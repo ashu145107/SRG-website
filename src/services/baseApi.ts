@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { createApi, fakeBaseQuery } from '@reduxjs/toolkit/query/react';
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const baseApi = createApi({
   reducerPath: 'srgApi',
-  baseQuery: fakeBaseQuery(),
+  baseQuery: fetchBaseQuery({ baseUrl: 'https://srgapp.dindoripranit.org' }),
   tagTypes: [
     'User',
     'Job',

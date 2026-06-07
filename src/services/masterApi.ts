@@ -11,6 +11,12 @@ export interface DropdownOption {
   labelMr: string;
 }
 
+export interface GenericMasterItem {
+  id: number;
+  name: string;
+  parentId?: number;
+}
+
 export const masterApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getLocations: builder.query<DropdownOption[], void>({
@@ -32,7 +38,7 @@ export const masterApi = baseApi.injectEndpoints({
         return {
           data: [
             { value: 'Information Technology', labelEn: 'Information IT Services', labelMr: 'माहिती तंत्रज्ञान (आयटी)' },
-            { value: 'Retail & Commerce', labelEn: 'Retail & Commerce Sales', labelMr: 'किरकोळ विक्री व दालने' },
+            { value: 'Retail & Commerce', labelEn: 'Retail & Commerce Sales', labelMr: 'किरкоळ विक्री व दालने' },
             { value: 'Customer Service', labelEn: 'Customer Support / BPO', labelMr: 'ग्राहक सेवा (कॉल सेंटर)' },
             { value: 'Education & Training', labelEn: 'Education Teaching', labelMr: 'शिक्षण आणि अध्यापन' },
             { value: 'Agriculture & Food Processing', labelEn: 'Agriculture Food processing', labelMr: 'शेती व अन्न प्रक्रिया' },
@@ -40,8 +46,46 @@ export const masterApi = baseApi.injectEndpoints({
           ]
         };
       }
-    })
+    }),
+    getCountries: builder.query<GenericMasterItem[], void>({
+      query: () => '/api/v1/country',
+      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+    }),
+    getStates: builder.query<GenericMasterItem[], number>({
+      query: (countryId) => `/api/v1/state/${countryId}`,
+      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+    }),
+    getDistricts: builder.query<GenericMasterItem[], number>({
+      query: (stateId) => `/api/v1/district/${stateId}`,
+      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+    }),
+    getTalukas: builder.query<GenericMasterItem[], number>({
+      query: (districtId) => `/api/v1/taluka/${districtId}`,
+      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+    }),
+    getSevaKendras: builder.query<GenericMasterItem[], number>({
+      query: (talukaId) => `/api/v1/sevakendra/${talukaId}`,
+      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+    }),
+    getEducationsList: builder.query<GenericMasterItem[], void>({
+      query: () => '/api/v1/educations',
+      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+    }),
+    getSubEducationsList: builder.query<GenericMasterItem[], number>({
+      query: (parentId) => `/api/v1/subeducations/${parentId}`,
+      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+    }),
   })
 });
 
-export const { useGetLocationsQuery, useGetJobCategoriesQuery } = masterApi;
+export const {
+  useGetLocationsQuery,
+  useGetJobCategoriesQuery,
+  useGetCountriesQuery,
+  useGetStatesQuery,
+  useGetDistrictsQuery,
+  useGetTalukasQuery,
+  useGetSevaKendrasQuery,
+  useGetEducationsListQuery,
+  useGetSubEducationsListQuery
+} = masterApi;

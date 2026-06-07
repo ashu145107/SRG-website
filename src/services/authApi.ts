@@ -13,21 +13,87 @@ export const authApi = baseApi.injectEndpoints({
       { user: User; token: string },
       { email: string; password?: string }
     >({
-      queryFn: async ({ email }) => {
-        // Find existing user
+      queryFn: async ({ email, password }) => {
+        const inputVal = email.trim().toLowerCase();
         const users = MockDb.getUsers();
-        const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        
+        // Match against list of demo accounts first for local convenience
+        const isDemo = ['admin@dindori.org123', 'admin@dindori.org', 'employer@tata.com', 'candidate@gmail.com', 'shg@shg.org', 'handler@dindori.org'].includes(inputVal);
+        const foundDemo = users.find(u => u.email.toLowerCase() === inputVal || u.name.toLowerCase() === inputVal);
 
-        if (!found) {
-          return { error: { status: 401, data: 'User not found. Please register first.' } };
+        if (isDemo && foundDemo) {
+          return {
+            data: {
+              user: foundDemo,
+              token: foundDemo.token || `jwt-mock-${foundDemo.id}`
+            }
+          };
         }
 
-        return {
-          data: {
-            user: found,
-            token: found.token || `jwt-mock-${found.id}`
+        // Otherwise, connect to real Swagger API!
+        try {
+          const res = await fetch('https://srgapp.dindoripranit.org/api/v1/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+              userName: email.trim(),
+              password: password || '',
+              clientIp: '127.0.0.1'
+            })
+          });
+
+          if (!res.ok) {
+            return {
+              error: {
+                status: res.status,
+                data: `API Server connection failed. Status code: ${res.status}`
+              }
+            };
           }
-        };
+
+          const responseData = await res.json();
+          if (responseData && responseData.isSuccess) {
+            const val = responseData.value || {};
+            
+            // Build a resilient User profile
+            const loggedUser: User = {
+              id: val.id ? `u-${val.id}` : `u-${Date.now()}`,
+              email: val.email || val.userName || email,
+              phone: val.phoneNumber || val.phone || 'Not Available',
+              name: val.name || val.userName || email.split('@')[0],
+              role: val.role || UserRole.CANDIDATE, // Default to Candidate if not specified
+              token: val.token || `jwt-real-${val.id || Date.now()}`,
+              companyId: val.companyId,
+              candidateId: val.candidateId,
+              shgId: val.shgId
+            };
+
+            return {
+              data: {
+                user: loggedUser,
+                token: loggedUser.token || ''
+              }
+            };
+          } else {
+            const errorMessage = responseData?.error?.message || 'The user credentials or login sequence is invalid.';
+            return {
+              error: {
+                status: 401,
+                data: errorMessage
+              }
+            };
+          }
+        } catch (err: any) {
+          return {
+            error: {
+              status: 500,
+              data: `नेटवर्क कनेक्शन एरर / Server Connection Error: ${err.message || err}`
+            }
+          };
+        }
       },
       invalidatesTags: ['User']
     }),

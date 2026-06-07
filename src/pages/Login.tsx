@@ -43,18 +43,18 @@ export default function Login() {
     e.preventDefault();
     setFormError('');
 
-    if (!email) {
-      setFormError('Please enter a registered email address.');
+    if (!email.trim()) {
+      setFormError('कृपया युझरनेम किंवा ईमेल प्रविष्ट करा / Please enter your username, email, or mobile number.');
       return;
     }
 
     try {
-      const response = await login({ email, password }).unwrap();
+      const response = await login({ email: email.trim(), password }).unwrap();
       // Store payloads momentarily, wait for OTP validation
       setVerifiedUserPayload(response);
       setShowOtpScreen(true);
     } catch (err: any) {
-      setFormError(err.data || 'Invalid login details. Try our demo presets.');
+      setFormError(err.data || 'लॉगिन अयशस्वी / Invalid login details. Please check your credentials or try our demo presets.');
     }
   };
 
@@ -119,9 +119,9 @@ export default function Login() {
               {formError && <Alert type="danger" message={formError} />}
 
               <TextBox
-                label={t('auth.email')}
-                type="email"
-                placeholder="example@domain.com"
+                label="युझरनेम / ईमेल / मोबाईल (Username / Email / Mobile)"
+                type="text"
+                placeholder="Enter Username, Email or Mobile"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />

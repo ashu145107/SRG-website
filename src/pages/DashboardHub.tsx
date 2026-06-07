@@ -42,7 +42,17 @@ import {
   useGetSHGByIdQuery,
   useUpdateSHGProfileMutation
 } from '../services/trainingApi';
-import { useGetLocationsQuery, useGetJobCategoriesQuery } from '../services/masterApi';
+import {
+  useGetLocationsQuery,
+  useGetJobCategoriesQuery,
+  useGetCountriesQuery,
+  useGetStatesQuery,
+  useGetDistrictsQuery,
+  useGetTalukasQuery,
+  useGetSevaKendrasQuery,
+  useGetEducationsListQuery,
+  useGetSubEducationsListQuery
+} from '../services/masterApi';
 import { useGetReportsQuery } from '../services/reportApi';
 
 import {
@@ -1242,6 +1252,50 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
   const [skillsText, setSkillsText] = useState('');
   const [resumeName, setResumeName] = useState('');
 
+  // Dynamic Live API Cascaded Dropdowns Section
+  const [liveCountryId, setLiveCountryId] = useState<number>(1); // Default to India (1)
+  const [liveStateId, setLiveStateId] = useState<number>(1); // Default to Maharashtra (1)
+  const [liveDistrictId, setLiveDistrictId] = useState<number>(6); // Default to Nashik (6)
+  const [liveTalukaId, setLiveTalukaId] = useState<number>(82); // Default to Nashik (82)
+  const [liveSevaKendraId, setLiveSevaKendraId] = useState<number>(159);
+  const [liveEducationId, setLiveEducationId] = useState<number>(12); // Default to B.Tech/B.E. (12)
+  const [liveSubEducationId, setLiveSubEducationId] = useState<number>(0);
+
+  const { data: liveCountries = [] } = useGetCountriesQuery();
+  const { data: liveStates = [] } = useGetStatesQuery(liveCountryId, { skip: !liveCountryId });
+  const { data: liveDistricts = [] } = useGetDistrictsQuery(liveStateId, { skip: !liveStateId });
+  const { data: liveTalukas = [] } = useGetTalukasQuery(liveDistrictId, { skip: !liveDistrictId });
+  const { data: liveSevaKendras = [] } = useGetSevaKendrasQuery(liveTalukaId, { skip: !liveTalukaId });
+  const { data: liveEducationsList = [] } = useGetEducationsListQuery();
+  const { data: liveSubEducationsList = [] } = useGetSubEducationsListQuery(liveEducationId, { skip: !liveEducationId });
+
+  const handleAutofillLiveSelections = () => {
+    const countryObj = liveCountries.find(c => c.id === Number(liveCountryId));
+    const stateObj = liveStates.find(s => s.id === Number(liveStateId));
+    const districtObj = liveDistricts.find(d => d.id === Number(liveDistrictId));
+    const talukaObj = liveTalukas.find(t => t.id === Number(liveTalukaId));
+    const skObj = liveSevaKendras.find(sk => sk.id === Number(liveSevaKendraId));
+    const eduObj = liveEducationsList.find(e => e.id === Number(liveEducationId));
+    const subEduObj = liveSubEducationsList.find(se => se.id === Number(liveSubEducationId));
+
+    const parts: string[] = [];
+    if (skObj) parts.push(skObj.name);
+    if (talukaObj) parts.push(talukaObj.name);
+    if (districtObj) parts.push(districtObj.name);
+    if (stateObj) parts.push(stateObj.name);
+    if (countryObj && countryObj.name !== 'INDIA') parts.push(countryObj.name);
+
+    if (parts.length > 0) {
+      setSeekerCity(parts.join(', '));
+    }
+
+    if (eduObj) {
+      setQualification(subEduObj ? `${eduObj.name} - ${subEduObj.name}` : eduObj.name);
+    }
+
+    setToastMsg('थेट एपीआय निवडलेली माहिती वर यशस्वीपणे भरली! सेव्ह बदल वर क्लिक करा. / Selections populated! Now click Save.');
+  };
+
   // Search parameters filter state
   const [searchPhrase, setSearchPhrase] = useState('');
 
@@ -1494,6 +1548,170 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                 placeholder="E.g. Sales, Drivers license, Computer typing, tailoring"
                 onChange={(e) => setSkillsText(e.target.value)}
               />
+
+              {/* Live srgapp Swagger APIs location locator */}
+              <div className="bg-orange-50/40 border border-orange-100 rounded-2xl p-5 space-y-4">
+                <div className="text-left">
+                  <h4 className="text-sm font-bold text-blue-950 flex items-center gap-1.5 md:text-base">
+                    <span>🌍</span> थेट स्वयंरोजगार मास्टर डेटा शोधक (Live Swagger API Explorer)
+                  </h4>
+                  <p className="text-xs text-slate-550 mt-1 leading-normal">
+                    आपल्या प्रोफाइलसाठी अधिकृत दिंडोरी प्रणीत एपीआय वरून थेट रिअल-टाइम देश, राज्य, जिल्हा, तालुका, सेवा केंद्र आणि शिक्षण सूची निवडा! (Select and pop from real-time API)
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Location Group */}
+                  <div className="space-y-3">
+                    <h5 className="text-xs font-bold text-orange-700 uppercase tracking-wider block text-left">ठिकाण पडताळणी / Location Cascade</h5>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="text-left">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">देश / Country</label>
+                        <select
+                          className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
+                          value={liveCountryId}
+                          onChange={(e) => {
+                            setLiveCountryId(Number(e.target.value));
+                            setLiveStateId(0);
+                            setLiveDistrictId(0);
+                            setLiveTalukaId(0);
+                            setLiveSevaKendraId(0);
+                          }}
+                        >
+                          <option value="0">--- Select Country ---</option>
+                          {liveCountries.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="text-left">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">राज्य / State</label>
+                        <select
+                          className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
+                          value={liveStateId}
+                          onChange={(e) => {
+                            setLiveStateId(Number(e.target.value));
+                            setLiveDistrictId(0);
+                            setLiveTalukaId(0);
+                            setLiveSevaKendraId(0);
+                          }}
+                          disabled={!liveCountryId}
+                        >
+                          <option value="0">--- Select State ---</option>
+                          {liveStates.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="text-left">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">जिल्हा / District</label>
+                        <select
+                          className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
+                          value={liveDistrictId}
+                          onChange={(e) => {
+                            setLiveDistrictId(Number(e.target.value));
+                            setLiveTalukaId(0);
+                            setLiveSevaKendraId(0);
+                          }}
+                          disabled={!liveStateId}
+                        >
+                          <option value="0">--- Select District ---</option>
+                          {liveDistricts.map(d => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="text-left">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">तालुका / Taluka</label>
+                        <select
+                          className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
+                          value={liveTalukaId}
+                          onChange={(e) => {
+                            setLiveTalukaId(Number(e.target.value));
+                            setLiveSevaKendraId(0);
+                          }}
+                          disabled={!liveDistrictId}
+                        >
+                          <option value="0">--- Select Taluka ---</option>
+                          {liveTalukas.map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="text-left">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">सेवाकेंद्र / Seva Kendra</label>
+                        <select
+                          className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
+                          value={liveSevaKendraId}
+                          onChange={(e) => setLiveSevaKendraId(Number(e.target.value))}
+                          disabled={!liveTalukaId}
+                        >
+                          <option value="0">--- Select Kendra ---</option>
+                          {liveSevaKendras.map(sk => (
+                            <option key={sk.id} value={sk.id}>{sk.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Education Group */}
+                  <div className="space-y-3 border-t md:border-t-0 md:border-l border-gray-200 pt-4 md:pt-0 md:pl-5">
+                    <h5 className="text-xs font-bold text-orange-700 uppercase tracking-wider block text-left">शिक्षण पात्रता / Education Cascade</h5>
+                    
+                    <div className="space-y-3">
+                      <div className="text-left">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">शिक्षण प्रकार / Highest Education</label>
+                        <select
+                          className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
+                          value={liveEducationId}
+                          onChange={(e) => {
+                            setLiveEducationId(Number(e.target.value));
+                            setLiveSubEducationId(0);
+                          }}
+                        >
+                          <option value="0">--- Select Education ---</option>
+                          {liveEducationsList.map(e => (
+                            <option key={e.id} value={e.id}>{e.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="text-left">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">उप-शिक्षण / Sub Education Course</label>
+                        <select
+                          className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
+                          value={liveSubEducationId}
+                          onChange={(e) => setLiveSubEducationId(Number(e.target.value))}
+                          disabled={!liveEducationId}
+                        >
+                          <option value="0">--- Select Sub Education ---</option>
+                          {liveSubEducationsList.map(se => (
+                            <option key={se.id} value={se.id}>{se.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={handleAutofillLiveSelections}
+                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-[0.98]"
+                  >
+                    📝 वरील प्रोफाइलमध्ये माहिती भरा / Autofill Selections Above
+                  </button>
+                </div>
+              </div>
 
               {/* Real Resume Drag and Drop / select mock upload */}
               <div className="space-y-1.5 text-left">
