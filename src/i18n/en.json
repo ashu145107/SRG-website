@@ -1,0 +1,117 @@
+{
+  "nav": {
+    "home": "Home",
+    "about": "About Us",
+    "initiatives": "Initiatives",
+    "contact": "Contact",
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "dashboard": "Dashboard"
+  },
+  "hero": {
+    "headline": "Spritual foundation paired with paths to self-employment!",
+    "subHeadline": "Shri Swami Samarth Seva & Adhyatmik Vikas Marg (Dindori Pranit) - Self Employment Department",
+    "candidate": {
+      "title": "Candidate / Job Seeker",
+      "desc": "Jobs, placements, and spiritual career counseling",
+      "action": "Enter Gateway"
+    },
+    "employer": {
+      "title": "Employer / Recruiter",
+      "desc": "Find direct talent - 100% Free",
+      "action": "Enter Gateway"
+    },
+    "shg": {
+      "title": "SHG / Self Employment Group",
+      "desc": "Training, market linkages, group registration",
+      "action": "Enter Gateway"
+    }
+  },
+  "trust": {
+    "title": "Trust & Impact",
+    "description": "Inspired by Sadguru More Dada and guided by H.H. Gurumauli, we are dedicated to coaching, empowering, and transforming lives. We coordinate job fairs, deliver free technical trainings, and facilitate fair market opportunities for Self-Help Groups (SHGs).",
+    "points": {
+      "morals": "Ethics and value-based professional pathways",
+      "rural": "Complete youth development in rural and interior regions",
+      "women": "Financial empowerment for women via organized self-help groups"
+    }
+  },
+  "howItWorks": {
+    "title": "How It Works?",
+    "step1Title": "1. Quick Registration",
+    "step1Desc": "Sign up in minutes as a Candidate, Recruiter, or Self-Help Group (SHG).",
+    "step2Title": "2. Build Complete Profile",
+    "step2Desc": "Highlight unique talents, list active job vacancies, or showcase craft products.",
+    "step3Title": "3. Reach Your Goal",
+    "step3Desc": "Secure your desired job, hire ideal team members, or scale group marketplaces."
+  },
+  "stats": {
+    "candidates": "Registered Candidates",
+    "jobs": "Active Jobs",
+    "companies": "Partner Companies",
+    "shgs": "Active Self-Help Groups",
+    "title": "Our Impact Metrics"
+  },
+  "initiatives": {
+    "title": "Our Initiatives",
+    "upcoming": "Upcoming Initiatives",
+    "past": "Past Achievements",
+    "viewDetails": "View Details"
+  },
+  "stories": {
+    "title": "Inspirational Success Stories"
+  },
+  "cta": {
+    "title": "Ready to Transform Your Future?",
+    "subtitle": "Join our network today. Create a free account or list your vacancies and group offerings in seconds.",
+    "button": "Register Now"
+  },
+  "footer": {
+    "aboutText": "Shri Swami Samarth Seva & Adhyatmik Vikas Marg (Dindori Pranit) Self Employment Department. Dedicated to elevated social economic welfare.",
+    "quickLinks": "Quick Links",
+    "contact": "Contact Info",
+    "address": "Dindori Darbar, Nashik, Maharashtra",
+    "phone": "0253-253XXXX",
+    "email": "info@dindoripranit.org",
+    "rights": "© 2026 Shri Swami Samarth Seva Marg. All Rights Reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service"
+  },
+  "auth": {
+    "loginTitle": "Portal Login",
+    "registerTitle": "Create Member Account",
+    "email": "Email Address",
+    "password": "Password",
+    "phone": "Mobile Number",
+    "fullName": "Full Name",
+    "role": "Member Type",
+    "submitLogin": "Login",
+    "submitRegister": "Register",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account? Register here",
+    "hasAccount": "Already have an account? Login",
+    "otpTitle": "OTP Verification",
+    "otpVerify": "Please enter the 4-digit secure OTP sent to your device",
+    "otpButton": "Verify & Continue",
+    "otpSent": "A secure OTP has been sent to your registered number.",
+    "resetTitle": "Reset Your Password",
+    "resetSubtitle": "Create a strong new password for security"
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "overview": "Quick Overview",
+    "recentJobs": "Recently Added Vacancies",
+    "appliedJobs": "Applied Opportunities",
+    "postJob": "Post a New Vacancy",
+    "applications": "Applicant Pipelines",
+    "shgTrainings": "Training enrollments & Showcase",
+    "adminTitle": "Admin Control Dashboard",
+    "superAdmin": "Super Admin Console",
+    "handlerTitle": "Liaison / Handler Panel",
+    "unauthorized": "Access Restricted",
+    "save": "Save Changes",
+    "edit": "Edit Profile",
+    "delete": "Delete"
+  }
+}

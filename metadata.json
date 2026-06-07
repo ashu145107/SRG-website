@@ -1,0 +1,6 @@
+{
+  "name": "Job & Self Employment Portal",
+  "description": "Multi-lingual Job & Self-Employment Portal for Shri Swami Samarth Seva & Adhyatmik Vikas Marg (Dindori Pranit)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
