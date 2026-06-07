@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { baseApi, getApiBaseUrl } from './baseApi';
+import { baseApi, getApiBaseUrl, getClientIp } from './baseApi';
 import { MockDb } from './mockDb';
 import { User, UserRole, HandlerPermissions } from '../types';
 
@@ -32,18 +32,7 @@ export const authApi = baseApi.injectEndpoints({
 
         // Otherwise, connect to real Swagger API!
         try {
-          let clientIp = '127.0.0.1';
-          try {
-            const ipRes = await fetch('https://api.ipify.org?format=json');
-            if (ipRes.ok) {
-              const ipJson = await ipRes.json();
-              if (ipJson && ipJson.ip) {
-                clientIp = ipJson.ip;
-              }
-            }
-          } catch (ipErr) {
-            console.warn('Could not fetch client IP. Using fallback.', ipErr);
-          }
+          const clientIp = await getClientIp();
 
           const res = await fetch(`${getApiBaseUrl()}/api/v1/login`, {
             method: 'POST',

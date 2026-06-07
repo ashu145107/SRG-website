@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const getApiBaseUrl = (): string => {
@@ -37,6 +32,28 @@ export const getApiBaseUrl = (): string => {
 
   // Direct connection to the production API server when deployed to production/UAT URL
   return 'https://srgapp.dindoripranit.org';
+};
+
+export const getClientIp = async (): Promise<string> => {
+  const ipEndpoints = [
+    'https://api.ipify.org',
+    'https://ipv4.icanhazip.com',
+    'https://ipapi.co/ip'
+  ];
+  for (const url of ipEndpoints) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        const ip = (await res.text()).trim();
+        if (ip && ip.length >= 7 && ip.length <= 45) {
+          return ip;
+        }
+      }
+    } catch (e) {
+      console.warn(`Failed to fetch IP from ${url}, trying next...`);
+    }
+  }
+  return '127.0.0.1';
 };
 
 export const baseApi = createApi({
