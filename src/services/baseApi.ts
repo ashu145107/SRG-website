@@ -7,7 +7,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const baseApi = createApi({
   reducerPath: 'srgApi',
-  baseQuery: fetchBaseQuery({ baseUrl: 'https://srgapp.dindoripranit.org' }),
+  baseQuery: fetchBaseQuery({ baseUrl: '' }),
   tagTypes: [
     'User',
     'Job',

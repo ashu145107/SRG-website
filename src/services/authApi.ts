@@ -32,7 +32,7 @@ export const authApi = baseApi.injectEndpoints({
 
         // Otherwise, connect to real Swagger API!
         try {
-          const res = await fetch('https://srgapp.dindoripranit.org/api/v1/login', {
+          const res = await fetch('/api/v1/login', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
