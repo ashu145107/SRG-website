@@ -100,14 +100,31 @@ export const authApi = baseApi.injectEndpoints({
 
     register: builder.mutation<
       { user: User; token: string },
-      { name: string; email: string; phone: string; role: UserRole }
+      {
+        name: string;
+        email: string;
+        phone: string;
+        role: UserRole;
+        countryName?: string;
+        stateName?: string;
+        districtName?: string;
+        talukaName?: string;
+        sevaKendraName?: string;
+        educationName?: string;
+        subEducationName?: string;
+        gender?: string;
+        experience?: string;
+      }
     >({
       queryFn: async (payload) => {
         const users = MockDb.getUsers();
         
-        // Check uniqueness
-        if (users.some(u => u.email.toLowerCase() === payload.email.toLowerCase())) {
-          return { error: { status: 400, data: 'Email already registered.' } };
+        // Check uniqueness only if email is provided
+        if (payload.email && payload.email.trim()) {
+          const emailCheck = payload.email.trim().toLowerCase();
+          if (users.some(u => u.email && u.email.toLowerCase() === emailCheck)) {
+            return { error: { status: 400, data: 'ईमेल आधीच नोंदणीकृत आहे. / Email already registered.' } };
+          }
         }
 
         const newUserId = `u-${Date.now()}`;
@@ -125,10 +142,10 @@ export const authApi = baseApi.injectEndpoints({
             id: companyId,
             companyName: payload.name,
             contactPerson: 'Contact Person',
-            email: payload.email,
+            email: payload.email || `${payload.phone}@dindori-employer.org`,
             phone: payload.phone,
-            industry: 'Unspecified',
-            address: 'Maharashtra address',
+            industry: payload.subEducationName || 'Unspecified',
+            address: `${payload.sevaKendraName || ''}, ${payload.talukaName || ''}, ${payload.districtName || ''}, ${payload.stateName || ''}`,
             isApproved: false // Requires admin approval status! Beautiful
           });
           MockDb.setCompanies(comps);
@@ -138,11 +155,11 @@ export const authApi = baseApi.injectEndpoints({
           cands.push({
             id: candidateId,
             fullName: payload.name,
-            email: payload.email,
+            email: payload.email || `${payload.phone}@dindori-candidate.org`,
             phone: payload.phone,
-            city: 'Not Set',
-            qualification: 'Not Set',
-            experienceYears: 0,
+            city: payload.sevaKendraName ? `${payload.sevaKendraName}, ${payload.talukaName || ''}, ${payload.districtName || ''}` : `${payload.talukaName || ''}, ${payload.districtName || ''}`,
+            qualification: payload.educationName ? (payload.subEducationName ? `${payload.educationName} - ${payload.subEducationName}` : payload.educationName) : 'Not Set',
+            experienceYears: payload.experience ? Number(payload.experience) : 0,
             skills: []
           });
           MockDb.setCandidates(cands);
@@ -154,7 +171,7 @@ export const authApi = baseApi.injectEndpoints({
             shgName: payload.name,
             leaderName: 'Leader Name',
             phone: payload.phone,
-            district: 'Not Set',
+            district: payload.districtName || 'Not Set',
             memberCount: 5,
             activities: [],
             productShowcase: []
@@ -174,7 +191,7 @@ export const authApi = baseApi.injectEndpoints({
 
         const newUser: User = {
           id: newUserId,
-          email: payload.email,
+          email: payload.email || `${payload.phone}@dindori.org`,
           phone: payload.phone,
           name: payload.name,
           role: payload.role,
@@ -185,8 +202,8 @@ export const authApi = baseApi.injectEndpoints({
           handlerPermissions
         };
 
-        users.push(newUser);
-        MockDb.setUsers(users);
+        const updatedUsers = [...users, newUser];
+        MockDb.setUsers(updatedUsers);
 
         return { data: { user: newUser, token } };
       },
