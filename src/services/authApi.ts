@@ -32,6 +32,19 @@ export const authApi = baseApi.injectEndpoints({
 
         // Otherwise, connect to real Swagger API!
         try {
+          let clientIp = '127.0.0.1';
+          try {
+            const ipRes = await fetch('https://api.ipify.org?format=json');
+            if (ipRes.ok) {
+              const ipJson = await ipRes.json();
+              if (ipJson && ipJson.ip) {
+                clientIp = ipJson.ip;
+              }
+            }
+          } catch (ipErr) {
+            console.warn('Could not fetch client IP. Using fallback.', ipErr);
+          }
+
           const res = await fetch('/api/v1/login', {
             method: 'POST',
             headers: {
@@ -41,7 +54,7 @@ export const authApi = baseApi.injectEndpoints({
             body: JSON.stringify({
               userName: email.trim(),
               password: password || '',
-              clientIp: '127.0.0.1'
+              clientIp
             })
           });
 
