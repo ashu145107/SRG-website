@@ -3,11 +3,45 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+
+export const getApiBaseUrl = (): string => {
+  if (typeof window === 'undefined') {
+    return 'https://srgapp.dindoripranit.org';
+  }
+
+  // Allow custom override via Vite environment variable if set by user's build setup
+  const envUrl = (import.meta as any).env?.VITE_API_BASE_URL;
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim();
+  }
+
+  const hostname = window.location.hostname;
+
+  // If running in development (localhost) or within Google AI Studio preview sandbox (run.app, googleusercontent.com),
+  // we proxy the requests locally through Vite / Express server to prevent browser CORS issues.
+  if (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname.includes('run.app') ||
+    hostname.includes('googleusercontent') ||
+    hostname.includes('aistudio')
+  ) {
+    return '';
+  }
+
+  // Direct connection to the production API server when deployed to production/UAT URL
+  return 'https://srgapp.dindoripranit.org';
+};
 
 export const baseApi = createApi({
   reducerPath: 'srgApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '' }),
+  baseQuery: fetchBaseQuery({ baseUrl: getApiBaseUrl() }),
   tagTypes: [
     'User',
     'Job',
@@ -20,3 +54,4 @@ export const baseApi = createApi({
   ],
   endpoints: () => ({}),
 });
+

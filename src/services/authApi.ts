@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { baseApi } from './baseApi';
+import { baseApi, getApiBaseUrl } from './baseApi';
 import { MockDb } from './mockDb';
 import { User, UserRole, HandlerPermissions } from '../types';
 
@@ -45,7 +45,7 @@ export const authApi = baseApi.injectEndpoints({
             console.warn('Could not fetch client IP. Using fallback.', ipErr);
           }
 
-          const res = await fetch('/api/v1/login', {
+          const res = await fetch(`${getApiBaseUrl()}/api/v1/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
