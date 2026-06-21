@@ -116,6 +116,13 @@ export const authApi = baseApi.injectEndpoints({
         subEducationName?: string;
         gender?: string;
         experience?: string;
+        countryId?: number;
+        stateId?: number;
+        districtId?: number;
+        talukaId?: number;
+        sevaKendraId?: number;
+        educationId?: number;
+        subEducationId?: number;
       }
     >({
       queryFn: async (payload) => {
@@ -137,7 +144,98 @@ export const authApi = baseApi.injectEndpoints({
         let candidateId: string | undefined;
         let shgId: string | undefined;
 
-        if (payload.role === UserRole.COMPANY) {
+        // If candidate, carry out the actual API invocation as requested
+        if (payload.role === UserRole.CANDIDATE) {
+          try {
+            const clientIp = await getClientIp();
+            
+            const apiBody = {
+              fullname: payload.name,
+              mobile: payload.phone,
+              address: payload.sevaKendraName || payload.talukaName || 'dindori',
+              email: payload.email || `${payload.phone}@gmail.com`,
+              talukaId: Number(payload.talukaId) || 0,
+              districtId: Number(payload.districtId) || 0,
+              stateId: Number(payload.stateId) || 0,
+              gender: payload.gender || 'M',
+              createdIp: clientIp || '0.0.0.0',
+              createdId: 0,
+              educationalDetail: Number(payload.educationId) || 0,
+              specialization: Number(payload.subEducationId) || 0,
+              skill: payload.subEducationName || 'computer',
+              courses: 'na',
+              experience: Number(payload.experience) || 0
+            };
+
+            const regRes = await fetch(`${getApiBaseUrl()}/api/v1/userregistration`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              },
+              body: JSON.stringify(apiBody)
+            });
+
+            if (!regRes.ok) {
+              return {
+                error: {
+                  status: regRes.status,
+                  data: `नोंदणी सर्व्हर त्रुटी / API Server registration failed. Status: ${regRes.status}`
+                }
+              };
+            }
+
+            const resData = await regRes.json();
+            if (resData && resData.isSuccess) {
+              // Successfully registered in real backend database!
+              // Now we also create the local candidate profile so the rest of the application runs perfectly.
+              candidateId = `cand-${Date.now()}`;
+              const cands = MockDb.getCandidates();
+              const newCand = {
+                id: candidateId,
+                fullName: payload.name,
+                email: payload.email || `${payload.phone}@dindori-candidate.org`,
+                phone: payload.phone,
+                city: payload.sevaKendraName ? `${payload.sevaKendraName}, ${payload.talukaName || ''}, ${payload.districtName || ''}` : `${payload.talukaName || ''}, ${payload.districtName || ''}`,
+                qualification: payload.educationName ? (payload.subEducationName ? `${payload.educationName} - ${payload.subEducationName}` : payload.educationName) : 'Not Set',
+                experienceYears: payload.experience ? Number(payload.experience) : 0,
+                skills: []
+              };
+              cands.push(newCand);
+              MockDb.setCandidates(cands);
+
+              const newUser: User = {
+                id: newUserId,
+                email: payload.email || `${payload.phone}@dindori.org`,
+                phone: payload.phone,
+                name: payload.name,
+                role: payload.role,
+                token: `jwt-real-reg-${Date.now()}`,
+                candidateId,
+              };
+
+              const updatedUsers = [...users, newUser];
+              MockDb.setUsers(updatedUsers);
+
+              return { data: { user: newUser, token: newUser.token } };
+            } else {
+              const errMsg = resData?.error?.message || 'नोंदणी अयशस्वी. Please check details or ensure connection is stable.';
+              return {
+                error: {
+                  status: 400,
+                  data: errMsg
+                }
+              };
+            }
+          } catch (err: any) {
+            return {
+              error: {
+                status: 500,
+                data: `नोंदणी नेटवर्क एरर / Registration Network Error: ${err.message || err}`
+              }
+            };
+          }
+        } else if (payload.role === UserRole.COMPANY) {
           companyId = `comp-${Date.now()}`;
           const comps = MockDb.getCompanies();
           comps.push({
@@ -151,20 +249,6 @@ export const authApi = baseApi.injectEndpoints({
             isApproved: false // Requires admin approval status! Beautiful
           });
           MockDb.setCompanies(comps);
-        } else if (payload.role === UserRole.CANDIDATE) {
-          candidateId = `cand-${Date.now()}`;
-          const cands = MockDb.getCandidates();
-          cands.push({
-            id: candidateId,
-            fullName: payload.name,
-            email: payload.email || `${payload.phone}@dindori-candidate.org`,
-            phone: payload.phone,
-            city: payload.sevaKendraName ? `${payload.sevaKendraName}, ${payload.talukaName || ''}, ${payload.districtName || ''}` : `${payload.talukaName || ''}, ${payload.districtName || ''}`,
-            qualification: payload.educationName ? (payload.subEducationName ? `${payload.educationName} - ${payload.subEducationName}` : payload.educationName) : 'Not Set',
-            experienceYears: payload.experience ? Number(payload.experience) : 0,
-            skills: []
-          });
-          MockDb.setCandidates(cands);
         } else if (payload.role === UserRole.SHG) {
           shgId = `shg-${Date.now()}`;
           const shgs = MockDb.getSHGs();

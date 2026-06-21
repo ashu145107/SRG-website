@@ -188,7 +188,14 @@ export default function Register() {
         educationName: selectedEducation,
         subEducationName: selectedSubEdu,
         gender,
-        experience: experience.trim()
+        experience: experience.trim(),
+        countryId,
+        stateId,
+        districtId,
+        talukaId,
+        sevaKendraId,
+        educationId,
+        subEducationId
       }).unwrap();
 
       dispatch(setCredentials(response));
