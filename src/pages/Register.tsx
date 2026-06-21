@@ -38,6 +38,7 @@ export default function Register() {
   const [gender, setGender] = useState('M'); // Male by default ('M' vs 'F')
   const [experience, setExperience] = useState('');
   const [isTnCChecked, setIsTnCChecked] = useState(false);
+  const [isOpenEula, setIsOpenEula] = useState(false);
 
   // Cascading Selection Lists from live srgapp Swagger APIs
   const [countryId, setCountryId] = useState<number>(1); // Default to India (1)
@@ -135,11 +136,6 @@ export default function Register() {
       return;
     }
 
-    if (!sevaKendraId) {
-      setErrorText('कृपया सेवेकरी केंद्र निवडा / Please select a Seva Kendra.');
-      return;
-    }
-
     if (!educationId) {
       setErrorText('कृपया आपले सर्वोच्च शिक्षण निवडा / Please select your Education detail.');
       return;
@@ -170,7 +166,7 @@ export default function Register() {
     const selectedState = states.find(s => s.id === stateId)?.name || '';
     const selectedDistrict = districts.find(d => d.id === districtId)?.name || '';
     const selectedTaluka = talukas.find(t => t.id === talukaId)?.name || '';
-    const selectedSevaKendra = sevaKendras.find(sk => sk.id === sevaKendraId)?.name || '';
+    const selectedSevaKendra = 'dindori';
     const selectedEducation = educations.find(e => e.id === educationId)?.name || '';
     const selectedSubEdu = subEducations.find(se => se.id === subEducationId)?.name || '';
 
@@ -386,7 +382,7 @@ export default function Register() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="text-left">
                   <label className="block text-[11px] font-bold text-gray-600 mb-1">
                     ३. जिल्हा / District * {isLoadingDistricts && <span className="text-[9px] text-orange-600">(...)</span>}
@@ -397,7 +393,6 @@ export default function Register() {
                     onChange={(e) => {
                       setDistrictId(Number(e.target.value));
                       setTalukaId(0);
-                      setSevaKendraId(0);
                     }}
                     disabled={!stateId || isLoadingDistricts}
                   >
@@ -417,30 +412,12 @@ export default function Register() {
                     value={talukaId}
                     onChange={(e) => {
                       setTalukaId(Number(e.target.value));
-                      setSevaKendraId(0);
                     }}
                     disabled={!districtId || isLoadingTalukas}
                   >
                     <option value="0">--- तालुका निवडा / Taluka ---</option>
                     {talukas.map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="text-left">
-                  <label className="block text-[11px] font-bold text-gray-600 mb-1">
-                    ५. सेवेकरी केंद्र / Seva Kendra * {isLoadingSevaKendras && <span className="text-[9px] text-orange-600">(...)</span>}
-                  </label>
-                  <select
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-bold transition-all disabled:opacity-60"
-                    value={sevaKendraId}
-                    onChange={(e) => setSevaKendraId(Number(e.target.value))}
-                    disabled={!talukaId || isLoadingSevaKendras}
-                  >
-                    <option value="0">--- केंद्र निवडा / Seva Kendra ---</option>
-                    {sevaKendras.map(sk => (
-                      <option key={sk.id} value={sk.id}>{sk.name}</option>
                     ))}
                   </select>
                 </div>
@@ -510,33 +487,33 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Account Role Selection */}
-            <div className="text-left">
-              <label className="block text-xs font-bold text-gray-700 mb-1.5 bg-gray-50 px-2 py-1 inline-block rounded-md">
-                खाते प्रकार / Register Role Selection *
-              </label>
-              <select
-                className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-700 font-bold transition-all"
-                value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
-              >
-                {roleOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Terms and Conditions Checkbox */}
+            {/* Terms and Conditions Checkbox with EULA Link */}
             <div className="flex items-start gap-2 text-left pt-2 border-t border-gray-100">
               <input
                 id="IsTnCChecked"
                 type="checkbox"
                 checked={isTnCChecked}
                 onChange={(e) => setIsTnCChecked(e.target.checked)}
-                className="mt-1 accent-orange-600 w-4 h-4 rounded-sm"
+                className="mt-1 accent-orange-600 w-4 h-4 cursor-pointer rounded-sm"
               />
-              <label htmlFor="IsTnCChecked" className="text-xs font-semibold text-gray-600 leading-snug select-none cursor-pointer">
-                मी सहमत आहे की वरील सर्व तपशील माझ्या सर्वोत्तम माहितीनुसार खरे आणि अचूक आहेत. / I agree that all provided details are true and accurate to the best of my knowledge. *
+              <label htmlFor="IsTnCChecked" className="text-xs font-semibold text-slate-700 leading-snug select-none">
+                मी सहमत आहे की वरील सर्व तपशील माझ्या सर्वोत्तम माहितीनुसार खरे आणि अचूक आहेत आणि मी{' '}
+                <button
+                  type="button"
+                  onClick={() => setIsOpenEula(true)}
+                  className="text-blue-600 font-bold hover:underline inline focus:outline-none cursor-pointer"
+                >
+                  अटी आणि शर्ती (Terms and Conditions / Privacy Notice)
+                </button>{' '}
+                मान्य करतो/करते. / I agree that all details are accurate and I accept the{' '}
+                <button
+                  type="button"
+                  onClick={() => setIsOpenEula(true)}
+                  className="text-blue-600 font-bold hover:underline inline focus:outline-none cursor-pointer"
+                >
+                  Terms and Conditions / Privacy Notice
+                </button>
+                . *
               </label>
             </div>
 
@@ -552,6 +529,89 @@ export default function Register() {
           </div>
         </div>
       </div>
+
+      {/* EULA Popup Modal */}
+      {isOpenEula && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in animate-duration-150">
+          <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-100 flex flex-col max-h-[85vh] overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 bg-linear-to-r from-orange-50 to-amber-50 flex justify-between items-center">
+              <h3 className="font-bold text-blue-950 text-sm sm:text-base flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-orange-600 animate-pulse"></span>
+                अटी आणि शर्ती आणि गोपनीयता सूचना / Terms & Privacy Notice
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsOpenEula(false)}
+                className="text-gray-400 hover:text-slate-600 font-black text-lg p-1 transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-4 text-left text-xs text-slate-600 leading-relaxed max-h-[50vh]">
+              <div className="p-4 bg-blue-50/70 border border-blue-100/60 rounded-xl space-y-3 font-medium">
+                <p className="text-blue-950 font-bold text-xs uppercase tracking-wider mb-1">
+                  महत्वाची गोपनीयता संमती / Privacy Content Notice:
+                </p>
+                <p className="text-slate-700 italic font-bold">
+                  "I further acknowledge that I have read and understand this Privacy Notice by checking the box.
+                </p>
+                <p className="text-slate-700 italic font-bold leading-normal">
+                  I agree to the processing of my data in the outlined manner and consent to the Company using my personal information to communicate with me via email, telephone and SMS communications regarding my job application"
+                </p>
+              </div>
+
+              <div className="border-t border-slate-100 pt-3 space-y-2">
+                <p className="font-extrabold text-slate-800 text-xs">
+                  मराठी भाषांतर / Marathi Translation:
+                </p>
+                <p className="text-slate-600">
+                  "मी याद्वारे मान्य करतो/करते की मी ही गोपनीयता नोटीस वाचली आहे आणि समजली आहे.
+                </p>
+                <p className="text-slate-600 leading-normal">
+                  मी वरील नमूद केलेल्या पद्धतीने माझ्या माहितीच्या प्रक्रियेस सहमत आहे आणि माझ्या नोकरीच्या अर्जाच्या संदर्भात ईमेल, दूरध्वनी आणि एसएमएस द्वारे संप्रेषण करण्यासाठी कंपनीला माझ्या वैयक्तिक माहितीचा वापर करण्यास संमती देत आहे."
+                </p>
+              </div>
+
+              <div className="border-t border-slate-100 pt-3 space-y-2 text-[11px] text-slate-500">
+                <h5 className="font-bold text-slate-750">१. माहिती संकलन आणि माहिती सुरक्षा / Information Collection & Security</h5>
+                <p>
+                  आम्ही संकलित केलेली माहिती केवळ जॉब प्लेसमेंट, करिअर कौन्सिलिंग आणि कौशल्य वृद्धी उपक्रमांसाठी वापरली जाईल. आपली सर्व वैयक्तिक माहिती पूर्णपणे सुरक्षित ठेवली जाईल आणि अनधिकृत व्यक्तींसोबत सामायिक केली जाणार नाही.
+                </p>
+                <p>
+                  All personal data including Contact information, Qualification details, and Placement history are governed by stringent confidentiality guidelines of Shri Swami Samarth Seva Marg recruitment portal.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setIsOpenEula(false)}
+                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                रद्द करा / Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTnCChecked(true);
+                  setIsOpenEula(false);
+                }}
+                className="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer"
+              >
+                मी वाचले आणि सहमत आहे / I Have Read & Agree
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
