@@ -217,7 +217,7 @@ export default function Register() {
         <LanguageSwitcher />
       </div>
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-2xl text-center">
+      <div className="mx-auto w-full max-w-lg md:max-w-3xl lg:max-w-5xl text-center">
         <Link to="/" className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-orange-600 transition-colors mb-4">
           <ArrowLeft className="w-3.5 h-3.5" /> {t('nav.home') || 'Home'}
         </Link>
@@ -236,7 +236,7 @@ export default function Register() {
         </p>
       </div>
 
-      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-2xl">
+      <div className="mt-6 mx-auto w-full max-w-lg md:max-w-3xl lg:max-w-5xl">
         <div className="bg-white py-8 px-6 sm:px-10 rounded-2xl border border-gray-100 shadow-sm space-y-6">
           
           <div className="border-b border-gray-100 pb-4">
