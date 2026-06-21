@@ -45,9 +45,9 @@ export default function Login() {
       dispatch(setCredentials(response));
       setToastMessage(`लॉगिन यशस्वी / Login Successful! Redirecting...`);
       
-      // Redirect direct to homepage!
+      // Redirect to dashboard!
       setTimeout(() => {
-        navigate('/');
+        navigate('/dashboard');
       }, 1000);
     } catch (err: any) {
       setFormError(err.data || 'लॉगिन अयशस्वी / Invalid login details. Please check your credentials or try our demo presets.');
