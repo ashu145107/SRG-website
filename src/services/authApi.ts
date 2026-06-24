@@ -60,17 +60,42 @@ export const authApi = baseApi.injectEndpoints({
           if (responseData && responseData.isSuccess) {
             const val = responseData.value || {};
             
+            // Helper function to map userTypeId and role from backend to UserRole enum
+            const mapUserRole = (userTypeId: any, roleStr: any): UserRole => {
+              const typeId = String(userTypeId || '').trim();
+              const roleName = String(roleStr || '').trim().toLowerCase();
+
+              if (typeId === '1' || roleName === 'admin') {
+                return UserRole.ADMIN;
+              }
+              if (typeId === '2' || roleName === 'candidate' || roleName === 'job seeker' || roleName === 'jobseeker') {
+                return UserRole.CANDIDATE;
+              }
+              if (typeId === '3' || roleName === 'company' || roleName === 'employer') {
+                return UserRole.COMPANY;
+              }
+              if (typeId === '4' || roleName === 'shg') {
+                return UserRole.SHG;
+              }
+              if (typeId === '5' || roleName === 'handler') {
+                return UserRole.HANDLER;
+              }
+              return UserRole.CANDIDATE;
+            };
+
+            const userType = mapUserRole(val.userTypeId, val.role);
+            
             // Build a resilient User profile
             const loggedUser: User = {
-              id: val.id ? `u-${val.id}` : `u-${Date.now()}`,
+              id: val.userId ? `u-${val.userId}` : (val.id ? `u-${val.id}` : `u-${Date.now()}`),
               email: val.email || val.userName || email,
-              phone: val.phoneNumber || val.phone || 'Not Available',
+              phone: val.mobile || val.phoneNumber || val.phone || 'Not Available',
               name: val.name || val.userName || email.split('@')[0],
-              role: val.role || UserRole.CANDIDATE, // Default to Candidate if not specified
-              token: val.token || `jwt-real-${val.id || Date.now()}`,
-              companyId: val.companyId,
-              candidateId: val.candidateId,
-              shgId: val.shgId
+              role: userType,
+              token: val.token || `jwt-real-${val.userId || val.id || Date.now()}`,
+              companyId: val.companyId || (userType === UserRole.COMPANY ? `comp-${val.userId || val.id || Date.now()}` : undefined),
+              candidateId: val.candidateId || (userType === UserRole.CANDIDATE ? `cand-${val.userId || val.id || Date.now()}` : undefined),
+              shgId: val.shgId || (userType === UserRole.SHG ? `shg-${val.userId || val.id || Date.now()}` : undefined)
             };
 
             return {
