@@ -89,7 +89,9 @@ import {
   Calendar,
   Sparkles,
   ShoppingBag,
-  Award
+  Award,
+  Download,
+  Eye
 } from 'lucide-react';
 import { MockDb } from '../services/mockDb';
 
@@ -409,119 +411,169 @@ function LiveDashboardStats() {
     return null;
   }
 
-  // Filter keys that are primitives (numbers, booleans, strings) and are not internal properties like id or isMock
-  const statEntries = Object.entries(stats).filter(([key, val]) => {
-    return (
-      typeof val !== 'object' &&
-      val !== null &&
-      key !== 'isMock' &&
-      key !== 'id' &&
-      key !== 'userId' &&
-      key !== 'userName' &&
-      key !== 'role' &&
-      key !== 'message' &&
-      key !== 'isSuccess' &&
-      key !== 'isFailure' &&
-      key !== 'token' &&
-      key !== 'lastLogin'
-    );
-  });
+  const { adminDashboard, employerDashboard, candidateDashboard, isMock } = stats;
 
-  if (statEntries.length === 0) {
+  let title = "माहिती फलक आकडेवारी / Dashboard Statistics";
+  let items: { labelMr: string; labelEn: string; value: any; icon: React.ReactNode; colorClass: string }[] = [];
+  let activityLogs: any[] = [];
+
+  if (adminDashboard) {
+    title = "प्रशासक नियंत्रण फलक / Admin Control Dashboard";
+    items = [
+      {
+        labelMr: 'एकूण वापरकर्ता नोंदणी संख्या',
+        labelEn: 'Total User Registrations',
+        value: adminDashboard.userRegistrationCount,
+        icon: <UserCheck className="w-5 h-5 text-blue-600" />,
+        colorClass: "bg-blue-50/70 border-blue-100"
+      },
+      {
+        labelMr: 'एकूण कंपनी नोंदणी संख्या',
+        labelEn: 'Total Company Registrations',
+        value: adminDashboard.companyRegistrationCount,
+        icon: <Layers className="w-5 h-5 text-emerald-600" />,
+        colorClass: "bg-emerald-50/70 border-emerald-100"
+      },
+      {
+        labelMr: 'एकूण नोकरी अर्ज संख्या',
+        labelEn: 'Total Job Applications',
+        value: adminDashboard.appliedJobCount,
+        icon: <FileText className="w-5 h-5 text-orange-600" />,
+        colorClass: "bg-orange-50/70 border-orange-100"
+      }
+    ];
+    if (adminDashboard.activityLogs && Array.isArray(adminDashboard.activityLogs)) {
+      activityLogs = adminDashboard.activityLogs;
+    }
+  } else if (employerDashboard) {
+    title = "नियोक्ता नियंत्रण फलक / Employer Control Dashboard";
+    items = [
+      {
+        labelMr: 'एकूण नोकरी अर्ज संख्या',
+        labelEn: 'Applied Candidates',
+        value: employerDashboard.appliedJobCount,
+        icon: <UserCheck className="w-5 h-5 text-blue-600" />,
+        colorClass: "bg-blue-50/70 border-blue-100"
+      },
+      {
+        labelMr: 'सक्रिय नोकऱ्या संख्या',
+        labelEn: 'Active Requirements',
+        value: employerDashboard.requirementCount,
+        icon: <Briefcase className="w-5 h-5 text-orange-600" />,
+        colorClass: "bg-orange-50/70 border-orange-100"
+      },
+      {
+        labelMr: 'उमेदवार प्रोफाइल व्ह्यूज',
+        labelEn: 'Resume Profile Views',
+        value: employerDashboard.profileViewCount,
+        icon: <Eye className="w-5 h-5 text-purple-600" />,
+        colorClass: "bg-purple-50/70 border-purple-100"
+      }
+    ];
+  } else if (candidateDashboard) {
+    title = "उमेदवार माहिती फलक / Candidate Dashboard";
+    items = [
+      {
+        labelMr: 'प्रोफाइल पूर्णता',
+        labelEn: 'Profile Completion',
+        value: `${candidateDashboard.ProfileComp || candidateDashboard.profileComp || 0}%`,
+        icon: <Sparkles className="w-5 h-5 text-amber-500" />,
+        colorClass: "bg-amber-50/70 border-amber-100"
+      },
+      {
+        labelMr: 'अर्ज केलेल्या नोकऱ्या',
+        labelEn: 'Applied Jobs Count',
+        value: candidateDashboard.AppliedJobCount || candidateDashboard.appliedJobCount || 0,
+        icon: <FileText className="w-5 h-5 text-blue-600" />,
+        colorClass: "bg-blue-50/70 border-blue-100"
+      },
+      {
+        labelMr: 'बायोडाटा डाउनलोड संख्या',
+        labelEn: 'Resume Downloads',
+        value: candidateDashboard.ProfileDownloadCount || candidateDashboard.profileDownloadCount || 0,
+        icon: <Download className="w-5 h-5 text-emerald-600" />,
+        colorClass: "bg-emerald-50/70 border-emerald-100"
+      },
+      {
+        labelMr: 'प्रोफाइल पाहिली संख्या',
+        labelEn: 'Profile Views',
+        value: candidateDashboard.ProfileViewCount || candidateDashboard.profileViewCount || 0,
+        icon: <Eye className="w-5 h-5 text-purple-600" />,
+        colorClass: "bg-purple-50/70 border-purple-100"
+      }
+    ];
+  } else {
     return null;
   }
 
-  const formatStatKey = (key: string): string => {
-    const words = key.replace(/([A-Z])/g, ' $1').trim().toLowerCase().split(' ');
-    const titleEn = words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    
-    const translations: Record<string, { mr: string; en: string }> = {
-      totalcandidates: { mr: 'एकूण उमेदवार', en: 'Total Candidates' },
-      totalcompanies: { mr: 'एकूण कंपन्या', en: 'Total Companies' },
-      totaljobs: { mr: 'एकूण नोकऱ्या', en: 'Total Jobs' },
-      totalshgs: { mr: 'एकूण बचत गट', en: 'Total SHGs' },
-      activejobs: { mr: 'सक्रिय नोकऱ्या', en: 'Active Jobs' },
-      appliedjobs: { mr: 'अर्ज केलेल्या नोकऱ्या', en: 'Applied Jobs' },
-      totalapplications: { mr: 'एकूण अर्ज', en: 'Total Applications' },
-      approvedcompanies: { mr: 'मंजूर कंपन्या', en: 'Approved Companies' },
-      totalusers: { mr: 'एकूण वापरकर्ते', en: 'Total Users' },
-      jobs: { mr: 'नोकऱ्या', en: 'Jobs' },
-      candidates: { mr: 'उमेदवार', en: 'Candidates' },
-      companies: { mr: 'कंपन्या', en: 'Companies' },
-      shg: { mr: 'बचत गट', en: 'SHG Groups' },
-      applications: { mr: 'अर्ज', en: 'Applications' },
-      postedjobs: { mr: 'पोस्ट केलेल्या नोकऱ्या', en: 'Posted Jobs' },
-      shortlisted: { mr: 'शॉर्टलिस्ट केलेले', en: 'Shortlisted Candidates' },
-      interviews: { mr: 'मुलाखती', en: 'Interviews Scheduled' },
-      jobseekerscount: { mr: 'एकूण जॉब सीकर्स', en: 'Total Job Seekers' },
-      recruitercount: { mr: 'एकूण नियोक्ते', en: 'Total Recruiters' },
-      recruiterscount: { mr: 'एकूण नियोक्ते', en: 'Total Recruiters' },
-    };
-
-    const cleanKey = key.toLowerCase().replace(/[^a-z]/g, '');
-    if (translations[cleanKey]) {
-      return `${translations[cleanKey].mr} / ${translations[cleanKey].en}`;
-    }
-    return titleEn;
-  };
-
-  const getIcon = (key: string) => {
-    const cleanKey = key.toLowerCase();
-    if (cleanKey.includes('candidate') || cleanKey.includes('seeker') || cleanKey.includes('user')) {
-      return <UserCheck className="w-5 h-5 text-blue-600" />;
-    }
-    if (cleanKey.includes('job') || cleanKey.includes('vacancy') || cleanKey.includes('post')) {
-      return <Briefcase className="w-5 h-5 text-orange-600" />;
-    }
-    if (cleanKey.includes('company') || cleanKey.includes('recruiter') || cleanKey.includes('employer')) {
-      return <Layers className="w-5 h-5 text-emerald-600" />;
-    }
-    if (cleanKey.includes('shg')) {
-      return <ShoppingBag className="w-5 h-5 text-purple-600" />;
-    }
-    if (cleanKey.includes('application') || cleanKey.includes('applied')) {
-      return <FileText className="w-5 h-5 text-teal-600" />;
-    }
-    return <Sparkles className="w-5 h-5 text-amber-500" />;
-  };
-
   return (
-    <div className="bg-white rounded-2xl border border-gray-150 shadow-xs p-6 space-y-4 text-left">
-      <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-orange-600 animate-pulse"></span>
-          <h3 className="font-extrabold text-blue-950 text-xs sm:text-sm tracking-wide uppercase">
-            थेट माहिती फलक आकडेवारी / Live API Statistics
-          </h3>
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl border border-gray-150 shadow-xs p-6 space-y-4 text-left">
+        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-orange-600 animate-pulse"></span>
+            <h3 className="font-extrabold text-blue-950 text-xs sm:text-sm tracking-wide uppercase">
+              {title}
+            </h3>
+          </div>
+          {isMock ? (
+            <span className="text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
+              डेमो मोड / Demo Mode
+            </span>
+          ) : (
+            <span className="text-[9px] font-black uppercase tracking-wider bg-orange-100 text-orange-700 px-2 py-0.5 rounded-md">
+              थेट डेटा / Live Sync
+            </span>
+          )}
         </div>
-        {stats.isMock ? (
-          <span className="text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
-            डेमो मोड / Demo Mode
-          </span>
-        ) : (
-          <span className="text-[9px] font-black uppercase tracking-wider bg-orange-100 text-orange-700 px-2 py-0.5 rounded-md">
-            थेट डेटा / Live Sync
-          </span>
-        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {items.map((item, idx) => (
+            <div key={idx} className={`p-4 rounded-xl border flex items-start gap-3 transition-all ${item.colorClass}`}>
+              <div className="p-2 bg-white rounded-lg shadow-2xs shrink-0">
+                {item.icon}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold text-slate-500 leading-tight mb-0.5">
+                  {item.labelMr}
+                </p>
+                <p className="text-[10px] font-medium text-slate-400 leading-tight mb-2.5">
+                  {item.labelEn}
+                </p>
+                <p className="text-base sm:text-lg font-black text-slate-950 leading-none">
+                  {item.value}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {statEntries.map(([key, val]) => (
-          <div key={key} className="bg-slate-50/70 hover:bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-start gap-3 transition-all">
-            <div className="p-2 bg-white rounded-lg shadow-2xs shrink-0">
-              {getIcon(key)}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold text-slate-500 leading-tight mb-1 truncate">
-                {formatStatKey(key)}
-              </p>
-              <p className="text-base sm:text-lg font-black text-slate-950 leading-none">
-                {String(val)}
-              </p>
-            </div>
+      {activityLogs.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-150 shadow-xs p-6 space-y-4 text-left">
+          <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+            <Calendar className="w-4 h-4 text-blue-950" />
+            <h3 className="font-extrabold text-blue-950 text-xs sm:text-sm tracking-wide uppercase">
+              अद्ययावत साप्ताहिक हालचाली / Weekly Activity Logs
+            </h3>
           </div>
-        ))}
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {activityLogs.map((log, index) => (
+              <div key={index} className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2 text-xs">
+                <div className="flex justify-between items-center text-blue-950 font-bold border-b border-slate-150 pb-1.5 mb-1.5">
+                  <span>📅 {log.activityDate}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+                  <div>• New Registrations: <strong className="text-slate-900">{log.newRegistration || log.newregistration}</strong></div>
+                  <div>• User Logins: <strong className="text-slate-900">{log.userlogin}</strong></div>
+                  <div>• New Requirements: <strong className="text-slate-900">{log.newRequirements || log.newrequirements}</strong></div>
+                  <div>• Job Applications: <strong className="text-slate-900">{log.jobApplications || log.jobapplications}</strong></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
