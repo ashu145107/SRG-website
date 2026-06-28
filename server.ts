@@ -26,6 +26,10 @@ async function startServer() {
         'Content-Type': 'application/json',
       };
 
+      if (req.headers.authorization) {
+        headers['Authorization'] = req.headers.authorization;
+      }
+
       const fetchOptions: RequestInit = {
         method: req.method,
         headers,

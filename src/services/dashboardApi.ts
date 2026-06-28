@@ -19,8 +19,25 @@ export interface DashboardStats {
 
 export const dashboardApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getDashboardStats: builder.query<DashboardStats, void>({
-      queryFn: async () => {
+    getDashboardStats: builder.query<any, void>({
+      queryFn: async (arg, api, extraOptions, baseQuery) => {
+        try {
+          const result = await baseQuery('/api/v1/dashboard');
+          if (result.data) {
+            const responseData: any = result.data;
+            // Unpack standard response wrapper if present
+            if (responseData && responseData.isSuccess && responseData.value !== undefined) {
+              return { data: responseData.value };
+            }
+            return { data: result.data };
+          }
+          if (result.error) {
+            console.warn('Real dashboard API returned error:', result.error);
+          }
+        } catch (err) {
+          console.warn('Real dashboard API failed:', err);
+        }
+
         const users = MockDb.getUsers();
         const jobs = MockDb.getJobs();
         const companies = MockDb.getCompanies();
@@ -68,7 +85,8 @@ export const dashboardApi = baseApi.injectEndpoints({
             approvedCompanies: companies.filter(c => c.isApproved).length,
             totalCandidates: candidates.length,
             totalSHGs: shgs.length,
-            recentActivities
+            recentActivities,
+            isMock: true
           }
         };
       },

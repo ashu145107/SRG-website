@@ -389,6 +389,144 @@ export default function DashboardHub() {
 }
 
 // ==========================================
+// SUB-TAB VIEWS: DYNAMIC LIVE API STATISTICS
+// ==========================================
+function LiveDashboardStats() {
+  const { data: stats, isLoading, error } = useGetDashboardStatsQuery();
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-2xl p-6 border border-slate-150 shadow-xs flex items-center justify-center min-h-[140px]">
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-8 h-8 rounded-full border-4 border-orange-500/20 border-t-orange-600 animate-spin"></div>
+          <p className="text-xs font-bold text-slate-500">माहिती फलक आकडेवारी लोड होत आहे / Loading Dashboard Statistics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return null;
+  }
+
+  // Filter keys that are primitives (numbers, booleans, strings) and are not internal properties like id or isMock
+  const statEntries = Object.entries(stats).filter(([key, val]) => {
+    return (
+      typeof val !== 'object' &&
+      val !== null &&
+      key !== 'isMock' &&
+      key !== 'id' &&
+      key !== 'userId' &&
+      key !== 'userName' &&
+      key !== 'role' &&
+      key !== 'message' &&
+      key !== 'isSuccess' &&
+      key !== 'isFailure' &&
+      key !== 'token' &&
+      key !== 'lastLogin'
+    );
+  });
+
+  if (statEntries.length === 0) {
+    return null;
+  }
+
+  const formatStatKey = (key: string): string => {
+    const words = key.replace(/([A-Z])/g, ' $1').trim().toLowerCase().split(' ');
+    const titleEn = words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    
+    const translations: Record<string, { mr: string; en: string }> = {
+      totalcandidates: { mr: 'एकूण उमेदवार', en: 'Total Candidates' },
+      totalcompanies: { mr: 'एकूण कंपन्या', en: 'Total Companies' },
+      totaljobs: { mr: 'एकूण नोकऱ्या', en: 'Total Jobs' },
+      totalshgs: { mr: 'एकूण बचत गट', en: 'Total SHGs' },
+      activejobs: { mr: 'सक्रिय नोकऱ्या', en: 'Active Jobs' },
+      appliedjobs: { mr: 'अर्ज केलेल्या नोकऱ्या', en: 'Applied Jobs' },
+      totalapplications: { mr: 'एकूण अर्ज', en: 'Total Applications' },
+      approvedcompanies: { mr: 'मंजूर कंपन्या', en: 'Approved Companies' },
+      totalusers: { mr: 'एकूण वापरकर्ते', en: 'Total Users' },
+      jobs: { mr: 'नोकऱ्या', en: 'Jobs' },
+      candidates: { mr: 'उमेदवार', en: 'Candidates' },
+      companies: { mr: 'कंपन्या', en: 'Companies' },
+      shg: { mr: 'बचत गट', en: 'SHG Groups' },
+      applications: { mr: 'अर्ज', en: 'Applications' },
+      postedjobs: { mr: 'पोस्ट केलेल्या नोकऱ्या', en: 'Posted Jobs' },
+      shortlisted: { mr: 'शॉर्टलिस्ट केलेले', en: 'Shortlisted Candidates' },
+      interviews: { mr: 'मुलाखती', en: 'Interviews Scheduled' },
+      jobseekerscount: { mr: 'एकूण जॉब सीकर्स', en: 'Total Job Seekers' },
+      recruitercount: { mr: 'एकूण नियोक्ते', en: 'Total Recruiters' },
+      recruiterscount: { mr: 'एकूण नियोक्ते', en: 'Total Recruiters' },
+    };
+
+    const cleanKey = key.toLowerCase().replace(/[^a-z]/g, '');
+    if (translations[cleanKey]) {
+      return `${translations[cleanKey].mr} / ${translations[cleanKey].en}`;
+    }
+    return titleEn;
+  };
+
+  const getIcon = (key: string) => {
+    const cleanKey = key.toLowerCase();
+    if (cleanKey.includes('candidate') || cleanKey.includes('seeker') || cleanKey.includes('user')) {
+      return <UserCheck className="w-5 h-5 text-blue-600" />;
+    }
+    if (cleanKey.includes('job') || cleanKey.includes('vacancy') || cleanKey.includes('post')) {
+      return <Briefcase className="w-5 h-5 text-orange-600" />;
+    }
+    if (cleanKey.includes('company') || cleanKey.includes('recruiter') || cleanKey.includes('employer')) {
+      return <Layers className="w-5 h-5 text-emerald-600" />;
+    }
+    if (cleanKey.includes('shg')) {
+      return <ShoppingBag className="w-5 h-5 text-purple-600" />;
+    }
+    if (cleanKey.includes('application') || cleanKey.includes('applied')) {
+      return <FileText className="w-5 h-5 text-teal-600" />;
+    }
+    return <Sparkles className="w-5 h-5 text-amber-500" />;
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-150 shadow-xs p-6 space-y-4 text-left">
+      <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-orange-600 animate-pulse"></span>
+          <h3 className="font-extrabold text-blue-950 text-xs sm:text-sm tracking-wide uppercase">
+            थेट माहिती फलक आकडेवारी / Live API Statistics
+          </h3>
+        </div>
+        {stats.isMock ? (
+          <span className="text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
+            डेमो मोड / Demo Mode
+          </span>
+        ) : (
+          <span className="text-[9px] font-black uppercase tracking-wider bg-orange-100 text-orange-700 px-2 py-0.5 rounded-md">
+            थेट डेटा / Live Sync
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {statEntries.map(([key, val]) => (
+          <div key={key} className="bg-slate-50/70 hover:bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-start gap-3 transition-all">
+            <div className="p-2 bg-white rounded-lg shadow-2xs shrink-0">
+              {getIcon(key)}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold text-slate-500 leading-tight mb-1 truncate">
+                {formatStatKey(key)}
+              </p>
+              <p className="text-base sm:text-lg font-black text-slate-950 leading-none">
+                {String(val)}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
 // SUB-TAB VIEWS: 1. ADMINS OVERVIEW METRICS
 // ==========================================
 function AdminOverviewTab() {
@@ -399,17 +537,12 @@ function AdminOverviewTab() {
 
   return (
     <div className="space-y-6 font-sans">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatisticCard title={t('stats.candidates')} value={stats.totalCandidates} trend="+12 This Week" />
-        <StatisticCard title={t('stats.jobs')} value={stats.totalJobs} trend="Active posts" />
-        <StatisticCard title={t('stats.companies')} value={stats.totalCompanies} trend="Verified recruiter" />
-        <StatisticCard title={t('stats.shgs')} value={stats.totalSHGs} trend="Self-employment" />
-      </div>
+      <LiveDashboardStats />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         {/* Recent timeline audit stream */}
         <Card title="अद्ययावत हालचाली / Recent System Activity">
-          <Timeline items={stats.recentActivities.map(act => ({
+          <Timeline items={(stats.recentActivities || []).map((act: any) => ({
             title: act.user,
             desc: act.action,
             time: act.time,
@@ -964,6 +1097,9 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       </div>
 
       <div className="lg:col-span-9 space-y-6">
+        {/* Live Dashboard API statistics */}
+        <LiveDashboardStats />
+
         {/* Verification Alert status banner if unapproved recruiter */}
         {profile && !profile.isApproved && (
           <Alert
@@ -1401,6 +1537,9 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
       </div>
 
       <div className="lg:col-span-9 space-y-6">
+        {/* Live Dashboard API statistics */}
+        <LiveDashboardStats />
+
         {/* Profile incomplete warning to push CV uploads */}
         {!resumeName && (
           <Alert
@@ -1854,6 +1993,9 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
       </div>
 
       <div className="lg:col-span-9 space-y-6">
+        {/* Live Dashboard API statistics */}
+        <LiveDashboardStats />
+
         {/* Trainings listed tab */}
         {activeTab === 'trainings' && (
           <Card title="उपलब्ध व्यावसायिक तंत्र शिक्षण वर्ग / Active Vocations Training classes">

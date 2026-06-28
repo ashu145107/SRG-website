@@ -58,7 +58,16 @@ export const getClientIp = async (): Promise<string> => {
 
 export const baseApi = createApi({
   reducerPath: 'srgApi',
-  baseQuery: fetchBaseQuery({ baseUrl: getApiBaseUrl() }),
+  baseQuery: fetchBaseQuery({
+    baseUrl: getApiBaseUrl(),
+    prepareHeaders: (headers, { getState }) => {
+      const token = (getState() as any).auth?.token;
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
+      return headers;
+    }
+  }),
   tagTypes: [
     'User',
     'Job',
