@@ -321,6 +321,122 @@ export const authApi = baseApi.injectEndpoints({
       invalidatesTags: ['User', 'Company', 'Candidate', 'SHG']
     }),
 
+    companyRegister: builder.mutation<
+      { user: User; token: string },
+      {
+        fullname: string;
+        mobile: string;
+        address: string;
+        email: string;
+        talukaId: number;
+        districtId: number;
+        stateId: number;
+        contactPerson: string;
+        alternateContactPerson: string;
+        alternateContactNumber: string;
+        companyTypeId: number;
+        industryTypeId: number;
+        discription: string;
+        website: string;
+        alternateEmail: string;
+      }
+    >({
+      queryFn: async (payload) => {
+        const users = MockDb.getUsers();
+        try {
+          const clientIp = await getClientIp();
+          
+          const apiBody = {
+            fullname: payload.fullname,
+            mobile: payload.mobile,
+            address: payload.address,
+            email: payload.email,
+            talukaId: Number(payload.talukaId) || 0,
+            districtId: Number(payload.districtId) || 0,
+            stateId: Number(payload.stateId) || 0,
+            createdIp: clientIp || '127.0.0.1',
+            contactPerson: payload.contactPerson,
+            alternateContactPerson: payload.alternateContactPerson,
+            alternateContactNumber: payload.alternateContactNumber,
+            companyTypeId: Number(payload.companyTypeId) || 1,
+            industryTypeId: Number(payload.industryTypeId) || 1,
+            discription: payload.discription,
+            website: payload.website,
+            alternateEmail: payload.alternateEmail
+          };
+
+          const regRes = await fetch(`${getApiBaseUrl()}/api/v1/companyregistration`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify(apiBody)
+          });
+
+          if (!regRes.ok) {
+            return {
+              error: {
+                status: regRes.status,
+                data: `नोंदणी सर्व्हर त्रुटी / API Server company registration failed. Status: ${regRes.status}`
+              }
+            };
+          }
+
+          const resData = await regRes.json();
+          if (resData && resData.isSuccess) {
+            const newUserId = `u-${Date.now()}`;
+            const companyId = `comp-${Date.now()}`;
+            const token = `jwt-real-comp-${Date.now()}`;
+
+            const comps = MockDb.getCompanies();
+            comps.push({
+              id: companyId,
+              companyName: payload.fullname,
+              contactPerson: payload.contactPerson,
+              email: payload.email,
+              phone: payload.mobile,
+              industry: 'Unspecified',
+              address: payload.address,
+              isApproved: false
+            });
+            MockDb.setCompanies(comps);
+
+            const newUser: User = {
+              id: newUserId,
+              email: payload.email,
+              phone: payload.mobile,
+              name: payload.fullname,
+              role: UserRole.COMPANY,
+              token,
+              companyId
+            };
+
+            const updatedUsers = [...users, newUser];
+            MockDb.setUsers(updatedUsers);
+
+            return { data: { user: newUser, token } };
+          } else {
+            const errMsg = resData?.error?.message || 'नोंदणी अयशस्वी. Please check details or ensure connection is stable.';
+            return {
+              error: {
+                status: 400,
+                data: errMsg
+              }
+            };
+          }
+        } catch (err: any) {
+          return {
+            error: {
+              status: 500,
+              data: `नोंदणी नेटवर्क एरर / Registration Network Error: ${err.message || err}`
+            }
+          };
+        }
+      },
+      invalidatesTags: ['User', 'Company']
+    }),
+
     verifyOtp: builder.mutation<{ success: boolean; message: string }, { otp: string; email: string }>({
       queryFn: async ({ otp }) => {
         if (otp.length === 4) {
@@ -341,6 +457,7 @@ export const authApi = baseApi.injectEndpoints({
 export const {
   useLoginMutation,
   useRegisterMutation,
+  useCompanyRegisterMutation,
   useVerifyOtpMutation,
   useResetPasswordMutation
 } = authApi;
