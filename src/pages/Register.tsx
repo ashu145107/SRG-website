@@ -92,6 +92,25 @@ export default function Register() {
   const [register, { isLoading: isRegistering }] = useRegisterMutation();
   const [companyRegister, { isLoading: isCompanyRegistering }] = useCompanyRegisterMutation();
 
+  // Highlight input textboxes/select fields in red if validation fails
+  const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({});
+
+  const clearError = (fieldName: string) => {
+    if (invalidFields[fieldName]) {
+      setInvalidFields((prev) => {
+        const updated = { ...prev };
+        delete updated[fieldName];
+        return updated;
+      });
+    }
+  };
+
+  // Clear all invalid fields when changing registration type
+  useEffect(() => {
+    setInvalidFields({});
+    setErrorText('');
+  }, [registrationType]);
+
   // If redirected from gateway clicks, prefill preferred role
   useEffect(() => {
     if (location.state?.preferredRole) {
@@ -118,75 +137,95 @@ export default function Register() {
 
     // Form Validations as requested:
     // Country, State, District, Mobile number, Name, Taluka, Sevakendra, Education, Subeducation, Experience are all mandatory.
+    const newInvalids: Record<string, boolean> = {};
+
     if (!name.trim()) {
-      setErrorText('कृपया आपले संपूर्ण नाव प्रविष्ट करा / Please enter your full name.');
-      return;
+      newInvalids['name'] = true;
     }
 
     if (!phone.trim()) {
-      setErrorText('कृपया तुमचा मोबाईल नंबर प्रविष्ट करा / Please enter your mobile number.');
-      return;
+      newInvalids['phone'] = true;
+    } else if (!/^\d+$/.test(phone.trim()) || phone.trim().length < 10 || phone.trim().length > 15) {
+      newInvalids['phone'] = true;
     }
 
-    // Phone format pattern (numeric check)
-    if (!/^\d+$/.test(phone.trim()) || phone.trim().length < 10 || phone.trim().length > 15) {
-      setErrorText('मोबाईल नंबर चुकीचा आहे (कृपया १० ते १५ अंकी वैध क्रमांक टाका). / Mobile number must be 10 to 15 numeric digits.');
-      return;
-    }
-
-    // Email id is not compulsory, but if email is written, validate email format
     if (email.trim()) {
       const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailPattern.test(email.trim().toLowerCase())) {
-        setErrorText('कृपया वैध ईमेल प्रविष्ट करा / Please enter a valid email address.');
-        return;
+        newInvalids['email'] = true;
       }
     }
 
     if (!countryId) {
-      setErrorText('कृपया देश निवडा / Please select a Country.');
-      return;
+      newInvalids['countryId'] = true;
     }
 
     if (!stateId) {
-      setErrorText('कृपया राज्य निवडा / Please select a State.');
-      return;
+      newInvalids['stateId'] = true;
     }
 
     if (!districtId) {
-      setErrorText('कृपया जिल्हा निवडा / Please select a District.');
-      return;
+      newInvalids['districtId'] = true;
     }
 
     if (!talukaId) {
-      setErrorText('कृपया तालुका निवडा / Please select a Taluka.');
-      return;
+      newInvalids['talukaId'] = true;
     }
 
     if (!educationId) {
-      setErrorText('कृपया आपले सर्वोच्च शिक्षण निवडा / Please select your Education detail.');
-      return;
+      newInvalids['educationId'] = true;
     }
 
     if (!subEducationId) {
-      setErrorText('कृपया उप-शिक्षण क्षेत्र / स्पेशल निवडा / Please select your Sub-Education detail.');
-      return;
+      newInvalids['subEducationId'] = true;
     }
 
-    if (experience.trim() === '') {
-      setErrorText('कृपया कामाचा अनुभव अंकात प्रविष्ट करा (उदा. ०) / Please enter experience in years.');
-      return;
-    }
-
-    if (isNaN(Number(experience)) || Number(experience) < 0) {
-      setErrorText('कामाचा अनुभव वैध संख्येमध्ये प्रविष्ट करा. / Please enter a valid non-negative number of experience years.');
-      return;
+    if (experience.trim() === '' || isNaN(Number(experience)) || Number(experience) < 0) {
+      newInvalids['experience'] = true;
     }
 
     if (!isTnCChecked) {
-      setErrorText('कृपया अटी आणि शर्ती मान्य करा. / You must agree to the Terms and Conditions.');
+      newInvalids['isTnCChecked'] = true;
+    }
+
+    if (Object.keys(newInvalids).length > 0) {
+      setInvalidFields(newInvalids);
+
+      if (newInvalids['name']) {
+        setErrorText('कृपया आपले संपूर्ण नाव प्रविष्ट करा / Please enter your full name.');
+      } else if (newInvalids['phone']) {
+        if (!phone.trim()) {
+          setErrorText('कृपया तुमचा मोबाईल नंबर प्रविष्ट करा / Please enter your mobile number.');
+        } else {
+          setErrorText('मोबाईल नंबर चुकीचा आहे (कृपया १० ते १५ अंकी वैध क्रमांक टाका). / Mobile number must be 10 to 15 numeric digits.');
+        }
+      } else if (newInvalids['email']) {
+        setErrorText('कृपया वैध ईमेल प्रविष्ट करा / Please enter a valid email address.');
+      } else if (newInvalids['countryId']) {
+        setErrorText('कृपया देश निवडा / Please select a Country.');
+      } else if (newInvalids['stateId']) {
+        setErrorText('कृपया राज्य निवडा / Please select a State.');
+      } else if (newInvalids['districtId']) {
+        setErrorText('कृपया जिल्हा निवडा / Please select a District.');
+      } else if (newInvalids['talukaId']) {
+        setErrorText('कृपया तालुका निवडा / Please select a Taluka.');
+      } else if (newInvalids['educationId']) {
+        setErrorText('कृपया आपले सर्वोच्च शिक्षण निवडा / Please select your Education detail.');
+      } else if (newInvalids['subEducationId']) {
+        setErrorText('कृपया उप-शिक्षण क्षेत्र / स्पेशल निवडा / Please select your Sub-Education detail.');
+      } else if (newInvalids['experience']) {
+        if (experience.trim() === '') {
+          setErrorText('कृपया कामाचा अनुभव अंकात प्रविष्ट करा (उदा. ०) / Please enter experience in years.');
+        } else {
+          setErrorText('कामाचा अनुभव वैध संख्येमध्ये प्रविष्ट करा. / Please enter a valid non-negative number of experience years.');
+        }
+      } else if (newInvalids['isTnCChecked']) {
+        setErrorText('कृपया अटी आणि शर्ती मान्य करा. / You must agree to the Terms and Conditions.');
+      }
       return;
     }
+
+    setInvalidFields({});
 
     // Find Names for friendly profile summary storage
     const selectedCountry = countries.find(c => c.id === countryId)?.name || '';
@@ -235,110 +274,138 @@ export default function Register() {
   const handleEmployerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorText('');
+    const newInvalids: Record<string, boolean> = {};
 
-    // Validations: All fields are mandatory!
     if (!empFullName.trim()) {
-      setErrorText('कृपया कंपनीचे पूर्ण नाव प्रविष्ट करा / Please enter Company Full Name.');
-      return;
+      newInvalids['empFullName'] = true;
     }
 
-    if (!empMobile.trim()) {
-      setErrorText('कृपया मोबाईल नंबर प्रविष्ट करा / Please enter Mobile Number.');
-      return;
-    }
-
-    // Exactly 10 digits check for mobile number as requested
     const mobilePattern = /^\d{10}$/;
-    if (!mobilePattern.test(empMobile.trim())) {
-      setErrorText('मोबाईल नंबर नक्की १० अंकी असावा / Mobile number must be exactly 10 digits.');
-      return;
+    if (!empMobile.trim()) {
+      newInvalids['empMobile'] = true;
+    } else if (!mobilePattern.test(empMobile.trim())) {
+      newInvalids['empMobile'] = true;
     }
 
     if (!empAddress.trim()) {
-      setErrorText('कृपया पत्ता प्रविष्ट करा / Please enter Address.');
-      return;
-    }
-
-    if (!empEmail.trim()) {
-      setErrorText('कृपया मुख्य ईमेल प्रविष्ट करा / Please enter Email Address.');
-      return;
+      newInvalids['empAddress'] = true;
     }
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(empEmail.trim().toLowerCase())) {
-      setErrorText('कृपया वैध मुख्य ईमेल पत्ता प्रविष्ट करा / Please enter a valid main Email Address.');
-      return;
+    if (!empEmail.trim()) {
+      newInvalids['empEmail'] = true;
+    } else if (!emailPattern.test(empEmail.trim().toLowerCase())) {
+      newInvalids['empEmail'] = true;
     }
 
     if (!empStateId) {
-      setErrorText('कृपया राज्य निवडा / Please select State.');
-      return;
+      newInvalids['empStateId'] = true;
     }
 
     if (!empDistrictId) {
-      setErrorText('कृपया जिल्हा निवडा / Please select District.');
-      return;
+      newInvalids['empDistrictId'] = true;
     }
 
     if (!empTalukaId) {
-      setErrorText('कृपया तालुका निवडा / Please select Taluka.');
-      return;
+      newInvalids['empTalukaId'] = true;
     }
 
     if (!empContactPerson.trim()) {
-      setErrorText('कृपया मुख्य संपर्क व्यक्तीचे नाव प्रविष्ट करा / Please enter Contact Person.');
-      return;
+      newInvalids['empContactPerson'] = true;
     }
 
     if (!empAlternateContactPerson.trim()) {
-      setErrorText('कृपया पर्यायी संपर्क व्यक्तीचे नाव प्रविष्ट करा / Please enter Alternate Contact Person.');
-      return;
+      newInvalids['empAlternateContactPerson'] = true;
     }
 
     if (!empAlternateContactNumber.trim()) {
-      setErrorText('कृपया पर्यायी संपर्क मोबाईल नंबर प्रविष्ट करा / Please enter Alternate Contact Number.');
-      return;
-    }
-
-    if (!mobilePattern.test(empAlternateContactNumber.trim())) {
-      setErrorText('पर्यायी संपर्क मोबाईल नंबर नक्की १० अंकी असावा / Alternate Contact Number must be exactly 10 digits.');
-      return;
+      newInvalids['empAlternateContactNumber'] = true;
+    } else if (!mobilePattern.test(empAlternateContactNumber.trim())) {
+      newInvalids['empAlternateContactNumber'] = true;
     }
 
     if (!empCompanyTypeId) {
-      setErrorText('कृपया कंपनी प्रकार निवडा / Please select Company Type.');
-      return;
+      newInvalids['empCompanyTypeId'] = true;
     }
 
     if (!empIndustryTypeId) {
-      setErrorText('कृपया उद्योग प्रकार निवडा / Please select Industry Type.');
-      return;
+      newInvalids['empIndustryTypeId'] = true;
     }
 
     if (!empDescription.trim()) {
-      setErrorText('कृपया कंपनीचे संक्षिप्त वर्णन प्रविष्ट करा / Please enter Description.');
-      return;
+      newInvalids['empDescription'] = true;
     }
 
     if (!empWebsite.trim()) {
-      setErrorText('कृपया कंपनीची वेबसाईट प्रविष्ट करा / Please enter Website.');
-      return;
+      newInvalids['empWebsite'] = true;
     }
 
     if (!empAlternateEmail.trim()) {
-      setErrorText('कृपया पर्यायी ईमेल प्रविष्ट करा / Please enter Alternate Email.');
-      return;
-    }
-
-    if (!emailPattern.test(empAlternateEmail.trim().toLowerCase())) {
-      setErrorText('कृपया वैध पर्यायी ईमेल प्रविष्ट करा / Please enter a valid Alternate Email.');
-      return;
+      newInvalids['empAlternateEmail'] = true;
+    } else if (!emailPattern.test(empAlternateEmail.trim().toLowerCase())) {
+      newInvalids['empAlternateEmail'] = true;
     }
 
     if (!isTnCChecked) {
-      setErrorText('कृपया अटी आणि शर्ती मान्य करा. / You must agree to the Terms and Conditions.');
+      newInvalids['isTnCChecked'] = true;
+    }
+
+    if (Object.keys(newInvalids).length > 0) {
+      setInvalidFields(newInvalids);
+
+      if (newInvalids['empFullName']) {
+        setErrorText('कृपया कंपनीचे पूर्ण नाव प्रविष्ट करा / Please enter Company Full Name.');
+      } else if (newInvalids['empMobile']) {
+        if (!empMobile.trim()) {
+          setErrorText('कृपया मोबाईल नंबर प्रविष्ट करा / Please enter Mobile Number.');
+        } else {
+          setErrorText('मोबाईल नंबर नक्की १० अंकी असावा / Mobile number must be exactly 10 digits.');
+        }
+      } else if (newInvalids['empAddress']) {
+        setErrorText('कृपया पत्ता प्रविष्ट करा / Please enter Address.');
+      } else if (newInvalids['empEmail']) {
+        if (!empEmail.trim()) {
+          setErrorText('कृपया मुख्य ईमेल प्रविष्ट करा / Please enter Email Address.');
+        } else {
+          setErrorText('कृपया वैध मुख्य ईमेल पत्ता प्रविष्ट करा / Please enter a valid main Email Address.');
+        }
+      } else if (newInvalids['empStateId']) {
+        setErrorText('कृपया राज्य निवडा / Please select State.');
+      } else if (newInvalids['empDistrictId']) {
+        setErrorText('कृपया जिल्हा निवडा / Please select District.');
+      } else if (newInvalids['empTalukaId']) {
+        setErrorText('कृपया तालुका निवडा / Please select Taluka.');
+      } else if (newInvalids['empContactPerson']) {
+        setErrorText('कृपया मुख्य संपर्क व्यक्तीचे नाव प्रविष्ट करा / Please enter Contact Person.');
+      } else if (newInvalids['empAlternateContactPerson']) {
+        setErrorText('कृपया पर्यायी संपर्क व्यक्तीचे नाव प्रविष्ट करा / Please enter Alternate Contact Person.');
+      } else if (newInvalids['empAlternateContactNumber']) {
+        if (!empAlternateContactNumber.trim()) {
+          setErrorText('कृपया पर्यायी संपर्क मोबाईल नंबर प्रविष्ट करा / Please enter Alternate Contact Number.');
+        } else {
+          setErrorText('पर्यायी संपर्क मोबाईल नंबर नक्की १० अंकी असावा / Alternate Contact Number must be exactly 10 digits.');
+        }
+      } else if (newInvalids['empCompanyTypeId']) {
+        setErrorText('कृपया कंपनी प्रकार निवडा / Please select Company Type.');
+      } else if (newInvalids['empIndustryTypeId']) {
+        setErrorText('कृपया उद्योग प्रकार निवडा / Please select Industry Type.');
+      } else if (newInvalids['empDescription']) {
+        setErrorText('कृपया कंपनीचे संक्षिप्त वर्णन प्रविष्ट करा / Please enter Description.');
+      } else if (newInvalids['empWebsite']) {
+        setErrorText('कृपया कंपनीची वेबसाईट प्रविष्ट करा / Please enter Website.');
+      } else if (newInvalids['empAlternateEmail']) {
+        if (!empAlternateEmail.trim()) {
+          setErrorText('कृपया पर्यायी ईमेल प्रविष्ट करा / Please enter Alternate Email.');
+        } else {
+          setErrorText('कृपया वैध पर्यायी ईमेल प्रविष्ट करा / Please enter a valid Alternate Email.');
+        }
+      } else if (newInvalids['isTnCChecked']) {
+        setErrorText('कृपया अटी आणि शर्ती मान्य करा. / You must agree to the Terms and Conditions.');
+      }
       return;
     }
+
+    setInvalidFields({});
 
     try {
       const response = await companyRegister({
@@ -450,9 +517,16 @@ export default function Register() {
                   <input
                     type="text"
                     placeholder="उदा. टाटा कन्सल्टन्सी सर्व्हिसेस / E.g. Tata Consultancy Services"
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-medium transition-all"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-750 font-medium ${
+                      invalidFields['empFullName']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-orange-500'
+                    }`}
                     value={empFullName}
-                    onChange={(e) => setEmpFullName(e.target.value)}
+                    onChange={(e) => {
+                      setEmpFullName(e.target.value);
+                      clearError('empFullName');
+                    }}
                     maxLength={150}
                   />
                 </div>
@@ -465,9 +539,16 @@ export default function Register() {
                   <input
                     type="tel"
                     placeholder="उदा. 9876543210"
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-medium transition-all"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-750 font-medium ${
+                      invalidFields['empMobile']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-orange-500'
+                    }`}
                     value={empMobile}
-                    onChange={(e) => setEmpMobile(e.target.value)}
+                    onChange={(e) => {
+                      setEmpMobile(e.target.value);
+                      clearError('empMobile');
+                    }}
                     maxLength={10}
                   />
                 </div>
@@ -483,9 +564,16 @@ export default function Register() {
                   <input
                     type="text"
                     placeholder="उदा. प्लॉट नं. १२, एमआयडीसी, नाशिक / E.g. Plot No 12, MIDC, Nashik"
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-medium transition-all"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-750 font-medium ${
+                      invalidFields['empAddress']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-orange-500'
+                    }`}
                     value={empAddress}
-                    onChange={(e) => setEmpAddress(e.target.value)}
+                    onChange={(e) => {
+                      setEmpAddress(e.target.value);
+                      clearError('empAddress');
+                    }}
                     maxLength={200}
                   />
                 </div>
@@ -498,9 +586,16 @@ export default function Register() {
                   <input
                     type="email"
                     placeholder="उदा. hr@company.com"
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-medium transition-all"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-750 font-medium ${
+                      invalidFields['empEmail']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-orange-500'
+                    }`}
                     value={empEmail}
-                    onChange={(e) => setEmpEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmpEmail(e.target.value);
+                      clearError('empEmail');
+                    }}
                     maxLength={100}
                   />
                 </div>
@@ -517,12 +612,17 @@ export default function Register() {
                   <div className="text-left">
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">१. राज्य / State *</label>
                     <select
-                      className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-bold transition-all disabled:opacity-60"
+                      className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-gray-750 font-bold ${
+                        invalidFields['empStateId']
+                          ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                          : 'border-gray-200 focus:ring-orange-500'
+                      }`}
                       value={empStateId}
                       onChange={(e) => {
                         setEmpStateId(Number(e.target.value));
                         setEmpDistrictId(0);
                         setEmpTalukaId(0);
+                        clearError('empStateId');
                       }}
                       disabled={isLoadingStates}
                     >
@@ -538,11 +638,16 @@ export default function Register() {
                       २. जिल्हा / District * {isLoadingEmpDistricts && <span className="text-[9px] text-orange-600">(...)</span>}
                     </label>
                     <select
-                      className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-bold transition-all disabled:opacity-60"
+                      className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-gray-750 font-bold ${
+                        invalidFields['empDistrictId']
+                          ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                          : 'border-gray-200 focus:ring-orange-500'
+                      }`}
                       value={empDistrictId}
                       onChange={(e) => {
                         setEmpDistrictId(Number(e.target.value));
                         setEmpTalukaId(0);
+                        clearError('empDistrictId');
                       }}
                       disabled={!empStateId || isLoadingEmpDistricts}
                     >
@@ -558,9 +663,16 @@ export default function Register() {
                       ३. तालुका / Taluka * {isLoadingEmpTalukas && <span className="text-[9px] text-orange-600">(...)</span>}
                     </label>
                     <select
-                      className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-bold transition-all disabled:opacity-60"
+                      className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-gray-750 font-bold ${
+                        invalidFields['empTalukaId']
+                          ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                          : 'border-gray-200 focus:ring-orange-500'
+                      }`}
                       value={empTalukaId}
-                      onChange={(e) => setEmpTalukaId(Number(e.target.value))}
+                      onChange={(e) => {
+                        setEmpTalukaId(Number(e.target.value));
+                        clearError('empTalukaId');
+                      }}
                       disabled={!empDistrictId || isLoadingEmpTalukas}
                     >
                       <option value="0">--- तालुका निवडा / Taluka ---</option>
@@ -585,9 +697,16 @@ export default function Register() {
                     <input
                       type="text"
                       placeholder="उदा. राहुल शर्मा / Rahul Sharma"
-                      className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-750 font-medium transition-all"
+                      className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-750 font-medium ${
+                        invalidFields['empContactPerson']
+                          ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                          : 'border-gray-200 focus:ring-blue-500'
+                      }`}
                       value={empContactPerson}
-                      onChange={(e) => setEmpContactPerson(e.target.value)}
+                      onChange={(e) => {
+                        setEmpContactPerson(e.target.value);
+                        clearError('empContactPerson');
+                      }}
                       maxLength={100}
                     />
                   </div>
@@ -597,9 +716,16 @@ export default function Register() {
                     <input
                       type="text"
                       placeholder="उदा. अमित पाटील / Amit Patil"
-                      className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-750 font-medium transition-all"
+                      className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-750 font-medium ${
+                        invalidFields['empAlternateContactPerson']
+                          ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                          : 'border-gray-200 focus:ring-blue-500'
+                      }`}
                       value={empAlternateContactPerson}
-                      onChange={(e) => setEmpAlternateContactPerson(e.target.value)}
+                      onChange={(e) => {
+                        setEmpAlternateContactPerson(e.target.value);
+                        clearError('empAlternateContactPerson');
+                      }}
                       maxLength={100}
                     />
                   </div>
@@ -609,9 +735,16 @@ export default function Register() {
                     <input
                       type="tel"
                       placeholder="उदा. 9123456789"
-                      className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-750 font-medium transition-all"
+                      className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-750 font-medium ${
+                        invalidFields['empAlternateContactNumber']
+                          ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                          : 'border-gray-200 focus:ring-blue-500'
+                      }`}
                       value={empAlternateContactNumber}
-                      onChange={(e) => setEmpAlternateContactNumber(e.target.value)}
+                      onChange={(e) => {
+                        setEmpAlternateContactNumber(e.target.value);
+                        clearError('empAlternateContactNumber');
+                      }}
                       maxLength={10}
                     />
                   </div>
@@ -626,9 +759,16 @@ export default function Register() {
                     <span>कंपनी प्रकार / Company Type *</span>
                   </label>
                   <select
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-bold transition-all"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-750 font-bold ${
+                      invalidFields['empCompanyTypeId']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-orange-500'
+                    }`}
                     value={empCompanyTypeId}
-                    onChange={(e) => setEmpCompanyTypeId(Number(e.target.value))}
+                    onChange={(e) => {
+                      setEmpCompanyTypeId(Number(e.target.value));
+                      clearError('empCompanyTypeId');
+                    }}
                   >
                     <option value="1">खाजगी मर्यादित / Private Limited</option>
                     <option value="2">भागीदारी / Partnership</option>
@@ -645,9 +785,16 @@ export default function Register() {
                     <span>उद्योग प्रकार / Industry Type *</span>
                   </label>
                   <select
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-bold transition-all"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-750 font-bold ${
+                      invalidFields['empIndustryTypeId']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-orange-500'
+                    }`}
                     value={empIndustryTypeId}
-                    onChange={(e) => setEmpIndustryTypeId(Number(e.target.value))}
+                    onChange={(e) => {
+                      setEmpIndustryTypeId(Number(e.target.value));
+                      clearError('empIndustryTypeId');
+                    }}
                   >
                     <option value="1">माहिती तंत्रज्ञान / Information Technology (IT)</option>
                     <option value="2">उत्पादन आणि अभियांत्रिकी / Manufacturing & Engineering</option>
@@ -670,9 +817,16 @@ export default function Register() {
                   <input
                     type="text"
                     placeholder="उदा. www.company.com"
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-medium transition-all"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-750 font-medium ${
+                      invalidFields['empWebsite']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-orange-500'
+                    }`}
                     value={empWebsite}
-                    onChange={(e) => setEmpWebsite(e.target.value)}
+                    onChange={(e) => {
+                      setEmpWebsite(e.target.value);
+                      clearError('empWebsite');
+                    }}
                     maxLength={100}
                   />
                 </div>
@@ -685,9 +839,16 @@ export default function Register() {
                   <input
                     type="email"
                     placeholder="उदा. support@company.com"
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-medium transition-all"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-750 font-medium ${
+                      invalidFields['empAlternateEmail']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-orange-500'
+                    }`}
                     value={empAlternateEmail}
-                    onChange={(e) => setEmpAlternateEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmpAlternateEmail(e.target.value);
+                      clearError('empAlternateEmail');
+                    }}
                     maxLength={100}
                   />
                 </div>
@@ -701,9 +862,16 @@ export default function Register() {
                 <textarea
                   placeholder="उदा. आमच्याकडे विविध तांत्रिक व सेवा क्षेत्रामध्ये रोजगाराच्या उत्तम संधी उपलब्ध आहेत. / Brief description about company profile..."
                   rows={3}
-                  className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-medium transition-all"
+                  className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-750 font-medium ${
+                    invalidFields['empDescription']
+                      ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                      : 'border-gray-200 focus:ring-orange-500'
+                  }`}
                   value={empDescription}
-                  onChange={(e) => setEmpDescription(e.target.value)}
+                  onChange={(e) => {
+                    setEmpDescription(e.target.value);
+                    clearError('empDescription');
+                  }}
                   maxLength={500}
                 />
               </div>
@@ -714,8 +882,13 @@ export default function Register() {
                   id="IsTnCCheckedEmp"
                   type="checkbox"
                   checked={isTnCChecked}
-                  onChange={(e) => setIsTnCChecked(e.target.checked)}
-                  className="mt-1 accent-orange-600 w-4 h-4 cursor-pointer rounded-sm"
+                  onChange={(e) => {
+                    setIsTnCChecked(e.target.checked);
+                    if (e.target.checked) clearError('isTnCChecked');
+                  }}
+                  className={`mt-1 accent-orange-600 w-4 h-4 cursor-pointer rounded-sm ${
+                    invalidFields['isTnCChecked'] ? 'outline-2 outline-offset-2 outline-red-500 ring-2 ring-red-400' : ''
+                  }`}
                 />
                 <label htmlFor="IsTnCCheckedEmp" className="text-xs font-semibold text-slate-700 leading-snug select-none">
                   मी सहमत आहे की वरील सर्व तपशील माझ्या सर्वोत्तम माहितीनुसार खरे आणि अचूक आहेत आणि मी{' '}
@@ -764,9 +937,16 @@ export default function Register() {
                 <input
                   type="text"
                   placeholder="उदा. राजेश रमेश पाटील / E.g. Rajesh Patil"
-                  className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-700 font-medium transition-all"
+                  className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-700 font-medium ${
+                    invalidFields['name']
+                      ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                      : 'border-gray-200 focus:ring-orange-500'
+                  }`}
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    clearError('name');
+                  }}
                   maxLength={100}
                 />
               </div>
@@ -779,9 +959,16 @@ export default function Register() {
                 <input
                   type="tel"
                   placeholder="उदा. 9876543210"
-                  className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-700 font-medium transition-all"
+                  className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-700 font-medium ${
+                    invalidFields['phone']
+                      ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                      : 'border-gray-200 focus:ring-orange-500'
+                  }`}
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    clearError('phone');
+                  }}
                   maxLength={15}
                 />
               </div>
@@ -796,9 +983,16 @@ export default function Register() {
                 <input
                   type="text"
                   placeholder="उदा. name@domain.com"
-                  className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-700 font-medium transition-all"
+                  className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-700 font-medium ${
+                    invalidFields['email']
+                      ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                      : 'border-gray-200 focus:ring-orange-500'
+                  }`}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    clearError('email');
+                  }}
                   maxLength={100}
                 />
                 <p className="text-[10px] text-slate-400 mt-1">रिकामे सोडू शकता. जर प्रविष्ट केले तर वैध ईमेल असावे.</p>
@@ -846,7 +1040,11 @@ export default function Register() {
                 <div className="text-left">
                   <label className="block text-[11px] font-bold text-gray-600 mb-1">१. देश / Country *</label>
                   <select
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-bold transition-all disabled:opacity-60"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-gray-750 font-bold ${
+                      invalidFields['countryId']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-orange-500'
+                    }`}
                     value={countryId}
                     onChange={(e) => {
                       setCountryId(Number(e.target.value));
@@ -854,6 +1052,7 @@ export default function Register() {
                       setDistrictId(0);
                       setTalukaId(0);
                       setSevaKendraId(0);
+                      clearError('countryId');
                     }}
                     disabled={isLoadingCountries}
                   >
@@ -869,13 +1068,18 @@ export default function Register() {
                     २. राज्य / State * {isLoadingStates && <span className="text-[9px] text-orange-600">(Loading...)</span>}
                   </label>
                   <select
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-bold transition-all disabled:opacity-60"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-gray-750 font-bold ${
+                      invalidFields['stateId']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-orange-500'
+                    }`}
                     value={stateId}
                     onChange={(e) => {
                       setStateId(Number(e.target.value));
                       setDistrictId(0);
                       setTalukaId(0);
                       setSevaKendraId(0);
+                      clearError('stateId');
                     }}
                     disabled={!countryId || isLoadingStates}
                   >
@@ -893,11 +1097,16 @@ export default function Register() {
                     ३. जिल्हा / District * {isLoadingDistricts && <span className="text-[9px] text-orange-600">(...)</span>}
                   </label>
                   <select
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-bold transition-all disabled:opacity-60"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-gray-750 font-bold ${
+                      invalidFields['districtId']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-orange-500'
+                    }`}
                     value={districtId}
                     onChange={(e) => {
                       setDistrictId(Number(e.target.value));
                       setTalukaId(0);
+                      clearError('districtId');
                     }}
                     disabled={!stateId || isLoadingDistricts}
                   >
@@ -913,10 +1122,15 @@ export default function Register() {
                     ४. तालुका / Taluka * {isLoadingTalukas && <span className="text-[9px] text-orange-600">(...)</span>}
                   </label>
                   <select
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-750 font-bold transition-all disabled:opacity-60"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-gray-750 font-bold ${
+                      invalidFields['talukaId']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-orange-500'
+                    }`}
                     value={talukaId}
                     onChange={(e) => {
                       setTalukaId(Number(e.target.value));
+                      clearError('talukaId');
                     }}
                     disabled={!districtId || isLoadingTalukas}
                   >
@@ -942,11 +1156,16 @@ export default function Register() {
                     १. सर्वोच्च शिक्षण पात्रता / Educational Detail * {isLoadingEducations && <span className="text-[9px] text-teal-600">(...)</span>}
                   </label>
                   <select
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-750 font-bold transition-all disabled:opacity-60"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-gray-750 font-bold ${
+                      invalidFields['educationId']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-teal-500'
+                    }`}
                     value={educationId}
                     onChange={(e) => {
                       setEducationId(Number(e.target.value));
                       setSubEducationId(0);
+                      clearError('educationId');
                     }}
                     disabled={isLoadingEducations}
                   >
@@ -962,9 +1181,16 @@ export default function Register() {
                     २. उप-शिक्षण क्षेत्र / Specialization Course * {isLoadingSubEducations && <span className="text-[9px] text-teal-600">(...)</span>}
                   </label>
                   <select
-                    className="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-750 font-bold transition-all disabled:opacity-60"
+                    className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-gray-750 font-bold ${
+                      invalidFields['subEducationId']
+                        ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                        : 'border-gray-200 focus:ring-teal-500'
+                    }`}
                     value={subEducationId}
-                    onChange={(e) => setSubEducationId(Number(e.target.value))}
+                    onChange={(e) => {
+                      setSubEducationId(Number(e.target.value));
+                      clearError('subEducationId');
+                    }}
                     disabled={!educationId || isLoadingSubEducations}
                   >
                     <option value="0">--- उप-प्रकार निवडा / Specialization ---</option>
@@ -984,9 +1210,16 @@ export default function Register() {
                   placeholder="उदा. 0 (नवीन असल्यास ० टाका) / E.g. 2"
                   min="0"
                   max="60"
-                  className="w-full sm:w-1/2 text-xs p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-750 font-bold transition-all"
+                  className={`w-full sm:w-1/2 text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-750 font-bold ${
+                    invalidFields['experience']
+                      ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                      : 'border-gray-200 focus:ring-teal-500'
+                  }`}
                   value={experience}
-                  onChange={(e) => setExperience(e.target.value)}
+                  onChange={(e) => {
+                    setExperience(e.target.value);
+                    clearError('experience');
+                  }}
                 />
                 <p className="text-[10px] text-slate-400 mt-1">नवीन उमेदवारांसाठी 0 भरा / Enter 0 if fresher</p>
               </div>
@@ -998,8 +1231,13 @@ export default function Register() {
                 id="IsTnCChecked"
                 type="checkbox"
                 checked={isTnCChecked}
-                onChange={(e) => setIsTnCChecked(e.target.checked)}
-                className="mt-1 accent-orange-600 w-4 h-4 cursor-pointer rounded-sm"
+                onChange={(e) => {
+                  setIsTnCChecked(e.target.checked);
+                  if (e.target.checked) clearError('isTnCChecked');
+                }}
+                className={`mt-1 accent-orange-600 w-4 h-4 cursor-pointer rounded-sm ${
+                  invalidFields['isTnCChecked'] ? 'outline-2 outline-offset-2 outline-red-500 ring-2 ring-red-400' : ''
+                }`}
               />
               <label htmlFor="IsTnCChecked" className="text-xs font-semibold text-slate-700 leading-snug select-none">
                 मी सहमत आहे की वरील सर्व तपशील माझ्या सर्वोत्तम माहितीनुसार खरे आणि अचूक आहेत आणि मी{' '}
