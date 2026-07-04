@@ -7,7 +7,31 @@ import { Loader2, CheckCircle2, XCircle, ShieldAlert, ArrowRight, Home } from 'l
 export default function ActivateAccount() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const code = searchParams.get('d');
+  
+  // Robustly extract 'd' parameter from:
+  // 1. React Router searchParams (after the hash)
+  // 2. Browser's window.location.search (before the hash)
+  // 3. Fallback: Parse manually from window.location.hash query portion
+  const getActivationCode = (): string | null => {
+    const codeFromRouter = searchParams.get('d');
+    if (codeFromRouter) return codeFromRouter;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const codeFromSearch = urlParams.get('d');
+    if (codeFromSearch) return codeFromSearch;
+
+    const hash = window.location.hash;
+    const qMarkIndex = hash.indexOf('?');
+    if (qMarkIndex !== -1) {
+      const hashParams = new URLSearchParams(hash.substring(qMarkIndex));
+      const codeFromHash = hashParams.get('d');
+      if (codeFromHash) return codeFromHash;
+    }
+
+    return null;
+  };
+
+  const code = getActivationCode();
   
   const [activateAccount, { isLoading }] = useActivateAccountMutation();
   const [activationResult, setActivationResult] = useState<{
@@ -32,16 +56,18 @@ export default function ActivateAccount() {
         const result = await activateAccount({ code }).unwrap();
         console.log('[ActivateAccount] API Result:', result);
 
-        if (result && result.isSuccess) {
+        // Check isSuccess, success, or if response is successful
+        const isSuccess = (result as any)?.isSuccess === true || (result as any)?.success === true || (result as any)?.data?.isSuccess === true || (result as any)?.data?.success === true;
+
+        if (isSuccess) {
           setActivationResult({
             success: true,
             message: 'खाते यशस्वीरित्या सक्रिय झाले! / Account Activated Successfully!',
             details: 'तुमचे खाते यशस्वीरित्या सक्रिय केले गेले आहे. आता आपण लॉगिन करून पुढील सेवांचा लाभ घेऊ शकता. / Your account has been activated successfully. You can now log in to use the services.',
           });
         } else {
-          // Check for error in response body as requested
-          const errorMsg = result?.error?.message || 'दुवा अवैध आहे किंवा आधीच वापरला गेला आहे. / Link is invalid or has already been used.';
-          const errorCode = result?.error?.code || 'ActivationError';
+          // Check for error in response body
+          const errorMsg = result?.error?.message || (result as any)?.message || 'दुवा अवैध आहे किंवा आधीच वापरला गेला आहे. / Link is invalid or has already been used.';
           setActivationResult({
             success: false,
             message: 'सक्रियकरण अयशस्वी / Activation Failed',

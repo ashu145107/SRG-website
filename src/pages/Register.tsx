@@ -261,12 +261,8 @@ export default function Register() {
         subEducationId
       }).unwrap();
 
-      dispatch(setCredentials(response));
+      setIsRegisteredSuccess(true);
       setToastMessage(`खाते यशस्वीरीत्या नोंदणीकृत झाले! / Account registered successfully!`);
-      
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1200);
     } catch (err: any) {
       setErrorText(err.data || 'नोंदणी अयशस्वी. कृपया पुन्हा प्रयत्न करा. / Registration failed. Please try again.');
     }
@@ -488,10 +484,10 @@ export default function Register() {
                 </p>
                 <div className="h-px bg-orange-100 my-3" />
                 <p className="text-xs text-slate-600 leading-normal">
-                  कृपया तुमचा नोंदणीकृत मुख्य ईमेल आयडी (<span className="font-semibold text-slate-800">{empEmail}</span>) तपासा आणि तुमचे खाते सक्रिय करण्यासाठी ईमेल मधील दुव्यावर (Link) क्लिक करा.
+                  कृपया तुमचा नोंदणीकृत मुख्य ईमेल आयडी (<span className="font-semibold text-slate-800">{registrationType === 'employer' ? empEmail : email}</span>) तपासा आणि तुमचे खाते सक्रिय करण्यासाठी ईमेल मधील दुव्यावर (Link) क्लिक करा.
                   <br />
                   <span className="text-[11px] text-slate-500 font-medium mt-1 block">
-                    Please check your registered main email ID (<span className="font-semibold text-slate-800">{empEmail}</span>) and click the activation link in the email to activate your account.
+                    Please check your registered main email ID (<span className="font-semibold text-slate-800">{registrationType === 'employer' ? empEmail : email}</span>) and click the activation link in the email to activate your account.
                   </span>
                 </p>
               </div>
