@@ -458,7 +458,7 @@ export const authApi = baseApi.injectEndpoints({
     >({
       queryFn: async ({ code }) => {
         try {
-          const res = await fetch(`${getApiBaseUrl()}/api/v1/activateaccount`, {
+          const res = await fetch(`${getApiBaseUrl()}/api/v1/activateaccount?d=${encodeURIComponent(code)}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
