@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <title>सक्रिय करत आहे... / Activating...</title>
   <script>
-    // Extract query string parameter 'd'
-    const params = new URLSearchParams(window.location.search);
-    const d = params.get('d');
+    // Extract query string parameter 'd' raw to preserve '+' characters
+    const href = window.location.href;
+    const match = /[?&]d=([^&#]*)/i.exec(href);
+    const d = match ? decodeURIComponent(match[1]) : null;
     
     // Resolve base path dynamically to support both root and subfolder deployments
     const pathname = window.location.pathname; // E.g., "/ActivateAccount/" or "/myapp/ActivateAccount/"

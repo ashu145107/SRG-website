@@ -9,16 +9,25 @@ export default function ActivateAccount() {
   const navigate = useNavigate();
   
   // Robustly extract 'd' parameter from:
-  // 1. React Router searchParams (after the hash)
-  // 2. Browser's window.location.search (before the hash)
+  // 1. Raw window.location.href (to preserve '+' characters and avoid URLSearchParams converting them to spaces)
+  // 2. React Router searchParams (after the hash)
   // 3. Fallback: Parse manually from window.location.hash query portion
   const getActivationCode = (): string | null => {
+    // 1. Raw extraction from entire href to avoid '+' being decoded to space
+    const href = window.location.href;
+    const regex = /[?&]d=([^&#]*)/i;
+    const match = regex.exec(href);
+    if (match) {
+      const rawValue = match[1];
+      try {
+        return decodeURIComponent(rawValue);
+      } catch (e) {
+        return rawValue;
+      }
+    }
+
     const codeFromRouter = searchParams.get('d');
     if (codeFromRouter) return codeFromRouter;
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const codeFromSearch = urlParams.get('d');
-    if (codeFromSearch) return codeFromSearch;
 
     const hash = window.location.hash;
     const qMarkIndex = hash.indexOf('?');
