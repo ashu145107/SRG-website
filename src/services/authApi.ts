@@ -450,6 +450,43 @@ export const authApi = baseApi.injectEndpoints({
       queryFn: async () => {
         return { data: { success: true, message: 'Password recovery notification sent successfully.' } };
       }
+    }),
+
+    activateAccount: builder.mutation<
+      { isSuccess: boolean; isFailure: boolean; value: any; error?: { code: string; message: string } },
+      { code: string }
+    >({
+      queryFn: async ({ code }) => {
+        try {
+          const res = await fetch(`${getApiBaseUrl()}/api/v1/activateaccount`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({ code })
+          });
+
+          if (!res.ok) {
+            return {
+              error: {
+                status: res.status,
+                data: `सक्रियकरण सर्व्हर त्रुटी / API Server activation failed. Status: ${res.status}`
+              }
+            };
+          }
+
+          const responseData = await res.json();
+          return { data: responseData };
+        } catch (err: any) {
+          return {
+            error: {
+              status: 500,
+              data: `सक्रियकरण नेटवर्क एरर / Activation Network Error: ${err.message || err}`
+            }
+          };
+        }
+      }
     })
   })
 });
@@ -459,5 +496,6 @@ export const {
   useRegisterMutation,
   useCompanyRegisterMutation,
   useVerifyOtpMutation,
-  useResetPasswordMutation
+  useResetPasswordMutation,
+  useActivateAccountMutation
 } = authApi;

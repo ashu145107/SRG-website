@@ -78,6 +78,7 @@ export default function Register() {
   const [empDescription, setEmpDescription] = useState('');
   const [empWebsite, setEmpWebsite] = useState('');
   const [empAlternateEmail, setEmpAlternateEmail] = useState('');
+  const [isRegisteredSuccess, setIsRegisteredSuccess] = useState(false);
 
   // Employer Location Selection States
   const [empStateId, setEmpStateId] = useState<number>(1); // Default to Maharashtra (1)
@@ -426,12 +427,8 @@ export default function Register() {
         alternateEmail: empAlternateEmail.trim().toLowerCase()
       }).unwrap();
 
-      dispatch(setCredentials(response));
+      setIsRegisteredSuccess(true);
       setToastMessage('कंपनी/नियोक्ता नोंदणी यशस्वी झाली! / Employer Registration completed successfully!');
-      
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1200);
     } catch (err: any) {
       const serverErr = typeof err?.data === 'string' ? err.data : (err?.data?.error?.message || err?.message);
       setErrorText(serverErr || 'नोंदणी अयशस्वी. कृपया सर्व तपशील तपासा / Registration failed. Please check details.');
@@ -472,8 +469,52 @@ export default function Register() {
       <div className="mt-6 mx-auto w-full max-w-lg md:max-w-3xl lg:max-w-5xl">
         <div className="bg-white py-8 px-6 sm:px-10 rounded-2xl border border-gray-100 shadow-sm space-y-6">
           
-          {/* Registration Type Dropdown */}
-          <div className="bg-orange-50/30 p-4 sm:p-5 rounded-2xl border border-orange-100/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-left">
+          {isRegisteredSuccess ? (
+            <div className="py-6 flex flex-col items-center text-center">
+              <div className="bg-orange-50 border border-orange-100 p-4 rounded-full mb-5">
+                <CheckCircle2 className="h-16 w-16 text-orange-600" />
+              </div>
+
+              <h3 className="text-xl font-bold text-slate-800 mb-3">
+                नोंदणी यशस्वी झाली! / Registration Successful!
+              </h3>
+
+              <div className="bg-orange-50/50 border border-orange-100/60 rounded-xl p-5 text-left mb-8 max-w-xl w-full">
+                <p className="text-xs text-orange-950 font-bold leading-normal mb-2">
+                  पडताळणी आणि सक्रियकरण लिंक पाठविली आहे:
+                </p>
+                <p className="text-xs sm:text-sm text-orange-800 font-bold leading-relaxed">
+                  verification activation link sent on main email id
+                </p>
+                <div className="h-px bg-orange-100 my-3" />
+                <p className="text-xs text-slate-600 leading-normal">
+                  कृपया तुमचा नोंदणीकृत मुख्य ईमेल आयडी (<span className="font-semibold text-slate-800">{empEmail}</span>) तपासा आणि तुमचे खाते सक्रिय करण्यासाठी ईमेल मधील दुव्यावर (Link) क्लिक करा.
+                  <br />
+                  <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+                    Please check your registered main email ID (<span className="font-semibold text-slate-800">{empEmail}</span>) and click the activation link in the email to activate your account.
+                  </span>
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 w-full justify-center max-w-md">
+                <Link
+                  to="/login"
+                  className="flex-1 inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs px-6 py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-98"
+                >
+                  लॉगिन पृष्ठावर जा / Go to Login Page
+                </Link>
+                <Link
+                  to="/"
+                  className="flex-1 inline-flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs px-6 py-3.5 rounded-xl transition-all active:scale-98"
+                >
+                  मुख्यपृष्ठ / Home
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Registration Type Dropdown */}
+              <div className="bg-orange-50/30 p-4 sm:p-5 rounded-2xl border border-orange-100/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-left">
             <div>
               <label className="block text-xs font-black text-slate-750 uppercase tracking-wide">
                 नोंदणी प्रकार निवडा / Select Registration Type
@@ -1266,6 +1307,8 @@ export default function Register() {
           </form>
         </>
       )}
+            </>
+          )}
 
           <div className="text-center text-xs font-semibold text-slate-500 border-t border-slate-100 pt-4 cursor-pointer">
             <Link to="/login" className="text-orange-600 hover:underline">
