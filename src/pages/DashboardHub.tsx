@@ -153,7 +153,9 @@ export default function DashboardHub() {
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-xs font-black">{user.name}</p>
-              <p className="text-[9px] text-slate-350">{user.email}</p>
+              {user.role !== UserRole.CANDIDATE && !/^[0-9]+@gmail\.com$/.test(user.email || '') && (
+                <p className="text-[9px] text-slate-350">{user.email}</p>
+              )}
             </div>
             <button
               onClick={() => {

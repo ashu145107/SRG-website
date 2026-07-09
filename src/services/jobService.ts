@@ -121,14 +121,14 @@ export const jobService = {
 
   /**
    * API 3: Paginated Job Requirements List
-   * GET /api/v1/jobrequirements/{pageNumber}/{pageSize}
+   * GET /api/v1/jobrequirements/{pageSize}/{pageNumber}
    */
   searchJobs: async (params?: JobSearchParams): Promise<JobRequirement[]> => {
     const pageNumber = params?.page || 1;
     const pageSize = params?.limit || 100; // Use a reasonable default of 100 to load a good set of listings if not specified
     
     try {
-      const response = await axiosInstance.get<any>(`/api/v1/jobrequirements/${pageNumber}/${pageSize}`);
+      const response = await axiosInstance.get<any>(`/api/v1/jobrequirements/${pageSize}/${pageNumber}`);
       let list: JobRequirement[] = [];
       const responseData = response.data;
       
@@ -172,7 +172,7 @@ export const jobService = {
         return list;
       }
     } catch (err) {
-      console.warn(`searchJobs (via /api/v1/jobrequirements/${pageNumber}/${pageSize}) failed, falling back to MockDb:`, err);
+      console.warn(`searchJobs (via /api/v1/jobrequirements/${pageSize}/${pageNumber}) failed, falling back to MockDb:`, err);
     }
     
     // Fallback: Query MockDb and map results cleanly
