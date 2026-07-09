@@ -120,25 +120,59 @@ export const jobService = {
   },
 
   /**
-   * API 3: Job Search
-   * GET /api/v1/jobsearch
+   * API 3: Paginated Job Requirements List
+   * GET /api/v1/jobrequirements/{pageNumber}/{pageSize}
    */
   searchJobs: async (params?: JobSearchParams): Promise<JobRequirement[]> => {
+    const pageNumber = params?.page || 1;
+    const pageSize = params?.limit || 100; // Use a reasonable default of 100 to load a good set of listings if not specified
+    
     try {
-      const response = await axiosInstance.get<any>('/api/v1/jobsearch', { params });
+      const response = await axiosInstance.get<any>(`/api/v1/jobrequirements/${pageNumber}/${pageSize}`);
       let list: JobRequirement[] = [];
-      if (Array.isArray(response.data)) {
-        list = response.data;
-      } else if (response.data) {
-        if (Array.isArray(response.data.data)) list = response.data.data;
-        else if (Array.isArray(response.data.items)) list = response.data.items;
-        else if (Array.isArray(response.data.results)) list = response.data.results;
+      const responseData = response.data;
+      
+      if (responseData) {
+        if (responseData.value !== undefined && responseData.value !== null) {
+          const val = responseData.value;
+          if (Array.isArray(val)) {
+            list = val;
+          } else if (typeof val === 'object') {
+            if (Array.isArray(val.data)) list = val.data;
+            else if (Array.isArray(val.items)) list = val.items;
+            else if (Array.isArray(val.results)) list = val.results;
+            else if (Array.isArray(val.jobRequirements)) list = val.jobRequirements;
+            else {
+              const arrayProp = Object.values(val).find(v => Array.isArray(v));
+              if (arrayProp) list = arrayProp as JobRequirement[];
+            }
+          }
+        } else if (Array.isArray(responseData)) {
+          list = responseData;
+        } else if (Array.isArray(responseData.data)) {
+          list = responseData.data;
+        } else if (Array.isArray(responseData.items)) {
+          list = responseData.items;
+        } else if (Array.isArray(responseData.results)) {
+          list = responseData.results;
+        }
       }
+
       if (list && list.length > 0) {
+        if (params?.searchPhrase) {
+          const q = params.searchPhrase.toLowerCase();
+          list = list.filter(item => 
+            (item.jobDesignation && item.jobDesignation.toLowerCase().includes(q)) ||
+            (item.profileHeader && item.profileHeader.toLowerCase().includes(q)) ||
+            (item.jobLocation && item.jobLocation.toLowerCase().includes(q)) ||
+            (item.workPlace && item.workPlace.toLowerCase().includes(q)) ||
+            (item.jobDiscription && item.jobDiscription.toLowerCase().includes(q))
+          );
+        }
         return list;
       }
     } catch (err) {
-      console.warn('searchJobs API failed, falling back to MockDb:', err);
+      console.warn(`searchJobs (via /api/v1/jobrequirements/${pageNumber}/${pageSize}) failed, falling back to MockDb:`, err);
     }
     
     // Fallback: Query MockDb and map results cleanly
