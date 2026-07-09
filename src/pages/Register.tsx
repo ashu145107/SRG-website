@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { setCredentials } from '../store/authSlice';
 import { useRegisterMutation, useCompanyRegisterMutation } from '../services/authApi';
@@ -29,6 +29,7 @@ export default function Register() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   // Primary Fields
   const [name, setName] = useState('');
@@ -62,8 +63,13 @@ export default function Register() {
   const [errorText, setErrorText] = useState('');
   const [toastMessage, setToastMessage] = useState('');
 
+  // Extract initial role selection from URL
+  const initialRole = searchParams.get('role');
+
   // Registration Type Selector
-  const [registrationType, setRegistrationType] = useState<'job_seeker' | 'employer'>('job_seeker');
+  const [registrationType, setRegistrationType] = useState<'job_seeker' | 'employer'>(
+    initialRole === 'employer' ? 'employer' : 'job_seeker'
+  );
 
   // Employer Registration Form States
   const [empFullName, setEmpFullName] = useState('');
@@ -509,28 +515,45 @@ export default function Register() {
             </div>
           ) : (
             <>
-              {/* Registration Type Dropdown */}
-              <div className="bg-orange-50/30 p-4 sm:p-5 rounded-2xl border border-orange-100/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-left">
-            <div>
-              <label className="block text-xs font-black text-slate-750 uppercase tracking-wide">
-                नोंदणी प्रकार निवडा / Select Registration Type
-              </label>
-              <p className="text-[10px] text-slate-500 mt-0.5">कृपया योग्य पर्याय निवडा / Please select candidate or employer to continue</p>
-            </div>
-            <div className="shrink-0">
-              <select
-                value={registrationType}
-                onChange={(e) => {
-                  setRegistrationType(e.target.value as 'job_seeker' | 'employer');
-                  setErrorText('');
-                }}
-                className="w-full sm:w-64 text-xs font-extrabold p-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-slate-800 transition-all cursor-pointer shadow-xs"
-              >
-                <option value="job_seeker">नोकरी शोधणारा / Job Seeker (Candidate)</option>
-                <option value="employer">नियोक्ता / Employer (Company)</option>
-              </select>
-            </div>
-          </div>
+              {/* Separate Form Tab Switcher */}
+              <div className="flex border border-slate-100 p-1 bg-slate-50 rounded-xl max-w-md mx-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRegistrationType('job_seeker');
+                    setErrorText('');
+                  }}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
+                    registrationType === 'job_seeker'
+                      ? 'bg-white text-orange-600 shadow-sm border border-slate-100'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <User className="w-4 h-4" />
+                  <div className="flex flex-col text-left">
+                    <span className="leading-tight text-[11px] block font-extrabold">नोकरी शोधक नोंदणी</span>
+                    <span className="text-[9px] opacity-75 font-bold block">Job Seeker</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRegistrationType('employer');
+                    setErrorText('');
+                  }}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
+                    registrationType === 'employer'
+                      ? 'bg-white text-orange-600 shadow-sm border border-slate-100'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Building className="w-4 h-4" />
+                  <div className="flex flex-col text-left">
+                    <span className="leading-tight text-[11px] block font-extrabold">नियोक्ता / उद्योजक</span>
+                    <span className="text-[9px] opacity-75 font-bold block">Employer</span>
+                  </div>
+                </button>
+              </div>
 
           {registrationType === 'employer' ? (
             <form className="space-y-6" onSubmit={handleEmployerSubmit}>

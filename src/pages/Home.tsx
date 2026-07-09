@@ -42,6 +42,7 @@ export default function Home() {
   // Mobil Nav Control
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loginDropdownOpen, setLoginDropdownOpen] = useState(false);
+  const [registerDropdownOpen, setRegisterDropdownOpen] = useState(false);
 
   // States for dynamic data
   const { data: stats } = useGetDashboardStatsQuery();
@@ -182,12 +183,46 @@ export default function Home() {
                   )}
                 </div>
 
-                <Link
-                  to="/register"
-                  className="px-5 py-2 text-xs font-bold text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-all shadow-md"
+                <div 
+                  className="relative" 
+                  onMouseLeave={() => setRegisterDropdownOpen(false)}
                 >
-                  {t('nav.register')}
-                </Link>
+                  <button
+                    onMouseEnter={() => setRegisterDropdownOpen(true)}
+                    onClick={() => setRegisterDropdownOpen(!registerDropdownOpen)}
+                    className="px-4 py-2 text-xs font-bold text-white bg-orange-600 border border-orange-700 rounded-lg hover:bg-orange-700 transition-all flex items-center gap-1 cursor-pointer shadow-md"
+                  >
+                    <span>{t('nav.register')}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${registerDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {registerDropdownOpen && (
+                    <div 
+                      onMouseEnter={() => setRegisterDropdownOpen(true)}
+                      className="absolute right-0 mt-1.5 w-60 bg-white rounded-xl shadow-lg border border-slate-100 py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                    >
+                      <div className="px-3.5 py-1 border-b border-slate-50 mb-1">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">नोंदणी प्रकार / Registration Type</span>
+                      </div>
+                      <Link
+                        to="/register?role=candidate"
+                        onClick={() => setRegisterDropdownOpen(false)}
+                        className="flex flex-col px-3.5 py-2 hover:bg-orange-50 text-left transition-colors"
+                      >
+                        <span className="text-xs font-bold text-slate-800 hover:text-orange-950">नोकरी शोधक नोंदणी / Job Seeker Register</span>
+                        <span className="text-[10px] text-slate-500 mt-0.5">उमेदवार व नोकरीसाठी नोंदणी</span>
+                      </Link>
+                      <Link
+                        to="/register?role=employer"
+                        onClick={() => setRegisterDropdownOpen(false)}
+                        className="flex flex-col px-3.5 py-2 hover:bg-orange-50 text-left transition-colors"
+                      >
+                        <span className="text-xs font-bold text-slate-800 hover:text-orange-950">उद्योजक नोंदणी / Employer Register</span>
+                        <span className="text-[10px] text-slate-500 mt-0.5">नियोक्ते व कंपन्यांसाठी नोंदणी</span>
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -279,13 +314,23 @@ export default function Home() {
                       उद्योजक / Employer
                     </Link>
                   </div>
-                  <Link
-                    to="/register"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block text-center w-full py-2.5 bg-orange-600 text-white rounded-xl text-xs font-bold shadow-md"
-                  >
-                    {t('nav.register')} / Register
-                  </Link>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-left pl-1 pt-1 border-t border-slate-100">नोंदणी प्रकार / Registration Gateways</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      to="/register?role=candidate"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block text-center py-2.5 bg-orange-50 border border-orange-100 text-orange-900 rounded-xl text-xs font-bold shadow-xs hover:bg-orange-100"
+                    >
+                      नोकरी शोधक / Job Seeker
+                    </Link>
+                    <Link
+                      to="/register?role=employer"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block text-center py-2.5 bg-orange-50 border border-orange-100 text-orange-900 rounded-xl text-xs font-bold shadow-xs hover:bg-orange-100"
+                    >
+                      उद्योजक / Employer
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
