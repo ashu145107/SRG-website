@@ -6,6 +6,7 @@
 import React from 'react';
 import { Provider } from 'react-redux';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { store } from './store';
 import './i18n/config';
 
@@ -23,30 +24,34 @@ if (window.location.pathname.toLowerCase().includes('/activateaccount')) {
   window.location.replace(`${window.location.origin}/#/ActivateAccount${search}`);
 }
 
+const queryClient = new QueryClient();
+
 export default function App() {
   return (
     <Provider store={store}>
-      <HashRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/ActivateAccount" element={<ActivateAccount />} />
-          <Route path="/activateaccount" element={<ActivateAccount />} />
-          
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardHub />
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </HashRouter>
+      <QueryClientProvider client={queryClient}>
+        <HashRouter>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/ActivateAccount" element={<ActivateAccount />} />
+            <Route path="/activateaccount" element={<ActivateAccount />} />
+            
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardHub />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </HashRouter>
+      </QueryClientProvider>
     </Provider>
   );
 }

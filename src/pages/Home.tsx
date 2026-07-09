@@ -116,7 +116,7 @@ export default function Home() {
           <div className="hidden lg:flex items-center gap-4">
             <LanguageSwitcher />
 
-            {isAuthenticated && user ? (
+            {isAuthenticated && user && (
               <div className="flex items-center gap-3">
                 <Link
                   to="/dashboard"
@@ -131,7 +131,9 @@ export default function Home() {
                   {t('nav.logout')}
                 </button>
               </div>
-            ) : (
+            )}
+
+            {(!isAuthenticated || !user) && (
               <div className="flex items-center gap-2">
                 <div 
                   className="relative" 
@@ -276,7 +278,7 @@ export default function Home() {
                 <LanguageSwitcher />
               </div>
 
-              {isAuthenticated && user ? (
+              {isAuthenticated && user && (
                 <div className="space-y-2">
                   <Link
                     to="/dashboard"
@@ -295,7 +297,9 @@ export default function Home() {
                     {t('nav.logout')}
                   </button>
                 </div>
-              ) : (
+              )}
+
+              {(!isAuthenticated || !user) && (
                 <div className="space-y-3 pt-2">
                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-left pl-1">लॉगिन प्रकार / Login Gateways</div>
                   <div className="grid grid-cols-2 gap-2">

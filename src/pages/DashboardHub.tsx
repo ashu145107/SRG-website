@@ -73,6 +73,10 @@ import {
 } from '../components/ui/DataComponents';
 import { Loader, Alert, Toast, Modal } from '../components/ui/FeedbackComponents';
 import { PermissionGuard } from '../components/ui/UtilityComponents';
+import { AddJobForm } from '../components/jobs/AddJobForm';
+import { EditJobForm } from '../components/jobs/EditJobForm';
+import { JobDetailsView } from '../components/jobs/JobDetailsView';
+import { JobListingView } from '../components/jobs/JobListingView';
 import { User, UserRole, Job, JobApplication, SHGProfile, CompanyProfile, CandidateProfile, Training } from '../types';
 import {
   LogOut,
@@ -551,26 +555,110 @@ function LiveDashboardStats() {
 
       {activityLogs.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-150 shadow-xs p-6 space-y-4 text-left">
-          <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
-            <Calendar className="w-4 h-4 text-blue-950" />
-            <h3 className="font-extrabold text-blue-950 text-xs sm:text-sm tracking-wide uppercase">
-              अद्ययावत साप्ताहिक हालचाली / Weekly Activity Logs
-            </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-100 pb-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-blue-950" />
+              <h3 className="font-extrabold text-blue-950 text-xs sm:text-sm tracking-wide uppercase">
+                साप्ताहिक प्रगती अहवाल / Weekly Activity & Progress Logs
+              </h3>
+            </div>
+            <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full border border-blue-100 shrink-0 self-start sm:self-auto">
+              मागील आठवड्याशी तुलना / Compared with previous week
+            </span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {activityLogs.map((log, index) => (
-              <div key={index} className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2 text-xs">
-                <div className="flex justify-between items-center text-blue-950 font-bold border-b border-slate-150 pb-1.5 mb-1.5">
-                  <span>📅 {log.activityDate}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
-                  <div>• New Registrations: <strong className="text-slate-900">{log.newRegistration || log.newregistration}</strong></div>
-                  <div>• User Logins: <strong className="text-slate-900">{log.userlogin}</strong></div>
-                  <div>• New Requirements: <strong className="text-slate-900">{log.newRequirements || log.newrequirements}</strong></div>
-                  <div>• Job Applications: <strong className="text-slate-900">{log.jobApplications || log.jobapplications}</strong></div>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto rounded-xl border border-slate-100">
+            <table className="min-w-full divide-y divide-slate-100 text-left text-xs">
+              <thead className="bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                <tr>
+                  <th scope="col" className="px-4 py-3.5 font-bold">
+                    आठवडा / Activity Date
+                  </th>
+                  <th scope="col" className="px-4 py-3.5 font-bold text-center">
+                    नवीन नोंदणी / New Registrations
+                  </th>
+                  <th scope="col" className="px-4 py-3.5 font-bold text-center">
+                    वापरकर्ता लॉगिन / User Logins
+                  </th>
+                  <th scope="col" className="px-4 py-3.5 font-bold text-center">
+                    नवीन आवश्यकता / New Requirements
+                  </th>
+                  <th scope="col" className="px-4 py-3.5 font-bold text-center">
+                    नोकरी अर्ज / Job Applications
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {activityLogs.map((log, index) => {
+                  const prevLog = activityLogs[index + 1];
+
+                  const getVal = (item: any, keys: string[]) => {
+                    for (const key of keys) {
+                      if (item && item[key] !== undefined) return parseInt(item[key]) || 0;
+                    }
+                    return 0;
+                  };
+
+                  const currReg = getVal(log, ['newRegistration', 'newregistration']);
+                  const prevReg = prevLog ? getVal(prevLog, ['newRegistration', 'newregistration']) : null;
+
+                  const currLogin = getVal(log, ['userLogin', 'userlogin']);
+                  const prevLogin = prevLog ? getVal(prevLog, ['userLogin', 'userlogin']) : null;
+
+                  const currReq = getVal(log, ['newRequirements', 'newrequirements']);
+                  const prevReq = prevLog ? getVal(prevLog, ['newRequirements', 'newrequirements']) : null;
+
+                  const currApp = getVal(log, ['jobApplications', 'jobapplications']);
+                  const prevApp = prevLog ? getVal(prevLog, ['jobApplications', 'jobapplications']) : null;
+
+                  const renderTrend = (curr: number, prev: number | null) => {
+                    if (prev === null) return null;
+                    const diff = curr - prev;
+                    if (diff > 0) {
+                      return (
+                        <span className="inline-flex items-center text-[10px] text-emerald-600 font-bold ml-1.5 bg-emerald-50 px-1 py-0.5 rounded">
+                          ↑+{diff}
+                        </span>
+                      );
+                    } else if (diff < 0) {
+                      return (
+                        <span className="inline-flex items-center text-[10px] text-rose-600 font-bold ml-1.5 bg-rose-50 px-1 py-0.5 rounded">
+                          ↓{diff}
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className="inline-flex items-center text-[10px] text-slate-400 font-medium ml-1.5 bg-slate-50 px-1 py-0.5 rounded">
+                        • 0
+                      </span>
+                    );
+                  };
+
+                  return (
+                    <tr key={index} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="whitespace-nowrap px-4 py-3.5 font-bold text-slate-800">
+                        📅 {log.activityDate}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-center">
+                        <span className="font-extrabold text-slate-900">{currReg}</span>
+                        {renderTrend(currReg, prevReg)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-center">
+                        <span className="font-extrabold text-slate-900">{currLogin}</span>
+                        {renderTrend(currLogin, prevLogin)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-center">
+                        <span className="font-extrabold text-slate-900">{currReq}</span>
+                        {renderTrend(currReq, prevReq)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-center">
+                        <span className="font-extrabold text-slate-900">{currApp}</span>
+                        {renderTrend(currApp, prevApp)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -980,6 +1068,10 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('pipeline');
 
+  const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
+  const [selectedJobIdForEdit, setSelectedJobIdForEdit] = useState<number | null>(null);
+  const [isPostingNewJob, setIsPostingNewJob] = useState<boolean>(false);
+
   const { data: locations = [] } = useGetLocationsQuery();
   const { data: jobCategories = [] } = useGetJobCategoriesQuery();
 
@@ -1240,101 +1332,24 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
 
         {/* 2. Job Listings tab */}
         {activeTab === 'listings' && (
-          <Card title="तुमच्या कंपनीने टाकलेल्या जाहिराती / Corporate Listed Vacancies">
-            {jobsList.length === 0 ? (
-              <EmptyState title="No Vacancies Posted" desc="Use 'Post Job' tab option to announce corporate roles." />
-            ) : (
-              <div className="space-y-4 animate-fade-in text-left">
-                {jobsList.map((job) => (
-                  <div key={job.id} className="p-4.5 bg-slate-50 border border-slate-100 rounded-2xl flex items-start justify-between gap-4">
-                    <div className="space-y-1.5 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-bold text-slate-800 leading-none">{job.title}</h4>
-                        {job.isApproved ? (
-                          <Badge type="success">✓ RUNNING</Badge>
-                        ) : (
-                          <Badge type="warning">⏳ PENDING APPROVAL</Badge>
-                        )}
-                      </div>
-                      <p className="text-xs font-semibold text-slate-600 block">{job.location} | {job.type} | {job.salary}</p>
-                      <p className="text-xs text-slate-500 leading-relaxed block">{job.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
+          selectedJobIdForDetail ? (
+            <JobDetailsView jobId={selectedJobIdForDetail} onBack={() => setSelectedJobIdForDetail(null)} />
+          ) : selectedJobIdForEdit ? (
+            <EditJobForm jobId={selectedJobIdForEdit} onCancel={() => setSelectedJobIdForEdit(null)} onSuccess={() => { setSelectedJobIdForEdit(null); refetchJobs(); }} />
+          ) : isPostingNewJob ? (
+            <AddJobForm onCancel={() => setIsPostingNewJob(false)} onSuccess={() => { setIsPostingNewJob(false); refetchJobs(); }} />
+          ) : (
+            <JobListingView
+              onViewDetails={(id) => setSelectedJobIdForDetail(id)}
+              onEditJob={(id) => setSelectedJobIdForEdit(id)}
+              onAddNewJob={() => setIsPostingNewJob(true)}
+            />
+          )
         )}
 
         {/* 3. Job creation Post vacancy Form tab */}
         {activeTab === 'post' && (
-          <Card title="नवीन जाहिरात जोडा / Invite Talented Candidates">
-            <form onSubmit={handlePostVacancy} className="space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <TextBox
-                  label="नोकरीचे नाव / Vacancy Title"
-                  placeholder="e.g. Sales Executive / Web Engineer"
-                  value={vacancyTitle}
-                  onChange={(e) => setVacancyTitle(e.target.value)}
-                  required
-                />
-                <TextBox
-                  label="वेतनश्रेणी / Salary Package range"
-                  placeholder="E.g. ₹१,६०,००० - ₹२,४०,००० सालाना"
-                  value={vacancySalary}
-                  onChange={(e) => setVacancySalary(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Dropdown
-                  label="नोकरीचे ठिकाण / Location"
-                  options={locations.map(l => ({ value: l.value, label: `${l.labelMr} / ${l.labelEn}` }))}
-                  value={vacancyLocation}
-                  onChange={(e) => setVacancyLocation(e.target.value)}
-                />
-                <Dropdown
-                  label="श्रेणी / Category"
-                  options={jobCategories.map(c => ({ value: c.value, label: `${c.labelMr} / ${c.labelEn}` }))}
-                  value={vacancyCategory}
-                  onChange={(e) => setVacancyCategory(e.target.value)}
-                />
-                <Dropdown
-                  label="प्रकार / Job Type"
-                  options={[
-                    { value: 'Full-time', label: 'Full-time' },
-                    { value: 'Part-time', label: 'Part-time' },
-                    { value: 'Contract', label: 'Contract' },
-                    { value: 'Remote', label: 'Remote' }
-                  ]}
-                  value={vacancyType}
-                  onChange={(e) => setVacancyType(e.target.value as any)}
-                />
-              </div>
-
-              <TextBox
-                label="आवश्यक कौशल्ये (स्वल्पविराम द्या) / Requirements (separated by, comma)"
-                placeholder="E.g. Sales, React coding, Driver License"
-                value={vacancyReqText}
-                onChange={(e) => setVacancyReqText(e.target.value)}
-              />
-
-              <TextArea
-                label="नोकरीचे सविस्तर वर्णन / Role Job Description (J.D)"
-                placeholder="Announce general duties, shifts, responsibilities..."
-                value={vacancyDesc}
-                onChange={(e) => setVacancyDesc(e.target.value)}
-                required
-              />
-
-              <div className="flex justify-end pt-3">
-                <PrimaryButton type="submit" loading={isPublishing}>
-                  प्रसिद्धीसाठी पाठवा / Save & Submit Vacancy
-                </PrimaryButton>
-              </div>
-            </form>
-          </Card>
+          <AddJobForm onSuccess={() => setActiveTab('listings')} />
         )}
 
         {/* 4. Recruiter Settings Profile card updater */}
@@ -1419,6 +1434,8 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
 function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: string; setToastMsg: (msg: string) => void }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('search');
+
+  const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
 
   // Load seeker profile
   const { data: profile, refetch: refetchProfile } = useGetCandidateByIdQuery(candidateId);
@@ -1603,63 +1620,26 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
 
         {/* 1. Job search list tab */}
         {activeTab === 'search' && (
-          <div className="space-y-4">
-            <div className="bg-white p-4.5 rounded-2xl border border-gray-150 shadow-xs flex items-center gap-3">
-              <TextBox
-                placeholder="जाहिरात, पात्रता, कंपनी, किंवा ठिकाण शोधा..."
-                value={searchPhrase}
-                onChange={(e) => setSearchPhrase(e.target.value)}
-              />
-            </div>
-
-            {filteredJobs.length === 0 ? (
-              <EmptyState title="No Jobs listed" desc="Try checking other keywords or categories" />
-            ) : (
-              <div className="space-y-4">
-                {filteredJobs.map((job) => {
-                  const alreadyApplied = myApps.some(a => a.jobId === job.id);
-                  return (
-                    <div key={job.id} className="p-5 bg-white border border-gray-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm hover:shadow-md/5 transition-all">
-                      <div className="space-y-1.5 text-left">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-extrabold text-slate-800">{job.title}</h4>
-                          <span className="px-2 py-0.5 bg-blue-50 text-blue-900 border border-blue-100 text-[10px] font-bold rounded-md leading-none">
-                            {job.type}
-                          </span>
-                        </div>
-                        <p className="text-xs font-bold text-slate-650 tracking-tight leading-none block">
-                          🏢 {job.companyName} | {job.location} | {job.salary}
-                        </p>
-                        <p className="text-xs text-slate-500 leading-normal block max-w-2xl">{job.description}</p>
-                        
-                        {job.requirements.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 pt-1">
-                            {job.requirements.map((req, i) => (
-                              <span key={i} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded-md">
-                                {req}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="shrink-0">
-                        {alreadyApplied ? (
-                          <span className="px-4 py-2 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-100">
-                            ✓ अर्ज सादर / Applied
-                          </span>
-                        ) : (
-                          <PrimaryButton onClick={() => handleApplyNow(job)} className="px-4 py-2 text-xs font-bold cursor-pointer">
-                            अर्ज करा / Apply Vacancy
-                          </PrimaryButton>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          selectedJobIdForDetail ? (
+            <JobDetailsView
+              jobId={selectedJobIdForDetail}
+              onBack={() => setSelectedJobIdForDetail(null)}
+              onApplySuccess={() => {
+                setSelectedJobIdForDetail(null);
+                refetchMyApps();
+              }}
+              alreadyApplied={myApps.some(
+                (app) =>
+                  Number(app.jobId) === selectedJobIdForDetail ||
+                  String(app.jobId) === String(selectedJobIdForDetail)
+              )}
+            />
+          ) : (
+            <JobListingView
+              onViewDetails={(id) => setSelectedJobIdForDetail(id)}
+              appliedJobIds={myApps.map((app) => Number(app.jobId)).filter(Boolean)}
+            />
+          )
         )}
 
         {/* 2. Job history tab */}
