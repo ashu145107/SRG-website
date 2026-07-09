@@ -837,9 +837,12 @@ function AdminUsersTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) 
 }
 
 // ==========================================
-// COMPONENT LIST: 3. JOBS APPROVAL GRID
+// COMPONENT LIST: 3. JOBS APPROVAL GRID WITH LIST AND EDIT
 // ==========================================
 function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) {
+  const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
+  const [selectedJobIdForEdit, setSelectedJobIdForEdit] = useState<number | null>(null);
+  const [isPostingNewJob, setIsPostingNewJob] = useState(false);
   const { data: jobs = [], refetch } = useGetJobsQuery();
   const [updateJob] = useUpdateJobMutation();
   const [deleteJob] = useDeleteJobMutation();
@@ -864,49 +867,105 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
     }
   };
 
+  if (selectedJobIdForDetail) {
+    return (
+      <JobDetailsView
+        jobId={selectedJobIdForDetail}
+        onBack={() => setSelectedJobIdForDetail(null)}
+      />
+    );
+  }
+
+  if (selectedJobIdForEdit) {
+    return (
+      <EditJobForm
+        jobId={selectedJobIdForEdit}
+        onCancel={() => setSelectedJobIdForEdit(null)}
+        onSuccess={() => {
+          setSelectedJobIdForEdit(null);
+          setToastMsg('नोकरी यशस्वीरित्या अद्ययावत केली! / Job updated successfully!');
+          refetch();
+        }}
+      />
+    );
+  }
+
+  if (isPostingNewJob) {
+    return (
+      <AddJobForm
+        onCancel={() => setIsPostingNewJob(false)}
+        onSuccess={() => {
+          setIsPostingNewJob(false);
+          setToastMsg('नोकरी यशस्वीरित्या जोडली! / Job added successfully!');
+          refetch();
+        }}
+      />
+    );
+  }
+
   return (
-    <Card title="नोकऱ्या मान्यता आणि तपासणी / Recruiter Vacancies Approval Desk">
-      <p className="text-xs text-slate-550 mb-6 font-semibold">
-        कंपन्यांनी / नियोक्त्यांनी टाकलेल्या जाहिरातींची पडताळणी करा आणि उमेदवारांना दिसण्यासाठी मंजूर करा.
-      </p>
+    <div className="space-y-6 text-left">
+      {/* 1. Recruiter Vacancies Approval Desk */}
+      <Card title="नोकऱ्या मान्यता आणि तपासणी / Recruiter Vacancies Approval Desk">
+        <p className="text-xs text-slate-500 mb-6 font-semibold">
+          कंपन्यांनी / नियोक्त्यांनी टाकलेल्या जाहिरातींची पडताळणी करा आणि उमेदवारांना दिसण्यासाठी मंजूर करा.
+        </p>
 
-      {jobs.length === 0 ? (
-        <EmptyState title="No vacancies listed" desc="Vacancies submitted by employers appear here." />
-      ) : (
-        <div className="space-y-4 text-left">
-          {jobs.map((job) => (
-            <div key={job.id} className="p-5 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="space-y-1.5 flex-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-bold text-blue-950">{job.title}</h4>
-                  {job.isApproved ? (
-                    <Badge type="success">PUBLISHED</Badge>
-                  ) : (
-                    <Badge type="warning">PENDING APPROVAL</Badge>
-                  )}
+        {jobs.length === 0 ? (
+          <EmptyState title="No vacancies listed" desc="Vacancies submitted by employers appear here." />
+        ) : (
+          <div className="space-y-4 text-left">
+            {jobs.map((job) => (
+              <div key={job.id} className="p-5 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1.5 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-blue-950">{job.title}</h4>
+                    {job.isApproved ? (
+                      <Badge type="success">PUBLISHED</Badge>
+                    ) : (
+                      <Badge type="warning">PENDING APPROVAL</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs font-bold text-slate-600 block">{job.companyName} | {job.location}</p>
+                  <p className="text-xs text-slate-500 font-semibold block leading-relaxed">{job.description}</p>
+                  <p className="text-[10px] text-orange-600 font-semibold block uppercase">वर्गवारी: {job.category} | वेतन: {job.salary}</p>
                 </div>
-                <p className="text-xs font-bold text-slate-600 block">{job.companyName} | {job.location}</p>
-                <p className="text-xs text-slate-500 font-semibold block leading-relaxed">{job.description}</p>
-                <p className="text-[10px] text-orange-600 font-semibold block uppercase">वर्गवारी: {job.category} | वेतन: {job.salary}</p>
-              </div>
 
-              <div className="flex items-center gap-2 mt-2 md:mt-0">
-                {!job.isApproved && (
-                  <PrimaryButton onClick={() => handleApprove(job.id)} className="px-3.5 py-1.5 text-xs font-bold">
-                    मंजूर करा / Approve
-                  </PrimaryButton>
-                )}
-                <DangerButton onClick={() => handleDelete(job.id)} className="px-3.5 py-1.5 text-xs font-bold bg-rose-50 border border-rose-100 hover:bg-rose-100 text-rose-700">
-                  काढून टाका / Delete
-                </DangerButton>
+                <div className="flex items-center gap-2 mt-2 md:mt-0">
+                  {!job.isApproved && (
+                    <PrimaryButton onClick={() => handleApprove(job.id)} className="px-3.5 py-1.5 text-xs font-bold">
+                      मंजूर करा / Approve
+                    </PrimaryButton>
+                  )}
+                  <DangerButton onClick={() => handleDelete(job.id)} className="px-3.5 py-1.5 text-xs font-bold bg-rose-50 border border-rose-100 hover:bg-rose-100 text-rose-700">
+                    काढून टाका / Delete
+                  </DangerButton>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* 2. Unified Job Listings view with Edit option */}
+      <Card title="सर्व सक्रिय नोकऱ्यांची यादी / List of All Jobs">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <p className="text-xs text-slate-500 font-medium">
+            प्रणालीतील सर्व नोकऱ्या शोधा, पहा आणि संपादित करा.
+          </p>
+          <PrimaryButton onClick={() => setIsPostingNewJob(true)} className="py-2 px-4 text-xs font-bold">
+            नवीन नोकरी जोडा / Add New Job
+          </PrimaryButton>
         </div>
-      )}
-    </Card>
+        <JobListingView
+          onViewDetails={(id) => setSelectedJobIdForDetail(id)}
+          onEditJob={(id) => setSelectedJobIdForEdit(id)}
+        />
+      </Card>
+    </div>
   );
 }
+
 
 // ==========================================
 // COMPONENT LIST: 4. COMPANIES APPROVAL GRID

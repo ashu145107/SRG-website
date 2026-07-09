@@ -23,9 +23,13 @@ export default function Login() {
 
   // Extract initial role selection from URL
   const initialRole = searchParams.get('role');
-  const [activeTab, setActiveTab] = useState<'candidate' | 'employer'>(
-    initialRole === 'employer' ? 'employer' : 'candidate'
-  );
+  const [activeTab, setActiveTab] = useState<'candidate' | 'employer' | 'admin' | 'handler' | 'shg'>(() => {
+    if (initialRole === 'employer') return 'employer';
+    if (initialRole === 'admin' || initialRole === 'super_admin') return 'admin';
+    if (initialRole === 'handler') return 'handler';
+    if (initialRole === 'shg') return 'shg';
+    return 'candidate';
+  });
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,8 +48,14 @@ export default function Login() {
     if (!email.trim()) {
       if (activeTab === 'candidate') {
         setFormError('कृपया मोबाईल नंबर किंवा युझरनेम प्रविष्ट करा / Please enter your mobile number, email or username.');
-      } else {
+      } else if (activeTab === 'employer') {
         setFormError('कृपया कंपनी ईमेल किंवा युझरनेम प्रविष्ट करा / Please enter your company email, username or mobile.');
+      } else if (activeTab === 'shg') {
+        setFormError('कृपया बचत गट ईमेल किंवा युझरनेम प्रविष्ट करा / Please enter your SHG email or username.');
+      } else if (activeTab === 'admin') {
+        setFormError('कृपया प्रशासक युझरनेम किंवा ईमेल प्रविष्ट करा / Please enter your admin username or email.');
+      } else {
+        setFormError('कृपया युझरनेम किंवा ईमेल प्रविष्ट करा / Please enter your username or email.');
       }
       return;
     }
@@ -69,6 +79,17 @@ export default function Login() {
     setEmail(presetEmail);
     setPassword('password123');
     setFormError('');
+    if (presetEmail === 'candidate@gmail.com') {
+      setActiveTab('candidate');
+    } else if (presetEmail === 'shg@shg.org') {
+      setActiveTab('shg');
+    } else if (presetEmail === 'employer@tata.com') {
+      setActiveTab('employer');
+    } else if (presetEmail === 'admin@dindori.org') {
+      setActiveTab('admin');
+    } else if (presetEmail === 'handler@dindori.org') {
+      setActiveTab('handler');
+    }
   };
 
   return (
@@ -85,10 +106,11 @@ export default function Login() {
           श्री
         </div>
         <h2 className="mt-4 text-2xl font-extrabold text-blue-950 tracking-tight">
-          {activeTab === 'candidate' 
-            ? 'नोकरी शोधक लॉगिन / Job Seeker Login' 
-            : 'उद्योजक लॉगिन / Employer Login'
-          }
+          {activeTab === 'candidate' && 'नोकरी शोधक लॉगिन / Job Seeker Login'}
+          {activeTab === 'employer' && 'उद्योजक लॉगिन / Employer Login'}
+          {activeTab === 'shg' && 'बचत गट लॉगिन / SHG Login'}
+          {activeTab === 'admin' && 'मुख्य प्रशासक लॉगिन / Super Admin Login'}
+          {activeTab === 'handler' && 'मदतनीस लॉगिन / Handler Login'}
         </h2>
         <p className="text-xs text-slate-500 font-bold uppercase mt-1 tracking-widest text-orange-600">
           श्री स्वामी समर्थ स्वयंरोजगार
@@ -99,7 +121,7 @@ export default function Login() {
         <div className="bg-white py-8 px-6 sm:px-10 rounded-2xl border border-gray-100 shadow-sm space-y-6">
           
           {/* Separate Form Tab Switcher */}
-          <div className="flex border border-slate-100 p-1 bg-slate-50 rounded-xl">
+          <div className="flex border border-slate-100 p-1 bg-slate-50 rounded-xl gap-1">
             <button
               onClick={() => {
                 setActiveTab('candidate');
@@ -138,6 +160,45 @@ export default function Login() {
                 <span className="text-[9px] opacity-75 font-medium block">Employer</span>
               </div>
             </button>
+
+            {activeTab === 'shg' && (
+              <button
+                type="button"
+                className="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1.5 cursor-default bg-white text-orange-600 shadow-sm border border-slate-100"
+              >
+                <Users className="w-4 h-4 text-orange-600" />
+                <div className="flex flex-col text-left">
+                  <span className="leading-tight text-[11px] block">बचत गट</span>
+                  <span className="text-[9px] opacity-75 font-medium block">SHG Cell</span>
+                </div>
+              </button>
+            )}
+
+            {activeTab === 'admin' && (
+              <button
+                type="button"
+                className="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1.5 cursor-default bg-white text-orange-600 shadow-sm border border-slate-100"
+              >
+                <ShieldCheck className="w-4 h-4 text-orange-600" />
+                <div className="flex flex-col text-left">
+                  <span className="leading-tight text-[11px] block">मुख्य प्रशासक</span>
+                  <span className="text-[9px] opacity-75 font-medium block">Super Admin</span>
+                </div>
+              </button>
+            )}
+
+            {activeTab === 'handler' && (
+              <button
+                type="button"
+                className="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1.5 cursor-default bg-white text-orange-600 shadow-sm border border-slate-100"
+              >
+                <ShieldCheck className="w-4 h-4 text-orange-600" />
+                <div className="flex flex-col text-left">
+                  <span className="leading-tight text-[11px] block">मदतनीस</span>
+                  <span className="text-[9px] opacity-75 font-medium block">Handler</span>
+                </div>
+              </button>
+            )}
           </div>
 
           <form className="space-y-5" onSubmit={handleLoginSubmit}>
@@ -151,11 +212,35 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
-            ) : (
+            ) : activeTab === 'employer' ? (
               <TextBox
                 label="कंपनी ईमेल आयडी / युझरनेम (Company Email ID / Username)"
                 type="text"
                 placeholder="Enter Company Email or Username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            ) : activeTab === 'shg' ? (
+              <TextBox
+                label="बचत गट ईमेल / युझरनेम (SHG Email / Username)"
+                type="text"
+                placeholder="Enter SHG Email or Username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            ) : activeTab === 'admin' ? (
+              <TextBox
+                label="प्रशासक युझरनेम / ईमेल (Admin Username / Email)"
+                type="text"
+                placeholder="Enter Admin Username or Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            ) : (
+              <TextBox
+                label="मदतनीस युझरनेम / ईमेल (Handler Username / Email)"
+                type="text"
+                placeholder="Enter Handler Username or Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -175,10 +260,7 @@ export default function Login() {
             </div>
 
             <PrimaryButton type="submit" loading={isLoginLoading} className="w-full py-3">
-              {activeTab === 'candidate' 
-                ? 'नोकरी शोधक म्हणून प्रवेश करा / Login as Job Seeker' 
-                : 'नियोक्ता म्हणून प्रवेश करा / Login as Employer'
-              }
+              लॉगिन / Login
             </PrimaryButton>
           </form>
 
