@@ -4,6 +4,7 @@
  */
 
 import axiosInstance from './axiosInstance';
+import { store } from '../store';
 import { MockDb } from './mockDb';
 import { Job } from '../types';
 import {
@@ -120,17 +121,34 @@ export const jobService = {
   },
 
   /**
-   * API 3: Paginated Job Requirements List
-   * GET /api/v1/jobrequirements/{pageSize}/{pageNumber}
+   * API 3: Paginated Job Requirements List or Search Jobs
+   * Admin roles: GET /api/v1/jobrequirements/{pageSize}/{pageNumber}
+   * Non-admin roles: GET /api/v1/jobsearch
    */
   searchJobs: async (params?: JobSearchParams): Promise<JobRequirement[]> => {
     const pageNumber = params?.page || 1;
     const pageSize = params?.limit || 100; // Use a reasonable default of 100 to load a good set of listings if not specified
     
+    // Check if the current user has an Admin role (SUPER_ADMIN, ADMIN, HANDLER)
+    let isAdmin = false;
     try {
-      const response = await axiosInstance.get<any>(`/api/v1/jobrequirements/${pageSize}/${pageNumber}`);
+      const state = store.getState();
+      const role = state.auth?.user?.role;
+      isAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'HANDLER';
+    } catch (e) {
+      console.warn('Could not read auth state from store', e);
+    }
+    
+    try {
+      let response;
+      if (isAdmin) {
+        response = await axiosInstance.get<any>(`/api/v1/jobrequirements/${pageSize}/${pageNumber}`);
+      } else {
+        response = await axiosInstance.get<any>('/api/v1/jobsearch', { params });
+      }
+      
       let list: JobRequirement[] = [];
-      const responseData = response.data;
+      const responseData = response?.data;
       
       if (responseData) {
         if (responseData.value !== undefined && responseData.value !== null) {
@@ -172,7 +190,7 @@ export const jobService = {
         return list;
       }
     } catch (err) {
-      console.warn(`searchJobs (via /api/v1/jobrequirements/${pageSize}/${pageNumber}) failed, falling back to MockDb:`, err);
+      console.warn(`searchJobs (isAdmin: ${isAdmin}) failed, falling back to MockDb:`, err);
     }
     
     // Fallback: Query MockDb and map results cleanly

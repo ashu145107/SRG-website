@@ -95,9 +95,21 @@ import {
   ShoppingBag,
   Award,
   Download,
-  Eye
+  Eye,
+  Tag,
+  Building2,
+  Users,
+  Send,
+  Power,
+  Mail
 } from 'lucide-react';
 import { MockDb } from '../services/mockDb';
+
+// Import newly created paginated lists for admin role
+import { AdminRegisteredCompanies } from '../components/AdminRegisteredCompanies';
+import { AdminRegisteredUsers } from '../components/AdminRegisteredUsers';
+import { AdminJobRequirements } from '../components/AdminJobRequirements';
+import { AdminJobApplications } from '../components/AdminJobApplications';
 
 export default function DashboardHub() {
   const { t, i18n } = useTranslation();
@@ -196,8 +208,47 @@ export default function DashboardHub() {
                   activeTab === 'overview' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
                 }`}
               >
-                <Layers className="w-4 h-4" /> {t('dashboard.overview')}
+                <Tag className="w-4 h-4" /> Seva / सेवा (Overview)
               </button>
+
+              <button
+                onClick={() => setActiveTab('registered_companies')}
+                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
+                  activeTab === 'registered_companies' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                }`}
+              >
+                <Building2 className="w-4 h-4" /> Registered Company / नोंदणीकृत कंपनी
+              </button>
+
+              <button
+                onClick={() => setActiveTab('registered_users')}
+                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
+                  activeTab === 'registered_users' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                }`}
+              >
+                <Users className="w-4 h-4" /> Registered User / नोंदणीकृत वापरकर्ते
+              </button>
+
+              <button
+                onClick={() => setActiveTab('job_requirements')}
+                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
+                  activeTab === 'job_requirements' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                }`}
+              >
+                <Send className="w-4 h-4" /> Job Requirement / नोकरी आवश्यकता
+              </button>
+
+              <button
+                onClick={() => setActiveTab('job_applications')}
+                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
+                  activeTab === 'job_applications' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                }`}
+              >
+                <Mail className="w-4 h-4" /> Job Application / नोकरी अर्ज
+              </button>
+
+              <hr className="my-1 border-gray-200 hidden lg:block" />
+
               <button
                 onClick={() => setActiveTab('users')}
                 className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
@@ -230,12 +281,44 @@ export default function DashboardHub() {
               >
                 <FileText className="w-4 h-4" /> अहवाल आणि विदा (Reports)
               </button>
+
+              <button
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to log off?')) {
+                    dispatch(logout());
+                    navigate('/login');
+                  }
+                }}
+                className="px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-100 mt-2"
+              >
+                <Power className="w-4 h-4" /> Log Off / लॉग ऑफ
+              </button>
             </div>
 
             <div className="lg:col-span-9 space-y-6">
               {/* Overview Tab */}
               {activeTab === 'overview' && (
                 <AdminOverviewTab />
+              )}
+
+              {/* Registered Companies Paginated List */}
+              {activeTab === 'registered_companies' && (
+                <AdminRegisteredCompanies />
+              )}
+
+              {/* Registered Users Paginated List */}
+              {activeTab === 'registered_users' && (
+                <AdminRegisteredUsers />
+              )}
+
+              {/* Job Requirements Paginated List */}
+              {activeTab === 'job_requirements' && (
+                <AdminJobRequirements />
+              )}
+
+              {/* Job Applications Paginated List */}
+              {activeTab === 'job_applications' && (
+                <AdminJobApplications />
               )}
 
               {/* Users & RBAC Tab */}
