@@ -3,10 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { useTranslation } from 'react-i18next';
-import { useJobDetailsQuery, useEditJobRequirementMutation } from '../../hooks/useJobQueries';
+import React, { useEffect, useState } from 'react';
+import { useEditJobRequirementMutation, useJobDetailsQuery } from '../../hooks/useJobQueries';
 import { JobRequirement } from '../../services/jobTypes';
 import {
   educations,
@@ -26,102 +24,152 @@ interface EditJobFormProps {
   onCancel?: () => void;
 }
 
-export const EditJobForm: React.FC<EditJobFormProps> = ({ jobId, onSuccess, onCancel }) => {
-  const { t } = useTranslation();
-  const user = useSelector((state: any) => state.auth?.user);
+type EditJobFormData = Omit<JobRequirement, 'id'>;
 
-  // 1. Fetch Existing Data
-  const { data: jobData, isLoading: isLoadingDetails, error: loadError, refetch } = useJobDetailsQuery(jobId);
+const getNumber = (value: unknown, fallback = 0): number => {
+  if (value === null || value === undefined || value === '') {
+    return fallback;
+  }
 
-  // 2. Edit Mutation
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const formatDateForInput = (dateValue: unknown): string => {
+  if (!dateValue) {
+    return '';
+  }
+
+  const date = new Date(String(dateValue));
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toISOString().split('T')[0];
+};
+
+const getErrorMessage = (error: any): string => {
+  const message =
+    error?.response?.data?.error?.message ||
+    error?.response?.data?.message ||
+    error?.data?.error?.message ||
+    error?.data?.message ||
+    error?.error?.message ||
+    error?.message ||
+    error?.data;
+
+  if (typeof message === 'string') {
+    return message;
+  }
+
+  return 'Failed to update Job Requirement. Please check the entered values.';
+};
+
+const initialForm: EditJobFormData = {
+  userId: 0,
+  profileHeader: '',
+  skill: '',
+  specialization: 1,
+  experiance: 0,
+  experianceTo: 1,
+  noOfVacancy: 1,
+  workPlace: '',
+  salary: 1,
+  salaryTo: 1,
+  expiryDate: '',
+  educationId: 3,
+  createdBy: 0,
+  roleTypeId: 1,
+  interviewModeId: 1,
+  interviewLocation: '',
+  postingNotes: '',
+  jobDiscription: '',
+  jobDesignation: '',
+  certificationsRequired: '',
+  genderPreference: 'Any',
+  ageRange: '18-45',
+  shiftTypeId: 1,
+  workModeId: 1,
+  jobLocation: '',
+  salaryPeriodId: 1,
+  benefits: '',
+  weeklyOffId: 1,
+  jobCode: '',
+};
+
+export const EditJobForm: React.FC<EditJobFormProps> = ({
+  jobId,
+  onSuccess,
+  onCancel,
+}) => {
+  const {
+    data: jobData,
+    isLoading: isLoadingDetails,
+    error: loadError,
+    refetch,
+  } = useJobDetailsQuery(jobId);
+
   const editJobMutation = useEditJobRequirementMutation();
-  const editJob = editJobMutation.mutateAsync;
-  const isSaving = editJobMutation.isPending;
-  const apiError = editJobMutation.error;
 
-  // Toast and Error states
+  const [form, setForm] = useState<EditJobFormData>(initialForm);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
-  const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Form State
-  const [form, setForm] = useState<Omit<JobRequirement, 'id'>>({
-    userId: 0,
-    profileHeader: '',
-    skill: '',
-    specialization: 1,
-    experiance: 0,
-    experianceTo: 1,
-    noOfVacancy: 1,
-    workPlace: '',
-    salary: 0,
-    salaryTo: 0,
-    expiryDate: '',
-    educationId: 1,
-    createdBy: 0,
-    roleTypeId: 1,
-    interviewModeId: 1,
-    interviewLocation: '',
-    postingNotes: '',
-    jobDiscription: '',
-    jobDesignation: '',
-    certificationsRequired: '',
-    genderPreference: 'Any',
-    ageRange: '18-45',
-    shiftTypeId: 1,
-    workModeId: 1,
-    jobLocation: '',
-    salaryPeriodId: 1,
-    benefits: '',
-    weeklyOffId: 1,
-    jobCode: '',
-  });
-
-  // Populate state once data is loaded
   useEffect(() => {
-    if (jobData) {
-      // Format expiryDate cleanly for input[type="date"] (YYYY-MM-DD)
-      const cleanDate = jobData.expiryDate
-        ? new Date(jobData.expiryDate).toISOString().split('T')[0]
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-      setForm({
-        userId: jobData.userId || 0,
-        profileHeader: jobData.profileHeader || '',
-        skill: jobData.skill || '',
-        specialization: Number(jobData.specialization) || 1,
-        experiance: Number(jobData.experiance) || 0,
-        experianceTo: Number(jobData.experianceTo) || 1,
-        noOfVacancy: Number(jobData.noOfVacancy) || 1,
-        workPlace: jobData.workPlace || '',
-        salary: Number(jobData.salary) || 0,
-        salaryTo: Number(jobData.salaryTo) || 0,
-        expiryDate: cleanDate,
-        educationId: Number(jobData.educationId) || 3,
-        createdBy: jobData.createdBy || 0,
-        roleTypeId: Number(jobData.roleTypeId) || 1,
-        interviewModeId: Number(jobData.interviewModeId) || 1,
-        interviewLocation: jobData.interviewLocation || '',
-        postingNotes: jobData.postingNotes || '',
-        jobDiscription: jobData.jobDiscription || '',
-        jobDesignation: jobData.jobDesignation || '',
-        certificationsRequired: jobData.certificationsRequired || '',
-        genderPreference: jobData.genderPreference || 'Any',
-        ageRange: jobData.ageRange || '18-45',
-        shiftTypeId: Number(jobData.shiftTypeId) || 1,
-        workModeId: Number(jobData.workModeId) || 1,
-        jobLocation: jobData.jobLocation || '',
-        salaryPeriodId: Number(jobData.salaryPeriodId) || 1,
-        benefits: jobData.benefits || '',
-        weeklyOffId: Number(jobData.weeklyOffId) || 1,
-        jobCode: jobData.jobCode || `JOB-${Math.floor(1000 + Math.random() * 9000)}`,
-      });
+    if (!jobData) {
+      return;
     }
+
+    const loadedForm: EditJobFormData = {
+      userId: getNumber(jobData.userId),
+      profileHeader: jobData.profileHeader ?? '',
+      skill: jobData.skill ?? '',
+      specialization: getNumber(jobData.specialization, 1),
+      experiance: getNumber(jobData.experiance, 0),
+      experianceTo: getNumber(jobData.experianceTo, 1),
+      noOfVacancy: getNumber(jobData.noOfVacancy, 1),
+      workPlace: jobData.workPlace ?? '',
+
+      // Do not use `|| 0` here because it silently changes values.
+      // Salary is initialized to 1 if the API has no value because the
+      // backend rejects zero salary values.
+      salary: getNumber(jobData.salary, 1),
+      salaryTo: getNumber(jobData.salaryTo, 1),
+
+      expiryDate: formatDateForInput(jobData.expiryDate),
+      educationId: getNumber(jobData.educationId, 3),
+      createdBy: getNumber(jobData.createdBy),
+      roleTypeId: getNumber(jobData.roleTypeId, 1),
+      interviewModeId: getNumber(jobData.interviewModeId, 1),
+      interviewLocation: jobData.interviewLocation ?? '',
+      postingNotes: jobData.postingNotes ?? '',
+      jobDiscription: jobData.jobDiscription ?? '',
+      jobDesignation: jobData.jobDesignation ?? '',
+      certificationsRequired: jobData.certificationsRequired ?? '',
+      genderPreference: jobData.genderPreference ?? 'Any',
+      ageRange: jobData.ageRange ?? '18-45',
+      shiftTypeId: getNumber(jobData.shiftTypeId, 1),
+      workModeId: getNumber(jobData.workModeId, 1),
+      jobLocation: jobData.jobLocation ?? '',
+      salaryPeriodId: getNumber(jobData.salaryPeriodId, 1),
+      benefits: jobData.benefits ?? '',
+      weeklyOffId: getNumber(jobData.weeklyOffId, 1),
+      jobCode: jobData.jobCode ?? '',
+    };
+
+    setForm(loadedForm);
   }, [jobData]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+  const handleChange = (
+    event: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = event.target;
+
     const numericFields = [
       'specialization',
       'experiance',
@@ -138,107 +186,184 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({ jobId, onSuccess, onCa
       'weeklyOffId',
     ];
 
-    setForm((prev) => ({
-      ...prev,
+    setForm((previous) => ({
+      ...previous,
       [name]: numericFields.includes(name) ? Number(value) : value,
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateForm = (): string | null => {
+    if (!form.profileHeader.trim()) {
+      return 'Please enter the profile header.';
+    }
+
+    if (!form.jobDesignation.trim()) {
+      return 'Please enter the job designation.';
+    }
+
+    if (!form.skill.trim()) {
+      return 'Please enter the required skills.';
+    }
+
+    if (!form.jobDiscription.trim()) {
+      return 'Please enter the job description.';
+    }
+
+    if (form.jobDiscription.trim().length < 10) {
+      return 'Job description must contain at least 10 characters.';
+    }
+
+    if (!form.noOfVacancy || form.noOfVacancy < 1) {
+      return 'Number of vacancies must be at least 1.';
+    }
+
+    if (form.experiance < 0 || form.experianceTo < 0) {
+      return 'Experience cannot be negative.';
+    }
+
+    if (form.experianceTo < form.experiance) {
+      return 'Maximum experience must be greater than or equal to minimum experience.';
+    }
+
+    // Important backend validation
+    if (!Number.isFinite(form.salary) || form.salary <= 0) {
+      return 'Minimum salary must be greater than 0.';
+    }
+
+    if (!Number.isFinite(form.salaryTo) || form.salaryTo <= 0) {
+      return 'Maximum salary must be greater than 0.';
+    }
+
+    if (form.salaryTo < form.salary) {
+      return 'Maximum salary must be greater than or equal to minimum salary.';
+    }
+
+    if (!form.jobLocation.trim()) {
+      return 'Please enter the job location.';
+    }
+
+    if (!form.expiryDate) {
+      return 'Please select an expiry date.';
+    }
+
+    const expiryDate = new Date(form.expiryDate);
+
+    if (Number.isNaN(expiryDate.getTime())) {
+      return 'Please enter a valid expiry date.';
+    }
+
+    return null;
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setValidationError(null);
 
-    // Form Validation
-    if (!form.jobDesignation.trim()) {
-      setValidationError('कृपया नोकरीचे पद / Designation प्रविष्ट करा.');
-      return;
-    }
-    if (!form.jobDiscription.trim() || form.jobDiscription.length < 10) {
-      setValidationError('कृपया कमीत कमी १० अक्षरांचे नोकरीचे वर्णन / Description प्रविष्ट करा.');
-      return;
-    }
-    if (!form.skill.trim()) {
-      setValidationError('कृपया आवश्यक कौशल्ये / Skills प्रविष्ट करा.');
-      return;
-    }
-    if (form.salaryTo < form.salary) {
-      setValidationError('कमाल वेतन हे किमान वेतनापेक्षा जास्त किंवा समान असावे.');
-      return;
-    }
-    if (form.experianceTo < form.experiance) {
-      setValidationError('कमाल अनुभव हा किमान अनुभवापेक्षा जास्त असावा.');
-      return;
-    }
-    if (!form.jobLocation.trim()) {
-      setValidationError('कृपया नोकरीचे ठिकाण / Location प्रविष्ट करा.');
+    const validationMessage = validateForm();
+
+    if (validationMessage) {
+      setValidationError(validationMessage);
       return;
     }
 
     try {
       const payload: JobRequirement = {
         ...form,
-        id: jobId, // Attach primary key for PUT/POST update identification
+
+        // Keep the existing backend property names.
+        // Do not rename these unless your API contract specifically requires it.
+        id: jobId,
+
+        userId: Number(form.userId),
+        createdBy: Number(form.createdBy),
+        specialization: Number(form.specialization),
+        experiance: Number(form.experiance),
+        experianceTo: Number(form.experianceTo),
+        noOfVacancy: Number(form.noOfVacancy),
+        salary: Number(form.salary),
+        salaryTo: Number(form.salaryTo),
+        educationId: Number(form.educationId),
+        roleTypeId: Number(form.roleTypeId),
+        interviewModeId: Number(form.interviewModeId),
+        shiftTypeId: Number(form.shiftTypeId),
+        workModeId: Number(form.workModeId),
+        salaryPeriodId: Number(form.salaryPeriodId),
+        weeklyOffId: Number(form.weeklyOffId),
+
         expiryDate: new Date(form.expiryDate).toISOString(),
       };
 
-      const result = await editJob(payload);
-      
+      const result: any = await editJobMutation.mutateAsync(payload);
+
+      // Handle APIs that return HTTP 200 but isSuccess=false
+      if (result?.isSuccess === false) {
+        throw new Error(
+          result?.error?.message || 'Job update failed on the server.'
+        );
+      }
+
       setToastType('success');
-      setToastMsg('नोकरी रिक्त जागा अद्ययावत केली! / Job Requirement Updated Successfully!');
+      setToastMsg('Job Requirement updated successfully.');
       setShowToast(true);
 
       if (onSuccess) {
-        setTimeout(() => onSuccess(result), 1500);
+        setTimeout(() => {
+          onSuccess(result?.value ?? result);
+        }, 800);
       }
-    } catch (err: any) {
-      console.error('Edit job API error:', err);
+    } catch (error: any) {
+      console.error('Edit job API error:', error);
+
+      const message = getErrorMessage(error);
+
       setToastType('error');
-      const errorMsg = err?.response?.data?.message || err?.data?.message || err?.data || 'Failed to update Job Requirement. Please try again.';
-      setToastMsg(typeof errorMsg === 'string' ? errorMsg : 'API Validation Error');
+      setToastMsg(message);
       setShowToast(true);
     }
   };
 
-  // Skeleton Loader State for details fetching
   if (isLoadingDetails) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-150 shadow-xs p-6 max-w-4xl mx-auto text-left animate-pulse">
-        <div className="h-6 bg-slate-200 w-1/3 rounded-md mb-2"></div>
-        <div className="h-4 bg-slate-200 w-1/4 rounded-md mb-8"></div>
+      <div className="bg-white rounded-2xl border border-slate-150 p-6 max-w-4xl mx-auto animate-pulse">
+        <div className="h-6 bg-slate-200 rounded w-1/3 mb-6" />
         <div className="space-y-4">
-          <div className="h-10 bg-slate-100 rounded-lg"></div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="h-10 bg-slate-100 rounded-lg"></div>
-            <div className="h-10 bg-slate-100 rounded-lg"></div>
-          </div>
-          <div className="h-32 bg-slate-100 rounded-lg"></div>
+          <div className="h-10 bg-slate-100 rounded" />
+          <div className="h-10 bg-slate-100 rounded" />
+          <div className="h-32 bg-slate-100 rounded" />
         </div>
       </div>
     );
   }
 
-  // Load failure states
   if (loadError || !jobData) {
     return (
       <div className="bg-white rounded-2xl border border-slate-150 p-8 max-w-xl mx-auto text-center">
         <div className="text-red-500 text-3xl mb-3">⚠️</div>
-        <h3 className="text-base font-bold text-slate-800">माहिती लोड करण्यात अयशस्वी / Failed to Load Job details</h3>
-        <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-          The requested Job Requirement ID #{jobId} could not be retrieved from the server.
+
+        <h3 className="text-base font-bold text-slate-800">
+          Failed to load job details
+        </h3>
+
+        <p className="text-xs text-slate-500 mt-2">
+          Job Requirement ID #{jobId} could not be loaded.
         </p>
-        <div className="flex gap-2 justify-center mt-5">
+
+        <div className="flex justify-center gap-2 mt-5">
           <button
+            type="button"
             onClick={() => refetch()}
             className="py-2 px-4 text-xs font-bold bg-slate-800 text-white rounded-xl"
           >
-            पुन्हा प्रयत्न करा / Retry
+            Retry
           </button>
+
           {onCancel && (
             <button
+              type="button"
               onClick={onCancel}
               className="py-2 px-4 text-xs font-bold border border-slate-200 text-slate-600 rounded-xl"
             >
-              मागे जा / Cancel
+              Cancel
             </button>
           )}
         </div>
@@ -247,347 +372,362 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({ jobId, onSuccess, onCa
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-150 shadow-xs p-6 max-w-4xl mx-auto text-left animate-fade-in">
+    <div className="bg-white rounded-2xl border border-slate-150 shadow-xs p-6 max-w-4xl mx-auto text-left">
       <div className="flex justify-between items-center pb-4 mb-6 border-b border-slate-100">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">नोकरी जाहिरात संपादित करा / Edit Job Requirement</h2>
-          <p className="text-xs text-slate-500 mt-0.5">जॉब कोड: {form.jobCode} (ID: #{jobId}) दुरुस्त करा</p>
+          <h2 className="text-xl font-bold text-slate-800">
+            Edit Job Requirement
+          </h2>
+
+          <p className="text-xs text-slate-500 mt-1">
+            Job Code: {form.jobCode || `JOB-${jobId}`} | ID: #{jobId}
+          </p>
         </div>
+
         {onCancel && (
           <button
-            onClick={onCancel}
             type="button"
-            className="text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors py-1.5 px-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer"
+            onClick={onCancel}
+            className="text-xs font-bold text-slate-500 py-2 px-3 rounded-lg border border-slate-200 hover:bg-slate-50"
           >
-            मागे जा / Cancel
+            Cancel
           </button>
         )}
       </div>
 
       {validationError && (
         <div className="mb-5">
-          <Alert type="error" title="Validation Error" message={validationError} />
+          <Alert
+            type="error"
+            title="Validation Error"
+            message={validationError}
+          />
         </div>
       )}
 
-      {apiError && (
+      {editJobMutation.error && (
         <div className="mb-5">
           <Alert
             type="error"
             title="Backend Error"
-            message={
-              (apiError as any)?.data?.message ||
-              (apiError as any)?.data ||
-              'A network error occurred while updating. Please check details.'
-            }
+            message={getErrorMessage(editJobMutation.error)}
           />
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Core Info Row */}
-        <div className="bg-slate-50/55 p-4 rounded-xl border border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे कोड / Job Code</label>
-            <input
-              type="text"
-              name="jobCode"
-              value={form.jobCode}
-              className="w-full text-xs font-mono font-bold bg-slate-100 p-2.5 rounded-lg border border-slate-200 text-slate-600 focus:outline-none"
-              readOnly
-            />
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे शीर्षक (हेडर) / Profile Header *</label>
+            <label className="form-label">Profile Header *</label>
             <input
-              type="text"
               name="profileHeader"
               value={form.profileHeader}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              className="form-input"
               required
+            />
+          </div>
+
+          <div>
+            <label className="form-label">Job Code</label>
+            <input
+              name="jobCode"
+              value={form.jobCode}
+              className="form-input bg-slate-100"
+              readOnly
             />
           </div>
         </div>
 
-        {/* Designation, Vacancies & Role Type */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे पद / Designation *</label>
+            <label className="form-label">Job Designation *</label>
             <input
-              type="text"
               name="jobDesignation"
               value={form.jobDesignation}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              className="form-input"
               required
             />
           </div>
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">एकूण जागा / No. of Vacancies *</label>
+            <label className="form-label">Number of Vacancies *</label>
             <input
               type="number"
               name="noOfVacancy"
               min="1"
               value={form.noOfVacancy}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              className="form-input"
               required
             />
           </div>
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचा प्रकार / Role Type *</label>
+            <label className="form-label">Role Type</label>
             <select
               name="roleTypeId"
               value={form.roleTypeId}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+              className="form-input"
             >
-              {roleTypes.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.labelMr} / {t.labelEn}
+              {roleTypes.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.labelEn}
                 </option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Experience & Salary Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-orange-50/20 rounded-xl border border-orange-100/30">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-orange-50/30 rounded-xl border border-orange-100">
           <div>
-            <span className="block text-xs font-extrabold text-orange-950 mb-2">अनुभव आवश्यकता / Experience Range (Years)</span>
+            <h3 className="text-xs font-bold text-orange-950 mb-3">
+              Experience Range
+            </h3>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] text-slate-500 mb-1">किमान अनुभव / Min Experience</label>
+                <label className="form-label">Minimum Experience</label>
                 <input
                   type="number"
                   name="experiance"
                   min="0"
                   value={form.experiance}
                   onChange={handleChange}
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-orange-500"
+                  className="form-input"
                 />
               </div>
+
               <div>
-                <label className="block text-[10px] text-slate-500 mb-1">कमाल अनुभव / Max Experience</label>
+                <label className="form-label">Maximum Experience</label>
                 <input
                   type="number"
                   name="experianceTo"
                   min="0"
                   value={form.experianceTo}
                   onChange={handleChange}
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-orange-500"
+                  className="form-input"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <span className="block text-xs font-extrabold text-orange-950 mb-2">मासिक वेतनश्रेणी / Monthly Salary Range (INR)</span>
+            <h3 className="text-xs font-bold text-orange-950 mb-3">
+              Salary Range
+            </h3>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] text-slate-500 mb-1">किमान वेतन / Min Salary</label>
+                <label className="form-label">Minimum Salary *</label>
                 <input
                   type="number"
                   name="salary"
-                  min="0"
+                  min="1"
+                  step="1"
                   value={form.salary}
                   onChange={handleChange}
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-orange-500"
+                  className="form-input"
+                  required
                 />
               </div>
+
               <div>
-                <label className="block text-[10px] text-slate-500 mb-1">कमाल वेतन / Max Salary</label>
+                <label className="form-label">Maximum Salary *</label>
                 <input
                   type="number"
                   name="salaryTo"
-                  min="0"
+                  min="1"
+                  step="1"
                   value={form.salaryTo}
                   onChange={handleChange}
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-orange-500"
+                  className="form-input"
+                  required
                 />
               </div>
             </div>
+
+            <p className="text-[10px] text-slate-500 mt-2">
+              Salary must be greater than 0 because the API does not accept
+              zero salary values.
+            </p>
           </div>
         </div>
 
-        {/* Specialized Fields: Work Mode, Workplace type, location */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">कामाची पद्धत / Work Mode *</label>
+            <label className="form-label">Work Mode</label>
             <select
               name="workModeId"
               value={form.workModeId}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+              className="form-input"
             >
-              {workModes.map((w) => (
-                <option key={w.value} value={w.value}>
-                  {w.labelMr} / {w.labelEn}
+              {workModes.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.labelEn}
                 </option>
               ))}
             </select>
           </div>
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">कार्यालय किंवा क्षेत्र / Workplace Type</label>
+            <label className="form-label">Workplace</label>
             <input
-              type="text"
               name="workPlace"
               value={form.workPlace}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              className="form-input"
             />
           </div>
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे ठिकाण / Job Location *</label>
+            <label className="form-label">Job Location *</label>
             <input
-              type="text"
               name="jobLocation"
               value={form.jobLocation}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              className="form-input"
               required
             />
           </div>
         </div>
 
-        {/* Education, Category, Expiry Date */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">शिक्षण पात्रता / Required Education *</label>
+            <label className="form-label">Education</label>
             <select
               name="educationId"
               value={form.educationId}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+              className="form-input"
             >
-              {educations.map((e) => (
-                <option key={e.value} value={e.value}>
-                  {e.labelMr} / {e.labelEn}
+              {educations.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.labelEn}
                 </option>
               ))}
             </select>
           </div>
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे क्षेत्र / Specialization *</label>
+            <label className="form-label">Specialization</label>
             <select
               name="specialization"
               value={form.specialization}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+              className="form-input"
             >
-              {specializations.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.labelMr} / {s.labelEn}
+              {specializations.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.labelEn}
                 </option>
               ))}
             </select>
           </div>
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">अंतिम मुदत / Expiry Date *</label>
+            <label className="form-label">Expiry Date *</label>
             <input
               type="date"
               name="expiryDate"
               value={form.expiryDate}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all cursor-pointer"
+              className="form-input"
               required
             />
           </div>
         </div>
 
-        {/* Interview Details */}
-        <div className="p-4 bg-slate-50 border border-slate-150 rounded-xl space-y-4">
-          <span className="block text-xs font-extrabold text-slate-800 border-b border-slate-100 pb-1.5">मुलाखत तपशील / Interview Details</span>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">मुलाखतीची पद्धत / Interview Mode</label>
-              <select
-                name="interviewModeId"
-                value={form.interviewModeId}
-                onChange={handleChange}
-                className="w-full text-xs p-2.5 bg-white rounded-lg border border-slate-200 focus:outline-none focus:border-orange-500"
-              >
-                {interviewModes.map((im) => (
-                  <option key={im.value} value={im.value}>
-                    {im.labelMr} / {im.labelEn}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">मुलाखतीचे ठिकाण / Interview Location</label>
-              <input
-                type="text"
-                name="interviewLocation"
-                value={form.interviewLocation}
-                onChange={handleChange}
-                className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none"
-              />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="form-label">Interview Mode</label>
+            <select
+              name="interviewModeId"
+              value={form.interviewModeId}
+              onChange={handleChange}
+              className="form-input"
+            >
+              {interviewModes.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.labelEn}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="form-label">Interview Location</label>
+            <input
+              name="interviewLocation"
+              value={form.interviewLocation}
+              onChange={handleChange}
+              className="form-input"
+            />
           </div>
         </div>
 
-        {/* Skills, Certifications, Preferences */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">आवश्यक कौशल्ये (स्वल्पविराम द्या) / Skills *</label>
+            <label className="form-label">Required Skills *</label>
             <input
-              type="text"
               name="skill"
               value={form.skill}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              className="form-input"
               required
             />
           </div>
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">आवश्यक प्रमाणपत्रे / Certifications Required</label>
+            <label className="form-label">Certifications Required</label>
             <input
-              type="text"
               name="certificationsRequired"
               value={form.certificationsRequired}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              className="form-input"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">लिंग प्राधान्य / Gender Preference</label>
+            <label className="form-label">Gender Preference</label>
             <select
               name="genderPreference"
               value={form.genderPreference}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+              className="form-input"
             >
-              <option value="Any">दोन्ही / Any Gender</option>
-              <option value="Male">पुरुष / Male</option>
-              <option value="Female">महिला / Female</option>
+              <option value="Any">Any</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
             </select>
           </div>
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">वयोमर्यादा / Age Range</label>
+            <label className="form-label">Age Range</label>
             <input
-              type="text"
               name="ageRange"
               value={form.ageRange}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              className="form-input"
             />
           </div>
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">वेतन कालावधी / Salary Period</label>
+            <label className="form-label">Salary Period</label>
             <select
               name="salaryPeriodId"
               value={form.salaryPeriodId}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+              className="form-input"
             >
-              {salaryPeriods.map((sp) => (
-                <option key={sp.value} value={sp.value}>
-                  {sp.labelMr} / {sp.labelEn}
+              {salaryPeriods.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.labelEn}
                 </option>
               ))}
             </select>
@@ -596,104 +736,123 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({ jobId, onSuccess, onCa
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">साप्ताहिक सुट्टी / Weekly Off</label>
+            <label className="form-label">Weekly Off</label>
             <select
               name="weeklyOffId"
               value={form.weeklyOffId}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+              className="form-input"
             >
-              {weeklyOffs.map((wo) => (
-                <option key={wo.value} value={wo.value}>
-                  {wo.labelMr} / {wo.labelEn}
+              {weeklyOffs.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.labelEn}
                 </option>
               ))}
             </select>
           </div>
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">कामाची पाळी / Shift Type</label>
+            <label className="form-label">Shift Type</label>
             <select
               name="shiftTypeId"
               value={form.shiftTypeId}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+              className="form-input"
             >
-              {shiftTypes.map((st) => (
-                <option key={st.value} value={st.value}>
-                  {st.labelMr} / {st.labelEn}
+              {shiftTypes.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.labelEn}
                 </option>
               ))}
             </select>
           </div>
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">इतर फायदे / Key Perks & Benefits</label>
+            <label className="form-label">Benefits</label>
             <input
-              type="text"
               name="benefits"
               value={form.benefits}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              className="form-input"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे सविस्तर वर्णन / Job Description *</label>
+          <label className="form-label">Job Description *</label>
           <textarea
             name="jobDiscription"
             rows={5}
             value={form.jobDiscription}
             onChange={handleChange}
-            className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all resize-none"
+            className="form-input resize-none"
             required
           />
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1.5">नियोक्ता टिप्पणी / Internal Posting Notes</label>
+          <label className="form-label">Posting Notes</label>
           <input
-            type="text"
             name="postingNotes"
             value={form.postingNotes}
             onChange={handleChange}
-            className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+            className="form-input"
           />
         </div>
 
-        {/* Buttons */}
         <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
           {onCancel && (
             <button
-              onClick={onCancel}
               type="button"
-              className="py-3 px-5 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all cursor-pointer"
+              onClick={onCancel}
+              className="py-3 px-5 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
             >
-              मागे जा / Cancel
+              Cancel
             </button>
           )}
+
           <button
             type="submit"
-            disabled={isSaving}
-            className={`py-3 px-6 text-xs font-bold text-white rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              isSaving ? 'bg-orange-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700'
-            }`}
+            disabled={editJobMutation.isPending}
+            className="py-3 px-6 text-xs font-bold text-white rounded-xl bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400"
           >
-            {isSaving ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                जतन होत आहे... / Saving...
-              </>
-            ) : (
-              'बदल जतन करा / Save Changes'
-            )}
+            {editJobMutation.isPending ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </form>
 
-      {showToast && <Toast message={toastMsg} type={toastType} onClose={() => setShowToast(false)} />}
+      {showToast && (
+        <Toast
+          message={toastMsg}
+          type={toastType}
+          onClose={() => setShowToast(false)}
+        />
+      )}
+
+      <style>{`
+        .form-label {
+          display: block;
+          margin-bottom: 6px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #334155;
+        }
+
+        .form-input {
+          width: 100%;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 10px;
+          font-size: 12px;
+          outline: none;
+          background: white;
+        }
+
+        .form-input:focus {
+          border-color: #f97316;
+          box-shadow: 0 0 0 1px #f97316;
+        }
+      `}</style>
     </div>
   );
 };

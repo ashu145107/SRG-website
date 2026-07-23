@@ -38,28 +38,37 @@ export interface User {
 }
 
 export interface CandidateProfile {
-  id: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  city: string;
-  qualification: string;
-  experienceYears: number;
-  skills: string[];
+  id?: string;
+  userId?: string;
+  fullName?: string;
+  candidateName?: string;
+  email?: string;
+  phone?: string;
+  mobile?: string;
+  city?: string;
+  district?: string;
+  address?: string;
+  qualification?: string;
+  education?: string;
+  experienceYears?: number;
+  experience?: number;
+  specialization?: string;
+  skills?: string[];
   resumeUrl?: string;
   resumeName?: string;
 }
 
 export interface CompanyProfile {
-  id: string;
-  companyName: string;
-  contactPerson: string;
-  email: string;
-  phone: string;
+  id?: string;
+  companyName?: string;
+  contactPerson?: string;
+  email?: string;
+  phone?: string;
+  mobile?: string;
   website?: string;
-  industry: string;
-  address: string;
-  isApproved: boolean;
+  industry?: string;
+  address?: string;
+  isApproved?: boolean;
 }
 
 export interface SHGProfile {

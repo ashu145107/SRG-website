@@ -21,30 +21,21 @@ export const jobKeys = {
  * GET /api/v1/jobsearch
  */
 export const useSearchJobsQuery = (params?: JobSearchParams) => {
-  return useQuery({
-    queryKey: jobKeys.list(params || {}),
+  return useQuery<JobRequirement[]>({
+    queryKey: ['searchJobs', params],
     queryFn: () => jobService.searchJobs(params),
-    retry: 2, // Automatic retry for network/temporary failures
-    staleTime: 1000 * 60 * 5, // Cache entries are fresh for 5 minutes
-    refetchOnWindowFocus: false,
-  });
-};
-
-/**
- * Hook to get specific job requirement details
- * GET /api/v1/jobrequirement/{id}
- */
-export const useJobDetailsQuery = (id: number, enabled: boolean = true) => {
-  return useQuery({
-    queryKey: jobKeys.detail(id),
-    queryFn: () => jobService.getJobDetails(id),
-    enabled: enabled && !!id && !isNaN(id),
+    staleTime: 1000 * 60 * 2, // 2 minutes
     retry: 1,
-    staleTime: 1000 * 60 * 10, // Cache details for 10 minutes
-    refetchOnWindowFocus: false,
   });
 };
 
+export const useJobDetailsQuery = (id: number | undefined) => {
+  return useQuery({
+    queryKey: ['jobDetails', id],
+    queryFn: () => (id ? jobService.getJobDetails(id) : Promise.reject('No ID')),
+    enabled: !!id,
+  });
+};
 /**
  * Hook to add a new job requirement
  * POST /api/v1/addjobrequirement

@@ -208,10 +208,19 @@ export function AdminRegisteredCompanies() {
                     माहिती लोड होत आहे / Loading companies...
                   </td>
                 </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center">
+                    <div className="inline-flex flex-col items-center gap-2 text-red-600 font-medium">
+                      <span className="text-sm">❌ API लोड करण्यात अयशस्वी</span>
+                      <span className="text-xs text-slate-500">Failed to load companies from API. Please check your connection and try again.</span>
+                    </div>
+                  </td>
+                </tr>
               ) : filteredAndSortedList.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-slate-400 font-medium">
-                    कोणतेही रेकॉर्ड सापडले नाही / No companies found matching search phrase
+                    कोणतेही रेकॉर्ड सापडले नाही / No companies found
                   </td>
                 </tr>
               ) : (
@@ -255,7 +264,7 @@ export function AdminRegisteredCompanies() {
             {Math.min(pageNumber * pageSize, totalCount)} of {totalCount} entries
           </div>
 
-          <div className="flex items-center gap-1 text-xs">
+          <div className="flex items-center gap-1 text-xs flex-wrap">
             <button
               onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
               disabled={pageNumber === 1 || isLoading}
@@ -264,7 +273,10 @@ export function AdminRegisteredCompanies() {
               <ChevronLeft className="w-4 h-4" />
             </button>
             
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const startPage = Math.max(1, pageNumber - 2);
+              return startPage + i <= totalPages ? startPage + i : null;
+            }).filter(Boolean).map((page) => (
               <button
                 key={page}
                 onClick={() => setPageNumber(page)}
@@ -278,6 +290,19 @@ export function AdminRegisteredCompanies() {
                 {page}
               </button>
             ))}
+
+            {totalPages > 5 && pageNumber < totalPages - 2 && (
+              <span className="text-slate-400 px-1">...</span>
+            )}
+            {totalPages > 5 && pageNumber < totalPages - 2 && (
+              <button
+                onClick={() => setPageNumber(totalPages)}
+                disabled={isLoading}
+                className="min-w-[32px] h-8 rounded-lg font-bold border bg-white border-slate-200 text-slate-600 hover:bg-slate-50 transition-all cursor-pointer"
+              >
+                {totalPages}
+              </button>
+            )}
 
             <button
               onClick={() => setPageNumber(prev => Math.min(prev + 1, totalPages))}
@@ -312,19 +337,19 @@ export function AdminRegisteredCompanies() {
             <div className="p-6 space-y-4 text-xs sm:text-sm overflow-y-auto max-h-[70vh]">
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Company Name:</span>
-                <span className="font-extrabold text-slate-900 col-span-2">{selectedCompany.companyName}</span>
+                <span className="font-extrabold text-slate-900 col-span-2">{selectedCompany.companyName || 'N/A'}</span>
               </div>
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Mobile:</span>
-                <span className="font-bold text-slate-900 col-span-2">{selectedCompany.phone}</span>
+                <span className="font-bold text-slate-900 col-span-2">{selectedCompany.phone || selectedCompany.mobile || 'N/A'}</span>
               </div>
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Email:</span>
-                <span className="font-medium text-slate-700 col-span-2 break-all">{selectedCompany.email}</span>
+                <span className="font-medium text-slate-700 col-span-2 break-all">{selectedCompany.email || 'N/A'}</span>
               </div>
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Contact Person:</span>
-                <span className="font-extrabold text-slate-850 col-span-2">{selectedCompany.contactPerson}</span>
+                <span className="font-extrabold text-slate-850 col-span-2">{selectedCompany.contactPerson || 'N/A'}</span>
               </div>
               {selectedCompany.website && (
                 <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
@@ -332,14 +357,18 @@ export function AdminRegisteredCompanies() {
                   <span className="font-medium text-blue-650 col-span-2 break-all">{selectedCompany.website}</span>
                 </div>
               )}
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
-                <span className="font-bold text-slate-400 col-span-1">Industry:</span>
-                <span className="font-medium text-slate-800 col-span-2">{selectedCompany.industry || 'General Industry'}</span>
-              </div>
-              <div className="grid grid-cols-3 pb-1">
-                <span className="font-bold text-slate-400 col-span-1">Address:</span>
-                <span className="font-medium text-slate-600 col-span-2 leading-relaxed">{selectedCompany.address}</span>
-              </div>
+              {selectedCompany.industry && (
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                  <span className="font-bold text-slate-400 col-span-1">Industry:</span>
+                  <span className="font-medium text-slate-800 col-span-2">{selectedCompany.industry}</span>
+                </div>
+              )}
+              {selectedCompany.address && (
+                <div className="grid grid-cols-3 pb-1">
+                  <span className="font-bold text-slate-400 col-span-1">Address:</span>
+                  <span className="font-medium text-slate-600 col-span-2 leading-relaxed">{selectedCompany.address}</span>
+                </div>
+              )}
             </div>
 
             <div className="bg-slate-50 px-6 py-4 flex justify-end border-t border-slate-100">

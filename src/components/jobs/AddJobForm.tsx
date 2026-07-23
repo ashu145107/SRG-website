@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -5,7 +6,6 @@
 
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
-import { useTranslation } from 'react-i18next';
 import { useAddJobRequirementMutation } from '../../hooks/useJobQueries';
 import { JobRequirement } from '../../services/jobTypes';
 import {
@@ -26,7 +26,6 @@ interface AddJobFormProps {
 }
 
 export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) => {
-  const { t } = useTranslation();
   const user = useSelector((state: any) => state.auth?.user);
   const addJobMutation = useAddJobRequirementMutation();
   const addJob = addJobMutation.mutateAsync;
@@ -53,10 +52,10 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
     workPlace: '',
     salary: 0,
     salaryTo: 0,
-    expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
-    educationId: 3, // Default Bachelor's Degree
-    roleTypeId: 1, // Default Full-time
-    interviewModeId: 1, // Default In-person
+    expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    educationId: 3,
+    roleTypeId: 1,
+    interviewModeId: 1,
     interviewLocation: '',
     postingNotes: '',
     jobDiscription: '',
@@ -64,12 +63,12 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
     certificationsRequired: '',
     genderPreference: 'Any',
     ageRange: '18-45',
-    shiftTypeId: 1, // Default Day Shift
-    workModeId: 1, // Default On-site
+    shiftTypeId: 1,
+    workModeId: 1,
     jobLocation: '',
-    salaryPeriodId: 1, // Default Monthly
+    salaryPeriodId: 1,
     benefits: '',
-    weeklyOffId: 1, // Default Sunday
+    weeklyOffId: 1,
     jobCode: `JOB-${Math.floor(1000 + Math.random() * 9000)}`,
   });
 
@@ -106,22 +105,38 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
       setValidationError('कृपया नोकरीचे पद / Designation प्रविष्ट करा.');
       return;
     }
+
     if (!form.jobDiscription.trim() || form.jobDiscription.length < 10) {
       setValidationError('कृपया कमीत कमी १० अक्षरांचे नोकरीचे वर्णन / Description प्रविष्ट करा.');
       return;
     }
+
     if (!form.skill.trim()) {
       setValidationError('कृपया आवश्यक कौशल्ये / Skills प्रविष्ट करा.');
       return;
     }
+
+    // Salary validation fix
+    if (!Number.isFinite(form.salary) || form.salary <= 0) {
+      setValidationError('कृपया किमान वेतन / Minimum Salary 0 पेक्षा जास्त प्रविष्ट करा.');
+      return;
+    }
+
+    if (!Number.isFinite(form.salaryTo) || form.salaryTo <= 0) {
+      setValidationError('कृपया कमाल वेतन / Maximum Salary 0 पेक्षा जास्त प्रविष्ट करा.');
+      return;
+    }
+
     if (form.salaryTo < form.salary) {
       setValidationError('कमाल वेतन हे किमान वेतनापेक्षा जास्त किंवा समान असावे.');
       return;
     }
+
     if (form.experianceTo < form.experiance) {
       setValidationError('कमाल अनुभव हा किमान अनुभवापेक्षा जास्त असावा.');
       return;
     }
+
     if (!form.jobLocation.trim()) {
       setValidationError('कृपया नोकरीचे ठिकाण / Location प्रविष्ट करा.');
       return;
@@ -132,12 +147,13 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
         ...form,
         userId: numericUserId,
         createdBy: numericUserId,
-        // Ensure expiryDate is in full ISO DateTime format as specified in request body
+        salary: Number(form.salary),
+        salaryTo: Number(form.salaryTo),
         expiryDate: new Date(form.expiryDate).toISOString(),
       };
 
       const result = await addJob(payload);
-      
+
       setToastType('success');
       setToastMsg('नोकरी रिक्त जागा यशस्वीरित्या जोडली! / Job Requirement Added Successfully!');
       setShowToast(true);
@@ -148,8 +164,14 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
     } catch (err: any) {
       console.error('Add job API error:', err);
       setToastType('error');
-      // Show exact backend error message if available, otherwise display a fallback
-      const errorMsg = err?.response?.data?.message || err?.data?.message || err?.data || 'Failed to submit Job Requirement. Please try again.';
+
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.data?.message ||
+        err?.data ||
+        err?.message ||
+        'Failed to submit Job Requirement. Please try again.';
+
       setToastMsg(typeof errorMsg === 'string' ? errorMsg : 'API Validation Error');
       setShowToast(true);
     }
@@ -304,7 +326,8 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                 <input
                   type="number"
                   name="salary"
-                  min="0"
+                  min="1"
+                  step="1"
                   value={form.salary}
                   onChange={handleChange}
                   className="w-full text-xs p-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-orange-500"
@@ -315,7 +338,8 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                 <input
                   type="number"
                   name="salaryTo"
-                  min="0"
+                  min="1"
+                  step="1"
                   value={form.salaryTo}
                   onChange={handleChange}
                   className="w-full text-xs p-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-orange-500"
@@ -605,7 +629,11 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               <>
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
                 </svg>
                 जतन होत आहे... / Saving...
               </>

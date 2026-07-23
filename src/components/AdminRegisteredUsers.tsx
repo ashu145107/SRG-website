@@ -210,10 +210,19 @@ export function AdminRegisteredUsers() {
                     माहिती लोड होत आहे / Loading candidates...
                   </td>
                 </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center">
+                    <div className="inline-flex flex-col items-center gap-2 text-red-600 font-medium">
+                      <span className="text-sm">❌ API लोड करण्यात अयशस्वी</span>
+                      <span className="text-xs text-slate-500">Failed to load candidates from API. Please check your connection and try again.</span>
+                    </div>
+                  </td>
+                </tr>
               ) : filteredAndSortedList.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-slate-400 font-medium">
-                    कोणतेही रेकॉर्ड सापडले नाही / No candidates found matching search phrase
+                    कोणतेही रेकॉर्ड सापडले नाही / No candidates found
                   </td>
                 </tr>
               ) : (
@@ -263,7 +272,7 @@ export function AdminRegisteredUsers() {
             {Math.min(pageNumber * pageSize, totalCount)} of {totalCount} entries
           </div>
 
-          <div className="flex items-center gap-1 text-xs">
+          <div className="flex items-center gap-1 text-xs flex-wrap">
             <button
               onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
               disabled={pageNumber === 1 || isLoading}
@@ -272,7 +281,10 @@ export function AdminRegisteredUsers() {
               <ChevronLeft className="w-4 h-4" />
             </button>
             
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const startPage = Math.max(1, pageNumber - 2);
+              return startPage + i <= totalPages ? startPage + i : null;
+            }).filter(Boolean).map((page) => (
               <button
                 key={page}
                 onClick={() => setPageNumber(page)}
@@ -286,6 +298,19 @@ export function AdminRegisteredUsers() {
                 {page}
               </button>
             ))}
+
+            {totalPages > 5 && pageNumber < totalPages - 2 && (
+              <span className="text-slate-400 px-1">...</span>
+            )}
+            {totalPages > 5 && pageNumber < totalPages - 2 && (
+              <button
+                onClick={() => setPageNumber(totalPages)}
+                disabled={isLoading}
+                className="min-w-[32px] h-8 rounded-lg font-bold border bg-white border-slate-200 text-slate-600 hover:bg-slate-50 transition-all cursor-pointer"
+              >
+                {totalPages}
+              </button>
+            )}
 
             <button
               onClick={() => setPageNumber(prev => Math.min(prev + 1, totalPages))}
@@ -320,11 +345,11 @@ export function AdminRegisteredUsers() {
             <div className="p-6 space-y-4 text-xs sm:text-sm overflow-y-auto max-h-[70vh]">
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Full Name:</span>
-                <span className="font-extrabold text-slate-900 col-span-2">{selectedCandidate.fullName}</span>
+                <span className="font-extrabold text-slate-900 col-span-2">{selectedCandidate.fullName || selectedCandidate.candidateName}</span>
               </div>
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Mobile:</span>
-                <span className="font-bold text-slate-900 col-span-2">{selectedCandidate.phone}</span>
+                <span className="font-bold text-slate-900 col-span-2">{selectedCandidate.phone || selectedCandidate.mobile}</span>
               </div>
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Email:</span>
@@ -332,26 +357,38 @@ export function AdminRegisteredUsers() {
               </div>
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Education:</span>
-                <span className="font-extrabold text-slate-850 col-span-2">{selectedCandidate.qualification}</span>
+                <span className="font-extrabold text-slate-850 col-span-2">{selectedCandidate.qualification || selectedCandidate.education || 'N/A'}</span>
+              </div>
+              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <span className="font-bold text-slate-400 col-span-1">Specialization:</span>
+                <span className="font-medium text-slate-800 col-span-2">{selectedCandidate.specialization || 'N/A'}</span>
               </div>
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Experience:</span>
-                <span className="font-extrabold text-slate-900 col-span-2">{selectedCandidate.experienceYears} Years</span>
+                <span className="font-extrabold text-slate-900 col-span-2">{selectedCandidate.experienceYears || selectedCandidate.experience || 0} Years</span>
               </div>
+              {selectedCandidate.skills && selectedCandidate.skills.length > 0 && (
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                  <span className="font-bold text-slate-400 col-span-1">Skills:</span>
+                  <span className="font-medium text-slate-800 col-span-2 flex flex-wrap gap-1">
+                    {selectedCandidate.skills.map((skill, index) => (
+                      <span key={index} className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-bold text-slate-700 border border-slate-200">
+                        {skill}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              )}
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
-                <span className="font-bold text-slate-400 col-span-1">Skills:</span>
-                <span className="font-medium text-slate-800 col-span-2 flex flex-wrap gap-1">
-                  {selectedCandidate.skills && selectedCandidate.skills.map((skill, index) => (
-                    <span key={index} className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-bold text-slate-700 border border-slate-200">
-                      {skill}
-                    </span>
-                  ))}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 pb-1">
                 <span className="font-bold text-slate-400 col-span-1">District/City:</span>
-                <span className="font-medium text-slate-600 col-span-2">{selectedCandidate.city || 'Nashik'}</span>
+                <span className="font-medium text-slate-600 col-span-2">{selectedCandidate.city || selectedCandidate.district || 'N/A'}</span>
               </div>
+              {selectedCandidate.address && (
+                <div className="grid grid-cols-3 pb-1">
+                  <span className="font-bold text-slate-400 col-span-1">Address:</span>
+                  <span className="font-medium text-slate-600 col-span-2 leading-relaxed">{selectedCandidate.address}</span>
+                </div>
+              )}
             </div>
 
             <div className="bg-slate-50 px-6 py-4 flex justify-end border-t border-slate-100">

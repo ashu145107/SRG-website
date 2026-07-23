@@ -191,10 +191,19 @@ export function AdminJobRequirements() {
                     माहिती लोड होत आहे / Loading requirements...
                   </td>
                 </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center">
+                    <div className="inline-flex flex-col items-center gap-2 text-red-600 font-medium">
+                      <span className="text-sm">❌ API लोड करण्यात अयशस्वी</span>
+                      <span className="text-xs text-slate-500">Failed to load job requirements from API. Please check your connection and try again.</span>
+                    </div>
+                  </td>
+                </tr>
               ) : filteredAndSortedList.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-slate-400 font-medium">
-                    कोणतेही रेकॉर्ड सापडले नाही / No job requirements found matching search phrase
+                    कोणतेही रेकॉर्ड सापडले नाही / No job requirements found
                   </td>
                 </tr>
               ) : (
@@ -238,7 +247,7 @@ export function AdminJobRequirements() {
             {Math.min(pageNumber * pageSize, totalCount)} of {totalCount} entries
           </div>
 
-          <div className="flex items-center gap-1 text-xs">
+          <div className="flex items-center gap-1 text-xs flex-wrap">
             <button
               onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
               disabled={pageNumber === 1 || isLoading}
@@ -247,7 +256,10 @@ export function AdminJobRequirements() {
               <ChevronLeft className="w-4 h-4" />
             </button>
             
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const startPage = Math.max(1, pageNumber - 2);
+              return startPage + i <= totalPages ? startPage + i : null;
+            }).filter(Boolean).map((page) => (
               <button
                 key={page}
                 onClick={() => setPageNumber(page)}
@@ -261,6 +273,19 @@ export function AdminJobRequirements() {
                 {page}
               </button>
             ))}
+
+            {totalPages > 5 && pageNumber < totalPages - 2 && (
+              <span className="text-slate-400 px-1">...</span>
+            )}
+            {totalPages > 5 && pageNumber < totalPages - 2 && (
+              <button
+                onClick={() => setPageNumber(totalPages)}
+                disabled={isLoading}
+                className="min-w-[32px] h-8 rounded-lg font-bold border bg-white border-slate-200 text-slate-600 hover:bg-slate-50 transition-all cursor-pointer"
+              >
+                {totalPages}
+              </button>
+            )}
 
             <button
               onClick={() => setPageNumber(prev => Math.min(prev + 1, totalPages))}
@@ -293,36 +318,46 @@ export function AdminJobRequirements() {
             </div>
 
             <div className="p-6 space-y-4 text-xs sm:text-sm overflow-y-auto max-h-[70vh]">
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
-                <span className="font-bold text-slate-400 col-span-1">Job Code:</span>
-                <span className="font-extrabold text-blue-900 col-span-2">{selectedJob.jobCode || 'RG05703'}</span>
-              </div>
+              {selectedJob.jobCode && (
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                  <span className="font-bold text-slate-400 col-span-1">Job Code:</span>
+                  <span className="font-extrabold text-blue-900 col-span-2">{selectedJob.jobCode}</span>
+                </div>
+              )}
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Profile Header:</span>
-                <span className="font-extrabold text-slate-900 col-span-2">{selectedJob.profileHeader || selectedJob.jobDesignation}</span>
+                <span className="font-extrabold text-slate-900 col-span-2">{selectedJob.profileHeader || selectedJob.jobDesignation || 'N/A'}</span>
               </div>
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Work Place:</span>
-                <span className="font-bold text-slate-900 col-span-2">{selectedJob.workPlace || selectedJob.jobLocation}</span>
+                <span className="font-bold text-slate-900 col-span-2">{selectedJob.workPlace || selectedJob.jobLocation || 'N/A'}</span>
               </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
-                <span className="font-bold text-slate-400 col-span-1">Required Skills:</span>
-                <span className="font-medium text-slate-700 col-span-2 break-words leading-relaxed">{selectedJob.skill}</span>
-              </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
-                <span className="font-bold text-slate-400 col-span-1">Vacancy Count:</span>
-                <span className="font-extrabold text-slate-800 col-span-2">{selectedJob.noOfVacancy || 1} Positions</span>
-              </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
-                <span className="font-bold text-slate-400 col-span-1">Experience Needed:</span>
-                <span className="font-medium text-slate-800 col-span-2">{selectedJob.experiance || 0} to {selectedJob.experianceTo || 3} Years</span>
-              </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
-                <span className="font-bold text-slate-400 col-span-1">Salary Range:</span>
-                <span className="font-extrabold text-emerald-700 col-span-2">
-                  ₹{selectedJob.salary?.toLocaleString() || '15,000'} - ₹{selectedJob.salaryTo?.toLocaleString() || '25,000'} Monthly
-                </span>
-              </div>
+              {selectedJob.skill && (
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                  <span className="font-bold text-slate-400 col-span-1">Required Skills:</span>
+                  <span className="font-medium text-slate-700 col-span-2 break-words leading-relaxed">{selectedJob.skill}</span>
+                </div>
+              )}
+              {selectedJob.noOfVacancy && (
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                  <span className="font-bold text-slate-400 col-span-1">Vacancy Count:</span>
+                  <span className="font-extrabold text-slate-800 col-span-2">{selectedJob.noOfVacancy} Positions</span>
+                </div>
+              )}
+              {(selectedJob.experiance !== undefined || selectedJob.experianceTo !== undefined) && (
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                  <span className="font-bold text-slate-400 col-span-1">Experience Needed:</span>
+                  <span className="font-medium text-slate-800 col-span-2">{selectedJob.experiance || 0} to {selectedJob.experianceTo || 'N/A'} Years</span>
+                </div>
+              )}
+              {(selectedJob.salary !== undefined || selectedJob.salaryTo !== undefined) && (
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                  <span className="font-bold text-slate-400 col-span-1">Salary Range:</span>
+                  <span className="font-extrabold text-emerald-700 col-span-2">
+                    ₹{selectedJob.salary?.toLocaleString() || '0'} - ₹{selectedJob.salaryTo?.toLocaleString() || '0'} Monthly
+                  </span>
+                </div>
+              )}
               {selectedJob.jobDiscription && (
                 <div className="grid grid-cols-3 pb-1">
                   <span className="font-bold text-slate-400 col-span-1">Description:</span>

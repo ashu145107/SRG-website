@@ -197,10 +197,19 @@ export function AdminJobApplications() {
                     माहिती लोड होत आहे / Loading applications...
                   </td>
                 </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center">
+                    <div className="inline-flex flex-col items-center gap-2 text-red-600 font-medium">
+                      <span className="text-sm">❌ API लोड करण्यात अयशस्वी</span>
+                      <span className="text-xs text-slate-500">Failed to load applications from API. Please check your connection and try again.</span>
+                    </div>
+                  </td>
+                </tr>
               ) : filteredAndSortedList.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-slate-400 font-medium">
-                    कोणतेही रेकॉर्ड सापडले नाही / No applications found matching search phrase
+                    कोणतेही रेकॉर्ड सापडले नाही / No applications found
                   </td>
                 </tr>
               ) : (
@@ -254,7 +263,7 @@ export function AdminJobApplications() {
             {Math.min(pageNumber * pageSize, totalCount)} of {totalCount} entries
           </div>
 
-          <div className="flex items-center gap-1 text-xs">
+          <div className="flex items-center gap-1 text-xs flex-wrap">
             <button
               onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
               disabled={pageNumber === 1 || isLoading}
@@ -263,7 +272,10 @@ export function AdminJobApplications() {
               <ChevronLeft className="w-4 h-4" />
             </button>
             
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const startPage = Math.max(1, pageNumber - 2);
+              return startPage + i <= totalPages ? startPage + i : null;
+            }).filter(Boolean).map((page) => (
               <button
                 key={page}
                 onClick={() => setPageNumber(page)}
@@ -277,6 +289,19 @@ export function AdminJobApplications() {
                 {page}
               </button>
             ))}
+
+            {totalPages > 5 && pageNumber < totalPages - 2 && (
+              <span className="text-slate-400 px-1">...</span>
+            )}
+            {totalPages > 5 && pageNumber < totalPages - 2 && (
+              <button
+                onClick={() => setPageNumber(totalPages)}
+                disabled={isLoading}
+                className="min-w-[32px] h-8 rounded-lg font-bold border bg-white border-slate-200 text-slate-600 hover:bg-slate-50 transition-all cursor-pointer"
+              >
+                {totalPages}
+              </button>
+            )}
 
             <button
               onClick={() => setPageNumber(prev => Math.min(prev + 1, totalPages))}
@@ -311,34 +336,42 @@ export function AdminJobApplications() {
             <div className="p-6 space-y-4 text-xs sm:text-sm overflow-y-auto max-h-[70vh]">
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Candidate Name:</span>
-                <span className="font-extrabold text-slate-900 col-span-2">{selectedApplication.candidateName}</span>
+                <span className="font-extrabold text-slate-900 col-span-2">{selectedApplication.candidateName || 'N/A'}</span>
               </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
-                <span className="font-bold text-slate-400 col-span-1">Mobile:</span>
-                <span className="font-bold text-slate-900 col-span-2">{selectedApplication.candidatePhone}</span>
-              </div>
+              {selectedApplication.candidatePhone && (
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                  <span className="font-bold text-slate-400 col-span-1">Mobile:</span>
+                  <span className="font-bold text-slate-900 col-span-2">{selectedApplication.candidatePhone}</span>
+                </div>
+              )}
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Applied Job:</span>
-                <span className="font-extrabold text-slate-900 col-span-2">{selectedApplication.jobTitle}</span>
+                <span className="font-extrabold text-slate-900 col-span-2">{selectedApplication.jobTitle || 'N/A'}</span>
               </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
-                <span className="font-bold text-slate-400 col-span-1">Company:</span>
-                <span className="font-bold text-orange-700 col-span-2">{selectedApplication.companyName}</span>
-              </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
-                <span className="font-bold text-slate-400 col-span-1">Current Status:</span>
-                <span className="font-extrabold text-blue-900 col-span-2">
-                  <span className="px-2.5 py-1 bg-blue-50 text-blue-800 rounded-full border border-blue-100 text-xs">
-                    {selectedApplication.status}
+              {selectedApplication.companyName && (
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                  <span className="font-bold text-slate-400 col-span-1">Company:</span>
+                  <span className="font-bold text-orange-700 col-span-2">{selectedApplication.companyName}</span>
+                </div>
+              )}
+              {selectedApplication.status && (
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                  <span className="font-bold text-slate-400 col-span-1">Current Status:</span>
+                  <span className="font-extrabold text-blue-900 col-span-2">
+                    <span className="px-2.5 py-1 bg-blue-50 text-blue-800 rounded-full border border-blue-100 text-xs">
+                      {selectedApplication.status}
+                    </span>
                   </span>
-                </span>
-              </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
-                <span className="font-bold text-slate-400 col-span-1">Application Date:</span>
-                <span className="font-medium text-slate-800 col-span-2">
-                  {selectedApplication.appliedAt ? new Date(selectedApplication.appliedAt).toLocaleDateString() : 'N/A'}
-                </span>
-              </div>
+                </div>
+              )}
+              {selectedApplication.appliedAt && (
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                  <span className="font-bold text-slate-400 col-span-1">Application Date:</span>
+                  <span className="font-medium text-slate-800 col-span-2">
+                    {new Date(selectedApplication.appliedAt).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
               {selectedApplication.interviewDate && (
                 <div className="grid grid-cols-3 pb-1 text-orange-850 bg-orange-50/50 p-2.5 rounded-xl border border-orange-100">
                   <span className="font-bold col-span-1">Interview Date:</span>
