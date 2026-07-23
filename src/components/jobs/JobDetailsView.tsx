@@ -16,7 +16,6 @@ import {
   workModes,
   salaryPeriods,
   weeklyOffs,
-  specializations,
 } from './jobMappings';
 import { Alert, Toast, ConfirmDialog } from '../ui/FeedbackComponents';
 import {
@@ -37,8 +36,9 @@ import {
 interface JobDetailsViewProps {
   jobId: number;
   onBack?: () => void;
-  onApplySuccess?: () => void;
+  onApplySuccess?: (appliedJobCode?: string) => void;
   alreadyApplied?: boolean;
+  jobCode?: string;
 }
 
 export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
@@ -46,6 +46,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
   onBack,
   onApplySuccess,
   alreadyApplied: initialApplied = false,
+  jobCode,
 }) => {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === 'mr' ? 'mr' : 'en';
@@ -54,7 +55,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
   const isAuthenticated = useSelector((state: any) => state.auth?.isAuthenticated);
 
   // Queries and mutations
-  const { data: job, isLoading, error: loadError, refetch } = useJobDetailsQuery(jobId);
+  const { data: job, isLoading, error: loadError, refetch } = useJobDetailsQuery(jobId, jobCode);
   const applyJobMutation = useApplyJobMutation();
   const applyJob = applyJobMutation.mutateAsync;
   const isApplying = applyJobMutation.isPending;
@@ -79,22 +80,26 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
   const handleConfirmApply = async () => {
     setShowConfirm(false);
     try {
-      // API accepts an array of strings representing job requirement IDs (e.g., [String(jobId)])
-      const response = await applyJob([String(jobId)]);
+      const jobIdentifier = job?.jobCode || String(jobId);
+      const response: any = await applyJob([jobIdentifier]);
+
+      if (response && response.isSuccess === false) {
+        throw { response: { data: response } };
+      }
 
       setHasApplied(true);
       setToastType('success');
-      // Show exact backend message or fallback
       setToastMsg(response?.message || 'अर्ज यशस्वीरीत्या सादर केला! / Application submitted successfully!');
       setShowToast(true);
 
       if (onApplySuccess) {
-        setTimeout(onApplySuccess, 1500);
+        onApplySuccess(jobIdentifier);
       }
     } catch (err: any) {
       console.error('Job Application error:', err);
       setToastType('error');
       const errorMsg =
+        err?.response?.data?.error?.message ||
         err?.response?.data?.message ||
         err?.data?.message ||
         err?.data ||
@@ -186,9 +191,9 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
                   </span>
                 </div>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                  {job.jobDesignation}
+                  {job.jobDesignation || job.profileHeader || 'Job Vacancy'}
                 </h1>
-                <p className="text-sm font-bold text-slate-600 block">{job.profileHeader}</p>
+                <p className="text-sm font-bold text-slate-600 block">{job.profileHeader || job.jobDesignation || 'Job Requirement'}</p>
               </div>
 
               {/* Desktop Apply Button */}
@@ -218,7 +223,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 block font-semibold leading-none mb-0.5">LOCATION</span>
-                  <span className="text-xs font-bold text-slate-800 block">{job.jobLocation}</span>
+                  <span className="text-xs font-bold text-slate-800 block">{job.jobLocation || job.workPlace || 'Nashik'}</span>
                 </div>
               </div>
 
@@ -229,7 +234,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
                 <div>
                   <span className="text-[10px] text-slate-400 block font-semibold leading-none mb-0.5">SALARY RANGE</span>
                   <span className="text-xs font-bold text-slate-800 block">
-                    ₹{job.salary.toLocaleString()} - ₹{job.salaryTo.toLocaleString()}
+                    ₹{job.salary ? job.salary.toLocaleString() : '0'} - ₹{job.salaryTo ? job.salaryTo.toLocaleString() : (job.salary ? job.salary.toLocaleString() : '0')}
                   </span>
                 </div>
               </div>
@@ -241,7 +246,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
                 <div>
                   <span className="text-[10px] text-slate-400 block font-semibold leading-none mb-0.5">EXPERIENCE</span>
                   <span className="text-xs font-bold text-slate-800 block">
-                    {job.experiance} - {job.experianceTo} Years
+                    {job.experiance !== undefined ? job.experiance : 0} - {job.experianceTo !== undefined ? job.experianceTo : 2} Years
                   </span>
                 </div>
               </div>
@@ -252,7 +257,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 block font-semibold leading-none mb-0.5">VACANCIES</span>
-                  <span className="text-xs font-bold text-slate-800 block">{job.noOfVacancy} Positions</span>
+                  <span className="text-xs font-bold text-slate-800 block">{job.noOfVacancy || 1} Positions</span>
                 </div>
               </div>
             </div>
@@ -265,7 +270,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
               <span>नोकरीचे सविस्तर वर्णन / Job Description</span>
             </h3>
             <p className="text-xs text-slate-650 leading-relaxed whitespace-pre-line block">
-              {job.jobDiscription}
+              {job.jobDiscription || job.profileHeader || 'Detailed job requirement specifications.'}
             </p>
           </div>
 
@@ -277,7 +282,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
                 <span>आवश्यक कौशल्ये / Required Skills</span>
               </h4>
               <div className="flex flex-wrap gap-2">
-                {job.skill.split(',').map((s, idx) => (
+                {(job.skill || 'Relevant Skills').split(',').map((s, idx) => (
                   <span key={idx} className="px-3 py-1 bg-slate-50 border border-slate-150 text-slate-700 text-xs font-bold rounded-lg shadow-2xs">
                     {s.trim()}
                   </span>
@@ -331,7 +336,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-500 font-bold">क्षेत्र / Specialization:</span>
                 <span className="font-extrabold text-slate-800">
-                  {getLabel(specializations, job.specialization, lang)}
+                  {job.industryTypeId || 'N/A'}
                 </span>
               </div>
 

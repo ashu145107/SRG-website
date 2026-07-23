@@ -8,13 +8,13 @@ import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useSearchJobsQuery } from '../../hooks/useJobQueries';
 import { JobRequirement } from '../../services/jobTypes';
+import { useGetIndustryTypesQuery } from '../../services/jobMasterApi';
 import {
   getLabel,
   educations,
   roleTypes,
   workModes,
   salaryPeriods,
-  specializations,
 } from './jobMappings';
 import {
   Search,
@@ -58,6 +58,8 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
   const [selectedWorkMode, setSelectedWorkMode] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
 
+  const { data: industryTypes = [] } = useGetIndustryTypesQuery();
+
   // Fetch Jobs via TanStack Query
   const {
     data: jobs = [],
@@ -75,6 +77,8 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
 
   // Perform Client-Side Filtering on top of API Search (to provide seamless, instant UX)
   const filteredJobs = jobs.filter((job) => {
+    // Hide already-applied jobs from Find Jobs listing
+    if (job.userJobStatus === 'Already applied') return false;
     // 1. Location Filter
     if (
       selectedLocation &&
@@ -86,8 +90,8 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
     if (selectedWorkMode && job.workModeId !== Number(selectedWorkMode)) {
       return false;
     }
-    // 3. Category/Specialization Filter
-    if (selectedCategory && job.specialization !== Number(selectedCategory)) {
+    // 3. Industry Type Filter
+    if (selectedCategory && job.industryTypeId !== Number(selectedCategory)) {
       return false;
     }
     return true;
@@ -198,9 +202,9 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
               className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 transition-all bg-white appearance-none"
             >
               <option value="">सर्व नोकरी क्षेत्रे / All Categories</option>
-              {specializations.map((spec) => (
-                <option key={spec.value} value={spec.value}>
-                  {spec.labelMr} / {spec.labelEn}
+              {industryTypes.map((spec) => (
+                <option key={spec.id} value={spec.id}>
+                  {spec.label}
                 </option>
               ))}
             </select>
@@ -273,24 +277,29 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                   {filteredJobs.map((job) => {
-                    const isApplied = appliedJobIds.includes(Number(job.id));
+                    const jobIdNum = Number(job.id || job.jobRequirementId || 1);
+                    const isApplied = appliedJobIds.includes(jobIdNum);
+                    const designation = job.jobDesignation || job.profileHeader || 'Job Requirement';
+                    const location = job.jobLocation || job.workPlace || 'Nashik';
+                    const salaryFrom = typeof job.salary === 'number' ? job.salary : parseFloat(job.salary) || 0;
+                    const salaryToVal = typeof job.salaryTo === 'number' ? job.salaryTo : parseFloat(job.salaryTo) || salaryFrom;
 
                     return (
-                      <tr key={job.id} className="hover:bg-slate-50/50 transition-colors">
+                      <tr key={jobIdNum} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-5 py-4 font-mono font-bold text-slate-500">
-                          {job.jobCode || `JOB-${job.id}`}
+                          {job.jobCode || `JOB-${jobIdNum}`}
                         </td>
                         <td className="px-5 py-4">
                           <span className="font-extrabold text-slate-900 block">
-                            {job.jobDesignation}
+                            {designation}
                           </span>
                           <span className="text-[10px] text-slate-400 block mt-0.5 line-clamp-1 max-w-[200px]">
-                            {job.profileHeader}
+                            {job.profileHeader || designation}
                           </span>
                         </td>
                         <td className="px-5 py-4">
                           <span className="px-2 py-0.5 bg-blue-50 text-blue-950 font-bold border border-blue-100 rounded-md text-[10px]">
-                            {getLabel(specializations, job.specialization, lang)}
+                            {job.industryTypeId || 'N/A'}
                           </span>
                         </td>
                         <td className="px-5 py-4">
@@ -299,11 +308,11 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                           </span>
                         </td>
                         <td className="px-5 py-4">
-                          <span className="font-bold text-slate-800">{job.jobLocation}</span>
+                          <span className="font-bold text-slate-800">{location}</span>
                         </td>
                         <td className="px-5 py-4">
                           <span className="font-extrabold text-slate-900 block">
-                            ₹{job.salary.toLocaleString()} - ₹{job.salaryTo.toLocaleString()}
+                            ₹{salaryFrom.toLocaleString()} - ₹{salaryToVal.toLocaleString()}
                           </span>
                           <span className="text-[10px] text-slate-400 block font-semibold">
                             {getLabel(salaryPeriods, job.salaryPeriodId, lang)}
@@ -313,7 +322,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                           <div className="inline-flex gap-2">
                             {/* View details */}
                             <button
-                              onClick={() => onViewDetails(Number(job.id))}
+                              onClick={() => onViewDetails(jobIdNum)}
                               className="py-1.5 px-3 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer text-slate-700"
                             >
                               <Eye className="w-3.5 h-3.5" />
@@ -351,11 +360,16 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
           {/* MOBILE CARDS VIEW */}
           <div className="lg:hidden space-y-4">
             {filteredJobs.map((job) => {
-              const isApplied = appliedJobIds.includes(Number(job.id));
+              const jobIdNum = Number(job.id || job.jobRequirementId || 1);
+              const isApplied = appliedJobIds.includes(jobIdNum);
+              const designation = job.jobDesignation || job.profileHeader || 'Job Requirement';
+              const location = job.jobLocation || job.workPlace || 'Nashik';
+              const salaryFrom = typeof job.salary === 'number' ? job.salary : parseFloat(job.salary) || 0;
+              const salaryToVal = typeof job.salaryTo === 'number' ? job.salaryTo : parseFloat(job.salaryTo) || salaryFrom;
 
               return (
                 <div
-                  key={job.id}
+                  key={jobIdNum}
                   className="bg-white rounded-2xl border border-slate-150 p-5 space-y-4 shadow-2xs relative"
                 >
                   {/* Top Header */}
@@ -366,13 +380,13 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                           {getLabel(roleTypes, job.roleTypeId, lang)}
                         </span>
                         <span className="font-mono text-[9px] text-slate-400 font-bold">
-                          {job.jobCode || `JOB-${job.id}`}
+                          {job.jobCode || `JOB-${jobIdNum}`}
                         </span>
                       </div>
                       <h3 className="text-base font-black text-slate-900 leading-tight block">
-                        {job.jobDesignation}
+                        {designation}
                       </h3>
-                      <p className="text-xs font-bold text-slate-500 leading-tight block">{job.profileHeader}</p>
+                      <p className="text-xs font-bold text-slate-500 leading-tight block">{job.profileHeader || designation}</p>
                     </div>
                   </div>
 
@@ -380,7 +394,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                   <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-[11px] text-slate-600">
                     <div>
                       <span className="text-slate-400 block font-bold text-[9px] mb-0.5">LOCATION</span>
-                      <span className="font-extrabold text-slate-800 block">{job.jobLocation}</span>
+                      <span className="font-extrabold text-slate-800 block">{location}</span>
                     </div>
                     <div>
                       <span className="text-slate-400 block font-bold text-[9px] mb-0.5">WORK MODE</span>
@@ -391,19 +405,19 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                     <div>
                       <span className="text-slate-400 block font-bold text-[9px] mb-0.5">SALARY</span>
                       <span className="font-extrabold text-slate-800 block">
-                        ₹{job.salary.toLocaleString()} - ₹{job.salaryTo.toLocaleString()}
+                        ₹{salaryFrom.toLocaleString()} - ₹{salaryToVal.toLocaleString()}
                       </span>
                     </div>
                     <div>
                       <span className="text-slate-400 block font-bold text-[9px] mb-0.5">VACANCIES</span>
-                      <span className="font-extrabold text-slate-800 block">{job.noOfVacancy} Positions</span>
+                      <span className="font-extrabold text-slate-800 block">{job.noOfVacancy || 1} Positions</span>
                     </div>
                   </div>
 
                   {/* Actions footer */}
                   <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                     <button
-                      onClick={() => onViewDetails(Number(job.id))}
+                      onClick={() => onViewDetails(jobIdNum)}
                       className="py-2 px-4 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer text-slate-700 flex-1"
                     >
                       <Eye className="w-3.5 h-3.5" />

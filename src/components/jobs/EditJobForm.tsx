@@ -7,15 +7,18 @@ import React, { useEffect, useState } from 'react';
 import { useEditJobRequirementMutation, useJobDetailsQuery } from '../../hooks/useJobQueries';
 import { JobRequirement } from '../../services/jobTypes';
 import {
-  educations,
-  roleTypes,
-  interviewModes,
-  shiftTypes,
-  workModes,
-  salaryPeriods,
-  weeklyOffs,
-  specializations,
-} from './jobMappings';
+  useGetCompanyTypesQuery,
+  useGetIndustryTypesQuery,
+  useGetInterviewModesQuery,
+  useGetJobTypesQuery,
+  useGetShiftTypesQuery,
+  useGetWorkModesQuery,
+  useGetSalaryPeriodsQuery,
+  useGetJobBenefitsQuery,
+  useGetWeeklyOffsQuery,
+  useGetEducationsQuery,
+  useGetSubEducationsQuery,
+} from '../../services/jobMasterApi';
 import { Alert, Toast } from '../ui/FeedbackComponents';
 
 interface EditJobFormProps {
@@ -70,7 +73,7 @@ const initialForm: EditJobFormData = {
   userId: 0,
   profileHeader: '',
   skill: '',
-  specialization: 1,
+  specialization: 0,
   experiance: 0,
   experianceTo: 1,
   noOfVacancy: 1,
@@ -78,7 +81,7 @@ const initialForm: EditJobFormData = {
   salary: 1,
   salaryTo: 1,
   expiryDate: '',
-  educationId: 3,
+  educationId: 0,
   createdBy: 0,
   roleTypeId: 1,
   interviewModeId: 1,
@@ -96,6 +99,10 @@ const initialForm: EditJobFormData = {
   benefits: '',
   weeklyOffId: 1,
   jobCode: '',
+  companyTypeId: 0,
+  industryTypeId: 0,
+  jobTypeId: 0,
+  subEducationId: 0,
 };
 
 export const EditJobForm: React.FC<EditJobFormProps> = ({
@@ -112,7 +119,21 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
 
   const editJobMutation = useEditJobRequirementMutation();
 
+  const { data: companyTypes = [] } = useGetCompanyTypesQuery();
+  const { data: industryTypes = [] } = useGetIndustryTypesQuery();
+  const { data: jobTypes = [] } = useGetJobTypesQuery();
+  const { data: interviewModes = [] } = useGetInterviewModesQuery();
+  const { data: shiftTypes = [] } = useGetShiftTypesQuery();
+  const { data: workModes = [] } = useGetWorkModesQuery();
+  const { data: salaryPeriods = [] } = useGetSalaryPeriodsQuery();
+  const { data: jobBenefits = [] } = useGetJobBenefitsQuery();
+  const { data: weeklyOffs = [] } = useGetWeeklyOffsQuery();
+  const { data: educations = [] } = useGetEducationsQuery();
+
   const [form, setForm] = useState<EditJobFormData>(initialForm);
+  const { data: subEducations = [] } = useGetSubEducationsQuery(form.educationId, {
+    skip: !form.educationId,
+  });
   const [validationError, setValidationError] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
@@ -127,7 +148,7 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
       userId: getNumber(jobData.userId),
       profileHeader: jobData.profileHeader ?? '',
       skill: jobData.skill ?? '',
-      specialization: getNumber(jobData.specialization, 1),
+      specialization: getNumber(jobData.specialization, 0),
       experiance: getNumber(jobData.experiance, 0),
       experianceTo: getNumber(jobData.experianceTo, 1),
       noOfVacancy: getNumber(jobData.noOfVacancy, 1),
@@ -140,7 +161,7 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
       salaryTo: getNumber(jobData.salaryTo, 1),
 
       expiryDate: formatDateForInput(jobData.expiryDate),
-      educationId: getNumber(jobData.educationId, 3),
+      educationId: getNumber(jobData.educationId, 0),
       createdBy: getNumber(jobData.createdBy),
       roleTypeId: getNumber(jobData.roleTypeId, 1),
       interviewModeId: getNumber(jobData.interviewModeId, 1),
@@ -158,6 +179,9 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
       benefits: jobData.benefits ?? '',
       weeklyOffId: getNumber(jobData.weeklyOffId, 1),
       jobCode: jobData.jobCode ?? '',
+      companyTypeId: getNumber(jobData.companyTypeId, 0),
+      industryTypeId: getNumber(jobData.industryTypeId, 0),
+      jobTypeId: getNumber(jobData.jobTypeId, 0),
     };
 
     setForm(loadedForm);
@@ -178,12 +202,16 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
       'salary',
       'salaryTo',
       'educationId',
+      'subEducationId',
       'roleTypeId',
       'interviewModeId',
       'shiftTypeId',
       'workModeId',
       'salaryPeriodId',
       'weeklyOffId',
+      'companyTypeId',
+      'industryTypeId',
+      'jobTypeId',
     ];
 
     setForm((previous) => ({
@@ -267,16 +295,12 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
     }
 
     try {
-      const payload: JobRequirement = {
+      const payload = {
         ...form,
-
-        // Keep the existing backend property names.
-        // Do not rename these unless your API contract specifically requires it.
+        specialization: Number(form.industryTypeId) || Number(form.specialization) || 1,
         id: jobId,
-
         userId: Number(form.userId),
         createdBy: Number(form.createdBy),
-        specialization: Number(form.specialization),
         experiance: Number(form.experiance),
         experianceTo: Number(form.experianceTo),
         noOfVacancy: Number(form.noOfVacancy),
@@ -289,7 +313,6 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
         workModeId: Number(form.workModeId),
         salaryPeriodId: Number(form.salaryPeriodId),
         weeklyOffId: Number(form.weeklyOffId),
-
         expiryDate: new Date(form.expiryDate).toISOString(),
       };
 
@@ -465,16 +488,17 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
           </div>
 
           <div>
-            <label className="form-label">Role Type</label>
+            <label className="form-label">Job Type</label>
             <select
-              name="roleTypeId"
-              value={form.roleTypeId}
+              name="jobTypeId"
+              value={form.jobTypeId}
               onChange={handleChange}
               className="form-input"
             >
-              {roleTypes.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.labelEn}
+              <option value={0}>-- Select --</option>
+              {jobTypes.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
                 </option>
               ))}
             </select>
@@ -565,9 +589,10 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               onChange={handleChange}
               className="form-input"
             >
+              <option value={0}>-- Select --</option>
               {workModes.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.labelEn}
+                <option key={item.id} value={item.id}>
+                  {item.label}
                 </option>
               ))}
             </select>
@@ -601,28 +626,34 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
             <select
               name="educationId"
               value={form.educationId}
-              onChange={handleChange}
+              onChange={(e) => {
+                handleChange(e);
+                setForm((prev) => ({ ...prev, subEducationId: 0 }));
+              }}
               className="form-input"
             >
+              <option value={0}>-- Select --</option>
               {educations.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.labelEn}
+                <option key={item.id} value={item.id}>
+                  {item.label}
                 </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="form-label">Specialization</label>
+            <label className="form-label">Sub-Education</label>
             <select
-              name="specialization"
-              value={form.specialization}
+              name="subEducationId"
+              value={form.subEducationId}
               onChange={handleChange}
+              disabled={!form.educationId}
               className="form-input"
             >
-              {specializations.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.labelEn}
+              <option value={0}>-- Select --</option>
+              {subEducations.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
                 </option>
               ))}
             </select>
@@ -643,6 +674,42 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
+            <label className="form-label">Company Type</label>
+            <select
+              name="companyTypeId"
+              value={form.companyTypeId}
+              onChange={handleChange}
+              className="form-input"
+            >
+              <option value={0}>-- Select --</option>
+              {companyTypes.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="form-label">Industry Type</label>
+            <select
+              name="industryTypeId"
+              value={form.industryTypeId}
+              onChange={handleChange}
+              className="form-input"
+            >
+              <option value={0}>-- Select --</option>
+              {industryTypes.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
             <label className="form-label">Interview Mode</label>
             <select
               name="interviewModeId"
@@ -650,9 +717,10 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               onChange={handleChange}
               className="form-input"
             >
+              <option value={0}>-- Select --</option>
               {interviewModes.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.labelEn}
+                <option key={item.id} value={item.id}>
+                  {item.label}
                 </option>
               ))}
             </select>
@@ -725,9 +793,10 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               onChange={handleChange}
               className="form-input"
             >
+              <option value={0}>-- Select --</option>
               {salaryPeriods.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.labelEn}
+                <option key={item.id} value={item.id}>
+                  {item.label}
                 </option>
               ))}
             </select>
@@ -743,9 +812,10 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               onChange={handleChange}
               className="form-input"
             >
+              <option value={0}>-- Select --</option>
               {weeklyOffs.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.labelEn}
+                <option key={item.id} value={item.id}>
+                  {item.label}
                 </option>
               ))}
             </select>
@@ -759,9 +829,10 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               onChange={handleChange}
               className="form-input"
             >
+              <option value={0}>-- Select --</option>
               {shiftTypes.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.labelEn}
+                <option key={item.id} value={item.id}>
+                  {item.label}
                 </option>
               ))}
             </select>
@@ -769,12 +840,19 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
 
           <div>
             <label className="form-label">Benefits</label>
-            <input
+            <select
               name="benefits"
               value={form.benefits}
               onChange={handleChange}
               className="form-input"
-            />
+            >
+              <option value="">-- Select --</option>
+              {jobBenefits.map((item) => (
+                <option key={item.id} value={item.label}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

@@ -29,14 +29,23 @@ async function startServer() {
       if (req.headers.authorization) {
         headers['Authorization'] = req.headers.authorization;
       }
+      if (req.headers.token) {
+        headers['token'] = req.headers.token as string;
+      }
+      if (req.headers['x-access-token']) {
+        headers['x-access-token'] = req.headers['x-access-token'] as string;
+      }
 
       const fetchOptions: RequestInit = {
         method: req.method,
         headers,
       };
 
-      if (req.method !== 'GET' && req.method !== 'HEAD' && req.body && Object.keys(req.body).length > 0) {
-        fetchOptions.body = JSON.stringify(req.body);
+      if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
+        const hasContent = Array.isArray(req.body) ? req.body.length > 0 : Object.keys(req.body).length > 0;
+        if (hasContent) {
+          fetchOptions.body = JSON.stringify(req.body);
+        }
       }
 
       const response = await fetch(targetUrl, fetchOptions);

@@ -103,6 +103,8 @@ export interface Job {
   category: string;
   createdAt: string;
   isApproved: boolean;
+  jobCode?: string;
+  userJobStatus?: string;
 }
 
 export interface JobApplication {

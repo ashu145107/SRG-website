@@ -29,10 +29,10 @@ export const useSearchJobsQuery = (params?: JobSearchParams) => {
   });
 };
 
-export const useJobDetailsQuery = (id: number | undefined) => {
+export const useJobDetailsQuery = (id: number | undefined, jobCode?: string) => {
   return useQuery({
-    queryKey: ['jobDetails', id],
-    queryFn: () => (id ? jobService.getJobDetails(id) : Promise.reject('No ID')),
+    queryKey: ['jobDetails', id, jobCode],
+    queryFn: () => (id ? jobService.getJobDetails(id, jobCode) : Promise.reject('No ID')),
     enabled: !!id,
   });
 };

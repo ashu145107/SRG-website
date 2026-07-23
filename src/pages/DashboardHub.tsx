@@ -18,6 +18,7 @@ import {
   useUpdateJobMutation,
   useDeleteJobMutation
 } from '../services/jobApi';
+import { useSearchJobsQuery } from '../hooks/useJobQueries';
 import {
   useGetCompaniesQuery,
   useGetCompanyByIdQuery,
@@ -183,8 +184,8 @@ export default function DashboardHub() {
       </nav>
 
       {/* Primary Layout and Shell wrapper */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full text-slate-800">
-        <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-gray-150 pb-5">
+      <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-5 lg:px-6 py-4 lg:py-8 w-full text-slate-800">
+        <div className="mb-4 lg:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-150 pb-4">
           <div className="text-left">
             <h2 className="text-xl sm:text-2xl font-black text-blue-950">
               {t('dashboard.welcome')}, {user.name}!
@@ -422,7 +423,7 @@ export default function DashboardHub() {
                 )}
               </div>
 
-              <div className="lg:col-span-9 space-y-6">
+      <div className="lg:col-span-9 space-y-4 lg:space-y-6">
                 {activeTab === 'overview' && (
                   <AdminOverviewTab />
                 )}
@@ -596,9 +597,9 @@ function LiveDashboardStats() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-gray-150 shadow-xs p-6 space-y-4 text-left">
-        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-white rounded-2xl border border-gray-150 shadow-xs p-4 lg:p-6 space-y-3 lg:space-y-4 text-left">
+        <div className="flex justify-between items-center border-b border-gray-100 pb-2 lg:pb-3">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-orange-600 animate-pulse"></span>
             <h3 className="font-extrabold text-blue-950 text-xs sm:text-sm tracking-wide uppercase">
@@ -616,20 +617,20 @@ function LiveDashboardStats() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-4">
           {items.map((item, idx) => (
-            <div key={idx} className={`p-4 rounded-xl border flex items-start gap-3 transition-all ${item.colorClass}`}>
-              <div className="p-2 bg-white rounded-lg shadow-2xs shrink-0">
+            <div key={idx} className={`p-3 lg:p-4 rounded-xl border flex items-start gap-2 lg:gap-3 transition-all ${item.colorClass}`}>
+              <div className="p-1.5 lg:p-2 bg-white rounded-lg shadow-2xs shrink-0">
                 {item.icon}
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold text-slate-500 leading-tight mb-0.5">
+                <p className="text-[9px] lg:text-[10px] font-semibold text-slate-500 leading-tight mb-0.5">
                   {item.labelMr}
                 </p>
-                <p className="text-[10px] font-medium text-slate-400 leading-tight mb-2.5">
+                <p className="text-[9px] lg:text-[10px] font-medium text-slate-400 leading-tight mb-1.5 lg:mb-2.5">
                   {item.labelEn}
                 </p>
-                <p className="text-base sm:text-lg font-black text-slate-950 leading-none">
+                <p className="text-sm lg:text-base sm:text-lg font-black text-slate-950 leading-none">
                   {item.value}
                 </p>
               </div>
@@ -1581,12 +1582,17 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
 
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
 
+  // Optimistic tracking of newly applied job IDs for instant UI updates
+  const [recentlyAppliedIds, setRecentlyAppliedIds] = useState<Set<string>>(new Set());
+
   // Load seeker profile
   const { data: profile, refetch: refetchProfile } = useGetCandidateByIdQuery(candidateId);
   const [updateProfile] = useUpdateCandidateMutation();
 
   // Load jobs lists (Approved only!)
   const { data: availableJobs = [], refetch: refetchJobs } = useGetJobsQuery({ approvedOnly: true });
+  // Load jobs from TanStack Query (same source as JobListingView, has userJobStatus)
+  const { data: searchJobs = [] } = useSearchJobsQuery();
   // Load applications history tracking
   const { data: myApps = [], refetch: refetchMyApps } = useGetApplicationsQuery({ candidateId });
 
@@ -1710,38 +1716,56 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
     }
   };
 
+  const isJobApplied = (jobId: number, job?: Job): boolean => {
+    if (recentlyAppliedIds.has(String(jobId))) return true;
+    if (job?.jobCode && recentlyAppliedIds.has(job.jobCode)) return true;
+    if (job?.userJobStatus === 'Already applied') return true;
+    const sj = searchJobs.find((j: any) => Number(j.id) === jobId);
+    if (sj && (sj.userJobStatus === 'Already applied' || sj.userJobStatus === 'Already Applied')) return true;
+    return false;
+  };
+
+  const apiAppliedCount = Math.max(
+    searchJobs.filter((j: any) => j.userJobStatus === 'Already applied' || j.userJobStatus === 'Already Applied').length,
+    availableJobs.filter((j) => j.userJobStatus === 'Already applied').length
+  );
+  const appliedCount = Math.max(apiAppliedCount, recentlyAppliedIds.size);
+
   const filteredJobs = availableJobs.filter((j) => {
     const query = searchPhrase.toLowerCase();
+    const sj = searchJobs.find((s: any) => String(s.id) === String(j.id) || s.jobCode === j.jobCode);
+    const isApplied = (j.userJobStatus === 'Already applied') || (sj && (sj.userJobStatus === 'Already applied' || sj.userJobStatus === 'Already Applied'));
     return (
-      j.title.toLowerCase().includes(query) ||
+      !isApplied &&
+      (j.title.toLowerCase().includes(query) ||
       j.companyName.toLowerCase().includes(query) ||
       j.location.toLowerCase().includes(query) ||
-      j.category.toLowerCase().includes(query)
+      j.category.toLowerCase().includes(query))
     );
   });
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start text-left font-sans animate-fade-in animate-duration-150">
-      <div className="lg:col-span-3 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start text-left font-sans animate-fade-in animate-duration-150">
+      <div className="lg:col-span-3 flex flex-row lg:flex-col gap-1.5 lg:gap-2 overflow-x-auto pb-1 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0">
         <button
-          onClick={() => setActiveTab('search')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-2 ${
+          onClick={() => { setActiveTab('search'); setSelectedJobIdForDetail(null); }}
+          className={`px-3 lg:px-4.5 py-2 lg:py-2.5 text-[11px] lg:text-xs font-bold rounded-lg lg:rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-1.5 lg:gap-2 ${
             activeTab === 'search' ? 'bg-orange-600 text-white' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
           }`}
         >
           🔍 शोध नोकरी / Find Jobs
         </button>
         <button
-          onClick={() => setActiveTab('history')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-2 ${
+          onClick={() => { setActiveTab('history'); setSelectedJobIdForDetail(null); }}
+          className={`px-3 lg:px-4.5 py-2 lg:py-2.5 text-[11px] lg:text-xs font-bold rounded-lg lg:rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-1.5 lg:gap-2 ${
             activeTab === 'history' ? 'bg-orange-600 text-white' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
           }`}
         >
-          📂 माझे अर्ज / Applied Pipeline Tracker ({myApps.length})
+          📂 माझे अर्ज / Applied ({appliedCount})
         </button>
         <button
-          onClick={() => setActiveTab('profile')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-2 ${
+          onClick={() => { setActiveTab('profile'); setSelectedJobIdForDetail(null); }}
+          className={`px-3 lg:px-4.5 py-2 lg:py-2.5 text-[11px] lg:text-xs font-bold rounded-lg lg:rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-1.5 lg:gap-2 ${
             activeTab === 'profile' ? 'bg-orange-600 text-white' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
           }`}
         >
@@ -1768,60 +1792,93 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
             <JobDetailsView
               jobId={selectedJobIdForDetail}
               onBack={() => setSelectedJobIdForDetail(null)}
-              onApplySuccess={() => {
+              onApplySuccess={(appliedJobCode?: string) => {
+                const job = availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail);
+                const identifier = appliedJobCode || job?.jobCode || String(selectedJobIdForDetail);
+                setRecentlyAppliedIds((prev) => new Set(prev).add(identifier));
                 setSelectedJobIdForDetail(null);
                 refetchMyApps();
               }}
-              alreadyApplied={myApps.some(
-                (app) =>
-                  Number(app.jobId) === selectedJobIdForDetail ||
-                  String(app.jobId) === String(selectedJobIdForDetail)
-              )}
+              alreadyApplied={isJobApplied(selectedJobIdForDetail, availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail))}
             />
           ) : (
             <JobListingView
               onViewDetails={(id) => setSelectedJobIdForDetail(id)}
-              appliedJobIds={myApps.map((app) => Number(app.jobId)).filter(Boolean)}
+              appliedJobIds={availableJobs
+                .filter((j) => isJobApplied(Number(j.id), j))
+                .map((j) => Number(j.id))
+                .filter(Boolean)}
             />
           )
         )}
 
         {/* 2. Job history tab */}
         {activeTab === 'history' && (
-          <Card title="तुमच्या अर्जांची स्थिती / Your Active Job Applications">
-            {myApps.length === 0 ? (
-              <EmptyState title="No Applications tracking logs" desc="Go seek and apply on active vacancys listed under Find Jobs." />
-            ) : (
-              <div className="space-y-4">
-                {myApps.map((app) => (
-                  <div key={app.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-4 text-left">
-                    <div className="space-y-1.5">
-                      <h4 className="text-sm font-bold text-slate-800">{app.jobTitle}</h4>
-                      <p className="text-xs text-slate-600 font-bold block leading-none">कंपनी: {app.companyName}</p>
-                      <p className="text-[10px] text-gray-500 font-semibold block leading-none">अर्ज तारीख: {app.appliedAt}</p>
-                    </div>
+          selectedJobIdForDetail ? (
+            <JobDetailsView
+              jobId={selectedJobIdForDetail}
+              onBack={() => setSelectedJobIdForDetail(null)}
+              alreadyApplied={true}
+            />
+          ) : (
+            <Card title="तुमच्या अर्जांची स्थिती / Your Active Job Applications">
+              {(() => {
+                const mergedApps: Array<{ id: string; jobTitle: string; companyName: string; status: string; numericId: number; jobCode?: string }> = [];
 
-                    <div>
-                      {app.status === 'Interview Scheduled' ? (
-                        <div className="text-right space-y-1">
-                          <Badge type="secondary">🗓️ MULTIPHASES ONLINE INTERVIEW</Badge>
-                          <span className="block text-[10px] text-blue-900 font-bold font-mono">
-                            Date: {app.interviewDate}
-                          </span>
+                // Jobs from searchJobs API (TanStack Query) where userJobStatus indicates already applied
+                searchJobs.forEach((j: any) => {
+                  if (j.userJobStatus === 'Already applied' || j.userJobStatus === 'Already Applied') {
+                    const numId = Number(j.id);
+                    if (numId && !isNaN(numId)) {
+                      mergedApps.push({ id: String(j.id), jobTitle: j.jobDesignation || j.profileHeader || 'Job', companyName: j.companyName || j.postingNotes || 'Company', status: 'Already applied', numericId: numId, jobCode: j.jobCode });
+                    }
+                  }
+                });
+
+                // Also check availableJobs (RTK Query)
+                availableJobs.forEach((j) => {
+                  if (j.userJobStatus === 'Already applied') {
+                    const numId = Number(j.id);
+                    if (numId && !isNaN(numId) && !mergedApps.some((a) => a.numericId === numId)) {
+                      mergedApps.push({ id: String(j.id), jobTitle: j.title, companyName: j.companyName, status: 'Already applied', numericId: numId, jobCode: j.jobCode });
+                    }
+                  }
+                });
+
+                // Optimistic entries from recent applies in this session
+                recentlyAppliedIds.forEach((code) => {
+                  if (!mergedApps.some((a) => String(a.numericId) === code || a.jobCode === code)) {
+                    const job = availableJobs.find((j) => String(j.id) === code || j.jobCode === code);
+                    if (job) {
+                      mergedApps.unshift({ id: `local-${code}`, jobTitle: job.title, companyName: job.companyName, status: 'Applied', numericId: Number(job.id), jobCode: job.jobCode });
+                    }
+                  }
+                });
+                if (mergedApps.length === 0) {
+                  return <EmptyState title="No Applications tracking logs" desc="Go seek and apply on active vacancys listed under Find Jobs." />;
+                }
+                return (
+                  <div className="space-y-4">
+                    {mergedApps.map((app) => (
+                      <div
+                        key={app.id}
+                        onClick={() => setSelectedJobIdForDetail(app.numericId)}
+                        className="p-3 lg:p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-3 text-left hover:bg-orange-50 hover:border-orange-200 transition-all cursor-pointer"
+                      >
+                        <div className="space-y-1.5">
+                          <h4 className="text-sm font-bold text-slate-800">{app.jobTitle}</h4>
+                          <p className="text-xs text-slate-600 font-bold block leading-none">कंपनी: {app.companyName}</p>
                         </div>
-                      ) : app.status === 'Hired' ? (
-                        <Badge type="success">✓ HIRED & ACTIVE</Badge>
-                      ) : app.status === 'Rejected' ? (
-                        <Badge type="danger">REJECTED</Badge>
-                      ) : (
-                        <Badge type="primary">{app.status}</Badge>
-                      )}
-                    </div>
+                        <div>
+                          <Badge type="primary">{app.status}</Badge>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </Card>
+                );
+              })()}
+            </Card>
+          )
         )}
 
         {/* 3. Seeker Profile settings updater */}

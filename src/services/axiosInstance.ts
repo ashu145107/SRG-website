@@ -17,14 +17,26 @@ export const axiosInstance = axios.create({
   },
 });
 
-// Request Interceptor: inject JWT authorization token from Redux Store dynamically
+// Request Interceptor: inject JWT authorization token from Redux Store or localStorage dynamically
 axiosInstance.interceptors.request.use(
   (config) => {
     const state = store.getState();
-    const token = state.auth?.token;
-    
+    let token = state.auth?.token;
+
+    if (!token) {
+      try {
+        const savedAuth = localStorage.getItem('srg_auth_state');
+        if (savedAuth) {
+          const parsed = JSON.parse(savedAuth);
+          token = parsed?.token || parsed?.user?.token;
+        }
+      } catch (e) {}
+    }
+
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      const cleanToken = token.startsWith('Bearer ') ? token.slice(7) : token;
+      config.headers.Authorization = `Bearer ${cleanToken}`;
+      config.headers['token'] = cleanToken;
     }
     return config;
   },

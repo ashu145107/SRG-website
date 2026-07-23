@@ -4,7 +4,7 @@
  */
 
 export interface JobRequirement {
-  id?: number; // Present on responses or when editing
+  id?: number;
   userId: number;
   profileHeader: string;
   skill: string;
@@ -13,7 +13,7 @@ export interface JobRequirement {
   noOfVacancy: number;
   workPlace: string;
   salary: number;
-  expiryDate: string; // ISO DateTime or date string
+  expiryDate: string;
   educationId: number;
   createdBy: number;
   experianceTo: number;
@@ -34,6 +34,12 @@ export interface JobRequirement {
   benefits: string;
   weeklyOffId: number;
   jobCode: string;
+  userJobStatus?: string;
+  /** UI-only alias — maps to `specialization` for backend */
+  companyTypeId?: number;
+  industryTypeId?: number;
+  jobTypeId?: number;
+  subEducationId?: number;
 }
 
 // Params for searching jobs

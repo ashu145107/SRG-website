@@ -52,62 +52,65 @@ export const candidateApi = baseApi.injectEndpoints({
     }),
     getApplications: builder.query<JobApplication[], { candidateId?: string; companyId?: string } | void>({
       queryFn: async (filters, api) => {
-        const state = api.getState();
-        const role = (state as any).auth?.user?.role;
-        const isAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'HANDLER';
-        
-        if (isAdmin) {
-          try {
-            const pageSize = 100;
-            const pageNumber = 1;
-            const response = await axiosInstance.get<any>(`/api/v1/jobapplications/${pageSize}/${pageNumber}`);
-            let list: any[] = [];
-            const responseData = response.data;
-            if (responseData) {
-              if (responseData.value !== undefined && responseData.value !== null) {
-                const val = responseData.value;
-                if (Array.isArray(val)) {
-                  list = val;
-                } else if (typeof val === 'object') {
-                  if (Array.isArray(val.data)) list = val.data;
-                  else if (Array.isArray(val.items)) list = val.items;
-                  else if (Array.isArray(val.results)) list = val.results;
-                  else if (Array.isArray(val.jobApplications)) list = val.jobApplications;
-                  else {
-                    const arrayProp = Object.values(val).find(v => Array.isArray(v));
-                    if (arrayProp) list = arrayProp as any[];
-                  }
+        try {
+          const pageSize = 100;
+          const pageNumber = 1;
+          const response = await axiosInstance.get<any>(`/api/v1/jobapplications/${pageSize}/${pageNumber}`);
+          let list: any[] = [];
+          const responseData = response.data;
+          if (responseData) {
+            if (responseData.value !== undefined && responseData.value !== null) {
+              const val = responseData.value;
+              if (Array.isArray(val)) {
+                list = val;
+              } else if (typeof val === 'object') {
+                if (Array.isArray(val.data)) list = val.data;
+                else if (Array.isArray(val.items)) list = val.items;
+                else if (Array.isArray(val.results)) list = val.results;
+                else if (Array.isArray(val.jobApplications)) list = val.jobApplications;
+                else {
+                  const arrayProp = Object.values(val).find(v => Array.isArray(v));
+                  if (arrayProp) list = arrayProp as any[];
                 }
-              } else if (Array.isArray(responseData)) {
-                list = responseData;
-              } else if (Array.isArray(responseData.data)) {
-                list = responseData.data;
-              } else if (Array.isArray(responseData.items)) {
-                list = responseData.items;
-              } else if (Array.isArray(responseData.results)) {
-                list = responseData.results;
               }
+            } else if (Array.isArray(responseData)) {
+              list = responseData;
+            } else if (Array.isArray(responseData.data)) {
+              list = responseData.data;
+            } else if (Array.isArray(responseData.items)) {
+              list = responseData.items;
+            } else if (Array.isArray(responseData.results)) {
+              list = responseData.results;
             }
-            
-            if (list && list.length > 0) {
-              const mapped = list.map((item: any) => ({
-                id: String(item.id || item.jobApplicationId || `app-${Date.now()}-${Math.random()}`),
-                jobId: String(item.jobId || item.jobRequirementId || ''),
-                jobTitle: item.jobTitle || item.jobDesignation || item.title || 'Untitled Job',
-                companyName: item.companyName || item.company || 'Unknown Company',
-                companyId: String(item.companyId || ''),
-                candidateId: String(item.candidateId || item.userId || ''),
-                candidateName: item.candidateName || item.fullName || 'Candidate',
-                candidatePhone: item.candidatePhone || item.phone || '',
-                status: (item.status || 'Applied') as JobApplication['status'],
-                appliedAt: item.appliedAt || item.createdDate || new Date().toISOString().split('T')[0],
-                interviewDate: item.interviewDate || undefined
-              }));
-              return { data: mapped };
-            }
-          } catch (err) {
-            console.warn('Failed to fetch job applications from API, falling back to mock DB:', err);
           }
+          
+          if (list && list.length > 0) {
+            const f = filters as { candidateId?: string; companyId?: string } | undefined;
+            const mapped = list.map((item: any) => ({
+              id: String(item.id || item.jobApplicationId || `app-${Date.now()}-${Math.random()}`),
+              jobId: String(item.jobId || item.jobRequirementId || item.jobCode || ''),
+              jobTitle: item.jobTitle || item.jobDesignation || item.title || 'Untitled Job',
+              companyName: item.companyName || item.company || 'Unknown Company',
+              companyId: String(item.companyId || ''),
+              candidateId: String(item.candidateId || item.userId || ''),
+              candidateName: item.candidateName || item.fullName || 'Candidate',
+              candidatePhone: item.candidatePhone || item.phone || '',
+              status: (item.status || 'Applied') as JobApplication['status'],
+              appliedAt: item.appliedAt || item.createdDate || new Date().toISOString().split('T')[0],
+              interviewDate: item.interviewDate || undefined
+            }));
+
+            let filtered = mapped;
+            if (f?.candidateId) {
+              filtered = filtered.filter(a => a.candidateId === f.candidateId);
+            }
+            if (f?.companyId) {
+              filtered = filtered.filter(a => a.companyId === f.companyId);
+            }
+            return { data: filtered };
+          }
+        } catch (err) {
+          console.warn('Failed to fetch job applications from API, falling back to mock DB:', err);
         }
         
         let apps = MockDb.getApplications();

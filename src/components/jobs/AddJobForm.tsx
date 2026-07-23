@@ -9,15 +9,18 @@ import { useSelector } from 'react-redux';
 import { useAddJobRequirementMutation } from '../../hooks/useJobQueries';
 import { JobRequirement } from '../../services/jobTypes';
 import {
-  educations,
-  roleTypes,
-  interviewModes,
-  shiftTypes,
-  workModes,
-  salaryPeriods,
-  weeklyOffs,
-  specializations,
-} from './jobMappings';
+  useGetCompanyTypesQuery,
+  useGetIndustryTypesQuery,
+  useGetInterviewModesQuery,
+  useGetJobTypesQuery,
+  useGetShiftTypesQuery,
+  useGetWorkModesQuery,
+  useGetSalaryPeriodsQuery,
+  useGetJobBenefitsQuery,
+  useGetWeeklyOffsQuery,
+  useGetEducationsQuery,
+  useGetSubEducationsQuery,
+} from '../../services/jobMasterApi';
 import { Alert, Toast } from '../ui/FeedbackComponents';
 
 interface AddJobFormProps {
@@ -32,6 +35,17 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
   const isLoading = addJobMutation.isPending;
   const apiError = addJobMutation.error;
 
+  const { data: companyTypes = [] } = useGetCompanyTypesQuery();
+  const { data: industryTypes = [] } = useGetIndustryTypesQuery();
+  const { data: jobTypes = [] } = useGetJobTypesQuery();
+  const { data: interviewModes = [] } = useGetInterviewModesQuery();
+  const { data: shiftTypes = [] } = useGetShiftTypesQuery();
+  const { data: workModes = [] } = useGetWorkModesQuery();
+  const { data: salaryPeriods = [] } = useGetSalaryPeriodsQuery();
+  const { data: jobBenefits = [] } = useGetJobBenefitsQuery();
+  const { data: weeklyOffs = [] } = useGetWeeklyOffsQuery();
+  const { data: educations = [] } = useGetEducationsQuery();
+
   // Toast and Error states
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
@@ -45,7 +59,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
   const [form, setForm] = useState({
     profileHeader: '',
     skill: '',
-    specialization: 1,
+    specialization: 0,
     experiance: 0,
     experianceTo: 1,
     noOfVacancy: 1,
@@ -53,7 +67,8 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
     salary: 0,
     salaryTo: 0,
     expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    educationId: 3,
+    educationId: 0,
+    subEducationId: 0,
     roleTypeId: 1,
     interviewModeId: 1,
     interviewLocation: '',
@@ -70,6 +85,13 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
     benefits: '',
     weeklyOffId: 1,
     jobCode: `JOB-${Math.floor(1000 + Math.random() * 9000)}`,
+    companyTypeId: 0,
+    industryTypeId: 0,
+    jobTypeId: 0,
+  });
+
+  const { data: subEducations = [] } = useGetSubEducationsQuery(form.educationId, {
+    skip: !form.educationId,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -82,12 +104,16 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
       'salary',
       'salaryTo',
       'educationId',
+      'subEducationId',
       'roleTypeId',
       'interviewModeId',
       'shiftTypeId',
       'workModeId',
       'salaryPeriodId',
       'weeklyOffId',
+      'companyTypeId',
+      'industryTypeId',
+      'jobTypeId',
     ];
 
     setForm((prev) => ({
@@ -143,8 +169,9 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
     }
 
     try {
-      const payload: JobRequirement = {
+      const payload = {
         ...form,
+        specialization: Number(form.industryTypeId) || 1,
         userId: numericUserId,
         createdBy: numericUserId,
         salary: Number(form.salary),
@@ -270,16 +297,17 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचा प्रकार / Role Type *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचा प्रकार / Job Type *</label>
             <select
-              name="roleTypeId"
-              value={form.roleTypeId}
+              name="jobTypeId"
+              value={form.jobTypeId}
               onChange={handleChange}
               className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
             >
-              {roleTypes.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.labelMr} / {t.labelEn}
+              <option value={0}>-- Select --</option>
+              {jobTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
                 </option>
               ))}
             </select>
@@ -359,9 +387,10 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               onChange={handleChange}
               className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
             >
+              <option value={0}>-- Select --</option>
               {workModes.map((w) => (
-                <option key={w.value} value={w.value}>
-                  {w.labelMr} / {w.labelEn}
+                <option key={w.id} value={w.id}>
+                  {w.label}
                 </option>
               ))}
             </select>
@@ -391,34 +420,40 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
           </div>
         </div>
 
-        {/* Education, Category, Expiry Date */}
+        {/* Education, Sub-Education, Expiry Date */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">शिक्षण पात्रता / Required Education *</label>
             <select
               name="educationId"
               value={form.educationId}
-              onChange={handleChange}
+              onChange={(e) => {
+                handleChange(e);
+                setForm((prev) => ({ ...prev, subEducationId: 0 }));
+              }}
               className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
             >
+              <option value={0}>-- Select --</option>
               {educations.map((e) => (
-                <option key={e.value} value={e.value}>
-                  {e.labelMr} / {e.labelEn}
+                <option key={e.id} value={e.id}>
+                  {e.label}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे क्षेत्र / Specialization *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">विशेषीकरण / Sub-Education</label>
             <select
-              name="specialization"
-              value={form.specialization}
+              name="subEducationId"
+              value={form.subEducationId}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+              disabled={!form.educationId}
+              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white disabled:bg-slate-50 disabled:text-slate-400"
             >
-              {specializations.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.labelMr} / {s.labelEn}
+              <option value={0}>-- Select --</option>
+              {subEducations.map((se) => (
+                <option key={se.id} value={se.id}>
+                  {se.label}
                 </option>
               ))}
             </select>
@@ -436,6 +471,42 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
           </div>
         </div>
 
+        {/* Company Type, Industry Type */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">कंपनीचा प्रकार / Company Type</label>
+            <select
+              name="companyTypeId"
+              value={form.companyTypeId}
+              onChange={handleChange}
+              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+            >
+              <option value={0}>-- Select --</option>
+              {companyTypes.map((ct) => (
+                <option key={ct.id} value={ct.id}>
+                  {ct.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">उद्योगाचे क्षेत्र / Industry Type</label>
+            <select
+              name="industryTypeId"
+              value={form.industryTypeId}
+              onChange={handleChange}
+              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+            >
+              <option value={0}>-- Select --</option>
+              {industryTypes.map((it) => (
+                <option key={it.id} value={it.id}>
+                  {it.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         {/* Interview Details */}
         <div className="p-4 bg-slate-50 border border-slate-150 rounded-xl space-y-4">
           <span className="block text-xs font-extrabold text-slate-800 border-b border-slate-100 pb-1.5">मुलाखत तपशील / Interview Details</span>
@@ -448,9 +519,10 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                 onChange={handleChange}
                 className="w-full text-xs p-2.5 bg-white rounded-lg border border-slate-200 focus:outline-none focus:border-orange-500"
               >
+                <option value={0}>-- Select --</option>
                 {interviewModes.map((im) => (
-                  <option key={im.value} value={im.value}>
-                    {im.labelMr} / {im.labelEn}
+                  <option key={im.id} value={im.id}>
+                    {im.label}
                   </option>
                 ))}
               </select>
@@ -528,9 +600,10 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               onChange={handleChange}
               className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
             >
+              <option value={0}>-- Select --</option>
               {salaryPeriods.map((sp) => (
-                <option key={sp.value} value={sp.value}>
-                  {sp.labelMr} / {sp.labelEn}
+                <option key={sp.id} value={sp.id}>
+                  {sp.label}
                 </option>
               ))}
             </select>
@@ -546,9 +619,10 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               onChange={handleChange}
               className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
             >
+              <option value={0}>-- Select --</option>
               {weeklyOffs.map((wo) => (
-                <option key={wo.value} value={wo.value}>
-                  {wo.labelMr} / {wo.labelEn}
+                <option key={wo.id} value={wo.id}>
+                  {wo.label}
                 </option>
               ))}
             </select>
@@ -561,23 +635,29 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               onChange={handleChange}
               className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
             >
+              <option value={0}>-- Select --</option>
               {shiftTypes.map((st) => (
-                <option key={st.value} value={st.value}>
-                  {st.labelMr} / {st.labelEn}
+                <option key={st.id} value={st.id}>
+                  {st.label}
                 </option>
               ))}
             </select>
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">इतर फायदे / Key Perks & Benefits</label>
-            <input
-              type="text"
+            <select
               name="benefits"
-              placeholder="e.g. Free Meals, PF, Medical Insurance, Paid Leaves"
               value={form.benefits}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
-            />
+              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+            >
+              <option value="">-- Select --</option>
+              {jobBenefits.map((b) => (
+                <option key={b.id} value={b.label}>
+                  {b.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
