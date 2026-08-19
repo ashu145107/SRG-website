@@ -158,6 +158,12 @@ export const uploadProfilePic = async (file: File): Promise<{ success: boolean; 
       return { success: false, message: msg };
     }
 
+    // API-level error even when HTTP 200
+    if (data?.isSuccess === false || data?.isFailure === true || data?.error) {
+      const msg = data?.message || data?.error?.message || data?.error || JSON.stringify(data);
+      return { success: false, message: msg };
+    }
+
     const val = data?.value || data?.data || data;
     return { success: true, message: 'Profile picture updated successfully.', url: val?.profilePicUrl || val?.url || '' };
   } catch (err: any) {
@@ -204,6 +210,12 @@ export const uploadResume = async (file: File): Promise<{ success: boolean; mess
 
     if (!res.ok) {
       const msg = data?.message || data?.error?.message || JSON.stringify(data) || `Server returned ${res.status}`;
+      return { success: false, message: msg };
+    }
+
+    // API-level error even when HTTP 200
+    if (data?.isSuccess === false || data?.isFailure === true || data?.error) {
+      const msg = data?.message || data?.error?.message || data?.error || JSON.stringify(data);
       return { success: false, message: msg };
     }
 
