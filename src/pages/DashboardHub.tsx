@@ -121,7 +121,7 @@ export default function DashboardHub() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, lastLogin } = useSelector((state: RootState) => state.auth);
 
   if (!user) {
     return (
@@ -148,11 +148,14 @@ export default function DashboardHub() {
   const { data: jobCategories = [] } = useGetJobCategoriesQuery();
 
   // API hooks for triggers
-  const { refetch: refetchStats } = useGetDashboardStatsQuery();
+  const { refetch: refetchStats } = useGetDashboardStatsQuery(undefined, { skip: !user });
 
   // Profile dropdown state
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch profile for pic display in navbar
+  const { data: navProfile } = useGetMyProfileQuery(undefined, { skip: !user });
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -183,22 +186,49 @@ export default function DashboardHub() {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Last Login - visible always */}
+            {lastLogin && (
+              <div className="hidden md:flex flex-col items-end mr-2">
+                <span className="text-[9px] text-blue-300 font-bold uppercase tracking-wider">Last Login</span>
+                <span className="text-[10px] text-orange-400 font-semibold">
+                  {new Date(lastLogin).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })},{' '}
+                  {new Date(lastLogin).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                </span>
+              </div>
+            )}
             {/* Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                 className="flex items-center gap-2 p-1 px-3 border border-blue-900 bg-blue-1000 font-bold hover:bg-blue-800 rounded-xl text-[11px] transition-all cursor-pointer"
               >
-                <UserCircle className="w-4 h-4 text-orange-400" />
+                {navProfile?.profilePicUrl ? (
+                  <img src={navProfile.profilePicUrl} alt="Profile" className="w-7 h-7 rounded-full object-cover border border-orange-400" />
+                ) : (
+                  <UserCircle className="w-7 h-7 text-orange-400" />
+                )}
                 <span className="hidden sm:inline text-left max-w-[120px] truncate">{user.email}</span>
                 <ChevronDown className={`w-3 h-3 transition-transform ${showProfileDropdown ? 'rotate-180' : ''}`} />
               </button>
 
               {showProfileDropdown && (
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 z-50 py-1 animate-fade-in">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-xs font-bold text-gray-900">{user.name}</p>
-                    <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+                    {navProfile?.profilePicUrl ? (
+                      <img src={navProfile.profilePicUrl} alt="Profile" className="w-9 h-9 rounded-full object-cover border border-orange-300 shrink-0" />
+                    ) : (
+                      <UserCircle className="w-9 h-9 text-gray-300 shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-gray-900 truncate">{user.name}</p>
+                      <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
+                      {lastLogin && (
+                        <p className="text-[9px] text-blue-600 font-semibold mt-1 truncate">
+                          Last Login: {new Date(lastLogin).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })},{' '}
+                          {new Date(lastLogin).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <button
                     onClick={() => {
@@ -532,7 +562,8 @@ export default function DashboardHub() {
 // SUB-TAB VIEWS: DYNAMIC LIVE API STATISTICS
 // ==========================================
 function LiveDashboardStats() {
-  const { data: stats, isLoading, error } = useGetDashboardStatsQuery();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { data: stats, isLoading, error } = useGetDashboardStatsQuery(undefined, { skip: !user });
 
   if (isLoading) {
     return (
@@ -804,7 +835,9 @@ function LiveDashboardStats() {
 // SUB-TAB VIEWS: 1. ADMINS OVERVIEW METRICS
 // ==========================================
 function AdminOverviewTab() {
-  const { data: stats, isLoading } = useGetDashboardStatsQuery();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { data: stats, isLoading } = useGetDashboardStatsQuery(undefined, { skip: !user });
+  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const { t } = useTranslation();
 
   if (isLoading || !stats) return <Loader />;
@@ -847,7 +880,9 @@ function AdminOverviewTab() {
 // ==========================================
 function AdminUsersTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) {
   const dispatch = useDispatch();
-  const { data: users = [], refetch } = useGetHandlersQuery(); // using handlers as users demo data
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { data: users = [], refetch } = useGetHandlersQuery(undefined, { skip: !user });
+  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const [editingHandlerId, setEditingHandlerId] = useState('');
   
   // Handler Permissions temporary state
@@ -974,11 +1009,13 @@ function AdminUsersTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) 
 // COMPONENT LIST: 3. JOBS APPROVAL GRID WITH LIST AND EDIT
 // ==========================================
 function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) {
+  const { user } = useSelector((state: RootState) => state.auth);
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
   const [selectedJobCode, setSelectedJobCode] = useState<string | undefined>(undefined);
   const [selectedJobIdForEdit, setSelectedJobIdForEdit] = useState<number | null>(null);
   const [isPostingNewJob, setIsPostingNewJob] = useState(false);
-  const { data: jobs = [], refetch } = useGetJobsQuery();
+  const { data: jobs = [], refetch } = useGetJobsQuery(undefined, { skip: !user });
+  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const [updateJob] = useUpdateJobMutation();
   const [deleteJob] = useDeleteJobMutation();
 
@@ -1107,7 +1144,9 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
 // COMPONENT LIST: 4. COMPANIES APPROVAL GRID
 // ==========================================
 function AdminCompaniesApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) {
-  const { data: companies = [], refetch } = useGetCompaniesQuery();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { data: companies = [], refetch } = useGetCompaniesQuery(undefined, { skip: !user });
+  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const [updateCompany] = useUpdateCompanyMutation();
 
   const handleApproveComp = async (compId: string) => {
@@ -1168,7 +1207,9 @@ function AdminCompaniesApprovalTab({ setToastMsg }: { setToastMsg: (msg: string)
 // SUB-TAB VIEW: 5. ANALYTICAL REPORTS
 // ==========================================
 function AdminReportsTab() {
-  const { data: reports, isLoading } = useGetReportsQuery();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { data: reports, isLoading } = useGetReportsQuery(undefined, { skip: !user });
+  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
 
   if (isLoading || !reports) return <Loader />;
 
@@ -1221,7 +1262,9 @@ function AdminReportsTab() {
 // SUB-TAB VIEW: 6. HANDLER STAFF - SHGs TAB
 // ==========================================
 function HandlerSHGTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) {
-  const { data: list = [], refetch } = useGetSHGProfilesQuery();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { data: list = [], refetch } = useGetSHGProfilesQuery(undefined, { skip: !user });
+  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
 
   return (
     <Card title="बचतगट गृहउद्योग पडताळणी / Women SHGs Micro-enterprise verification">
@@ -1261,6 +1304,8 @@ function HandlerSHGTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) 
 // ==========================================
 function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: string; setToastMsg: (msg: string) => void }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { user } = useSelector((state: RootState) => state.auth);
   const [activeTab, setActiveTab] = useState('pipeline');
 
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
@@ -1275,16 +1320,16 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   const [pipelinePage, setPipelinePage] = useState(1);
   const PIPELINE_PAGE_SIZE = 10;
 
-  const { data: locations = [] } = useGetLocationsQuery();
-  const { data: jobCategories = [] } = useGetJobCategoriesQuery();
+  const { data: locations = [] } = useGetLocationsQuery(undefined, { skip: !user });
+  const { data: jobCategories = [] } = useGetJobCategoriesQuery(undefined, { skip: !user });
 
   // Load recruiter profile from unified endpoint
-  const { data: profile, refetch: refetchProfile } = useGetMyProfileQuery();
+  const { data: profile, refetch: refetchProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const [updateProfile] = useUpdateCompanyMutation();
 
   // Load applicants pipelines & jobs (employer-specific endpoints with Bearer token)
-  const { data: pipelineApps = [], refetch: refetchApps } = useGetMyJobApplicationsQuery();
-  const { data: jobsList = [], refetch: refetchJobs } = useGetMyRequirementsQuery();
+  const { data: pipelineApps = [], refetch: refetchApps } = useGetMyJobApplicationsQuery(undefined, { skip: !user });
+  const { data: jobsList = [], refetch: refetchJobs } = useGetMyRequirementsQuery(undefined, { skip: !user });
 
   // Unique job titles from applications for filter dropdown
   const uniqueJobTitles = React.useMemo(() => {
@@ -1569,9 +1614,12 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                       <div key={app.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200/50 pb-2.5">
                           <div className="space-y-1">
-                            <span className="text-xs text-orange-600 font-extrabold uppercase tracking-wide">
+                            <button
+                              onClick={() => app.candidateId && navigate(`/candidate/${app.candidateId}`)}
+                              className="text-xs text-orange-600 font-extrabold uppercase tracking-wide hover:text-orange-800 hover:underline transition-colors text-left cursor-pointer"
+                            >
                               अर्जदार: {app.candidateName}
-                            </span>
+                            </button>
                             <h4 className="text-sm font-bold text-blue-950">{app.jobTitle}</h4>
                             <p className="text-[10px] text-gray-500 font-semibold block leading-none">
                               मोबाईल: {app.candidatePhone} | अर्ज दिनांक: {app.appliedAt}
@@ -1767,6 +1815,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
 // ==========================================
 function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: string; setToastMsg: (msg: string) => void }) {
   const { t } = useTranslation();
+  const { user } = useSelector((state: RootState) => state.auth);
   const [activeTab, setActiveTab] = useState('search');
 
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
@@ -1776,16 +1825,16 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
   const [recentlyAppliedIds, setRecentlyAppliedIds] = useState<Set<string>>(new Set());
 
   // Load seeker profile from unified endpoint
-  const { data: profile, refetch: refetchProfile } = useGetMyProfileQuery();
+  const { data: profile, refetch: refetchProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const [updateProfile] = useUpdateCandidateMutation();
 
-  // Load jobs lists (Approved only!)
-  const { data: availableJobs = [], refetch: refetchJobs } = useGetJobsQuery({ approvedOnly: true });
+  // Load jobs lists (Approved only!) — skip until user/token are ready
+  const { data: availableJobs = [], refetch: refetchJobs } = useGetJobsQuery({ approvedOnly: true }, { skip: !user });
   // Load jobs from TanStack Query (same source as JobListingView, has userJobStatus)
-  const { data: searchJobsData } = useSearchJobsQuery();
+  const { data: searchJobsData } = useSearchJobsQuery(undefined, { enabled: !!user });
   const searchJobs = searchJobsData?.jobs || [];
   // Load applications history tracking
-  const { data: myApps = [], refetch: refetchMyApps } = useGetApplicationsQuery({ candidateId });
+  const { data: myApps = [], refetch: refetchMyApps } = useGetApplicationsQuery({ candidateId }, { skip: !user || !candidateId });
 
   // Load options metadata
   const { data: locations = [] } = useGetLocationsQuery();
@@ -2315,10 +2364,12 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
 // INTEGRATED SUB-BOARD: SELF HELP GROUPS (SHG) PORTAL
 // ==========================================
 function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg: (msg: string) => void }) {
+  const { user } = useSelector((state: RootState) => state.auth);
   const [activeTab, setActiveTab] = useState('trainings');
 
   // Load trainings list
-  const { data: trainings = [] } = useGetTrainingsQuery();
+  const { data: trainings = [] } = useGetTrainingsQuery(undefined, { skip: !user });
+  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
 
   // Load dynamic SHG state
   const [shgName, setShgName] = useState('Swami Samarth Mahila Gruhudyog');

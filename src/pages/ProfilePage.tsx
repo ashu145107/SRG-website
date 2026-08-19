@@ -24,7 +24,9 @@ import {
   FileText,
   CheckCircle,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Eye,
+  Download
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
@@ -110,7 +112,7 @@ export default function ProfilePage() {
   const tabs = [
     { key: 'details' as const, label: 'Basic Details', icon: <UserCircle className="w-4 h-4" /> },
     { key: 'pic' as const, label: 'Profile Picture', icon: <Camera className="w-4 h-4" /> },
-    { key: 'resume' as const, label: 'Resume', icon: <FileUp className="w-4 h-4" /> },
+    ...(user.role === UserRole.CANDIDATE ? [{ key: 'resume' as const, label: 'Resume', icon: <FileUp className="w-4 h-4" /> }] : []),
   ];
 
   return (
@@ -242,7 +244,7 @@ export default function ProfilePage() {
               <input
                 ref={profilePicInputRef}
                 type="file"
-                accept="image/*"
+                accept=".png,image/png"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -284,22 +286,54 @@ export default function ProfilePage() {
           )}
 
           {/* ---- TAB 3: Resume ---- */}
-          {activeTab === 'resume' && (
+          {activeTab === 'resume' && user.role === UserRole.CANDIDATE && (
             <div className="flex flex-col items-center gap-6 py-6">
               {/* Current resume info */}
               {profile?.resumeUrl ? (
-                <div className="w-full max-w-md bg-blue-50 border border-blue-200 rounded-xl p-5 flex items-center gap-4">
-                  <FileText className="w-10 h-10 text-blue-600 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-blue-900 truncate">{profile.resumeName || 'Current Resume'}</p>
-                    <a
-                      href={profile.resumeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] text-blue-600 underline font-semibold mt-1 inline-block"
-                    >
-                      View Current Resume
-                    </a>
+                <div className="w-full max-w-2xl space-y-4">
+                  {/* Resume card */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 flex items-center gap-4">
+                    <FileText className="w-10 h-10 text-blue-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-blue-900 truncate">{profile.resumeName || 'Resume'}</p>
+                      <p className="text-[10px] text-blue-500 mt-0.5 truncate">{profile.resumeUrl}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => {
+                          const w = window.open('', '_blank');
+                          if (w) {
+                            w.document.write(`
+                              <html><head><title>${profile.resumeName || 'Resume'}</title></head>
+                              <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f1f5f9;">
+                                <iframe src="${profile.resumeUrl}" style="width:100%;height:100vh;border:none;"></iframe>
+                              </body></html>
+                            `);
+                          }
+                        }}
+                        className="px-3 py-2 text-[11px] font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> Preview
+                      </button>
+                      <a
+                        href={profile.resumeUrl}
+                        download={profile.resumeName || 'resume'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-2 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+                      >
+                        <Download className="w-3.5 h-3.5" /> Download
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Inline PDF preview */}
+                  <div className="w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                    <iframe
+                      src={profile.resumeUrl}
+                      title="Resume Preview"
+                      className="w-full h-[500px]"
+                    />
                   </div>
                 </div>
               ) : (

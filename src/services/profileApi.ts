@@ -4,32 +4,56 @@
  */
 
 import { baseApi } from './baseApi';
-import { axiosInstance } from './axiosInstance';
+import { store } from '../store';
 import { MyProfile } from '../types';
 
 /**
  * Normalize raw API response into MyProfile.
+ * API returns: { value: { personalInfo: {...}, educationInfo: {...}, employmentHistory: [...] } }
  */
 const normalizeProfile = (data: any): MyProfile => {
   if (!data) return {} as MyProfile;
 
   const raw = data.value || data.data || data;
 
+  // Handle nested structure: value.personalInfo + value.educationInfo
+  const personal = raw.personalInfo || raw;
+  const education = raw.educationInfo || raw;
+
+  const fullName = personal.fullName || raw.fullName || raw.candidateName || raw.name || '';
+  const email = personal.email || raw.email || '';
+  const phone = personal.mobile || raw.phone || raw.mobile || '';
+  const profilePicUrl = personal.profilePic || raw.profilePicUrl || raw.profileImage || raw.photoUrl || raw.avatarUrl || '';
+  const address = personal.address || raw.address || '';
+  const district = typeof personal.district === 'string' ? personal.district : raw.district || '';
+  const city = personal.city || raw.city || '';
+  const qualification = education.education || raw.qualification || raw.education || '';
+  const experienceYears = education.experience ?? raw.experienceYears ?? raw.experience ?? 0;
+  const skills = education.skill
+    ? education.skill.split(',').map((s: string) => s.trim()).filter(Boolean)
+    : Array.isArray(raw.skills) ? raw.skills : typeof raw.skills === 'string' ? raw.skills.split(',').map((s: string) => s.trim()) : [];
+  const resumeRaw = education.resume_File_Path || raw.resumeUrl || raw.resumeFileName || '';
+  // Prepend base URL if the path is relative (e.g. /Uploads/Resume/...)
+  const resumeUrl = resumeRaw && !resumeRaw.startsWith('http')
+    ? `https://srgapp.dindoripranit.org${resumeRaw.startsWith('/') ? '' : '/'}${resumeRaw}`
+    : resumeRaw;
+  const resumeName = education.resumeName || raw.resumeName || raw.resumeFileName || (resumeUrl ? resumeUrl.split('/').pop() || 'Resume' : '');
+
   return {
-    id: raw.id || raw.userId || '',
-    userId: raw.userId || raw.id || '',
-    fullName: raw.fullName || raw.candidateName || raw.name || '',
-    email: raw.email || '',
-    phone: raw.phone || raw.mobile || '',
-    profilePicUrl: raw.profilePicUrl || raw.profileImage || raw.photoUrl || raw.avatarUrl || '',
-    resumeUrl: raw.resumeUrl || raw.resumeFileName || '',
-    resumeName: raw.resumeName || raw.resumeFileName || '',
-    city: raw.city || '',
-    district: raw.district || '',
-    address: raw.address || '',
-    qualification: raw.qualification || raw.education || '',
-    experienceYears: raw.experienceYears || raw.experience || 0,
-    skills: Array.isArray(raw.skills) ? raw.skills : typeof raw.skills === 'string' ? raw.skills.split(',').map((s: string) => s.trim()) : [],
+    id: personal.userId || raw.id || '',
+    userId: String(personal.userId || raw.userId || raw.id || ''),
+    fullName,
+    email,
+    phone,
+    profilePicUrl,
+    resumeUrl,
+    resumeName,
+    city,
+    district,
+    address,
+    qualification,
+    experienceYears,
+    skills,
     companyName: raw.companyName || '',
     contactPerson: raw.contactPerson || '',
     industry: raw.industry || '',
@@ -42,20 +66,41 @@ export const profileApi = baseApi.injectEndpoints({
     /**
      * GET /api/v1/myprofile
      * Returns the logged-in user's profile (candidate, employer, SHG, etc.)
-     * Auth: Bearer token (auto-attached by baseApi prepareHeaders).
+     * Uses direct fetch to SRG URL to bypass proxy CORS issues (same as uploadProfilePic).
      */
     getMyProfile: builder.query<MyProfile, void>({
-      queryFn: async (_arg, _api, _extraOptions, baseQuery) => {
+      queryFn: async () => {
         try {
-          const result = await baseQuery('/api/v1/myprofile');
-          if (result.data) {
-            return { data: normalizeProfile(result.data) };
+          let token = store.getState().auth?.token;
+          if (!token) {
+            try {
+              const saved = localStorage.getItem('srg_auth_state');
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                token = parsed?.token || parsed?.user?.token;
+              }
+            } catch (e) {}
           }
-          if (result.error) {
-            console.error('[profileApi] getMyProfile error:', result.error);
-            return { error: result.error };
+          const cleanToken = token?.startsWith('Bearer ') ? token.slice(7) : token;
+
+          console.log('[profileApi] getMyProfile → fetching from SRG directly');
+          const res = await fetch('https://srgapp.dindoripranit.org/api/v1/myprofile', {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${cleanToken}`,
+              'token': cleanToken || '',
+            },
+          });
+
+          const data = await res.json();
+          console.log('[profileApi] getMyProfile response:', res.status, data);
+
+          if (!res.ok) {
+            return { error: { status: res.status, data: data?.message || `HTTP ${res.status}` } };
           }
-          return { data: {} as MyProfile };
+
+          return { data: normalizeProfile(data) };
         } catch (err) {
           console.error('[profileApi] getMyProfile failed:', err);
           return { error: { status: 'FETCH_ERROR', error: String(err) } };
@@ -69,47 +114,103 @@ export const profileApi = baseApi.injectEndpoints({
 export const { useGetMyProfileQuery } = profileApi;
 
 /**
- * Upload profile picture via POST /api/v1/profilepic (multipart/form-data).
- * Uses axiosInstance (which auto-attaches JWT from Redux/localStorage).
+ * Upload profile picture via POST https://srgapp.dindoripranit.org/api/v1/profilepic
+ * Direct call (bypasses proxy) — sends file as PNG with proper image MIME type.
  */
 export const uploadProfilePic = async (file: File): Promise<{ success: boolean; message: string; url?: string }> => {
-  const formData = new FormData();
-  formData.append('file', file, file.name);
+  // Ensure the file is sent as a PNG image
+  const pngFile = new File([file], file.name.replace(/\.[^.]+$/, '.png'), { type: 'image/png' });
 
-  console.log('[uploadProfilePic] Sending file:', file.name, 'size:', file.size, 'type:', file.type);
+  const formData = new FormData();
+  formData.append('file', pngFile, pngFile.name);
+
+  // Get token from Redux store or localStorage
+  let token = store.getState().auth?.token;
+  if (!token) {
+    try {
+      const saved = localStorage.getItem('srg_auth_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        token = parsed?.token || parsed?.user?.token;
+      }
+    } catch (e) {}
+  }
+  const cleanToken = token?.startsWith('Bearer ') ? token.slice(7) : token;
+
+  console.log('[uploadProfilePic] File:', pngFile.name, 'size:', pngFile.size, 'type:', pngFile.type);
+  console.log('[uploadProfilePic] Token present:', !!cleanToken);
 
   try {
-    const res = await axiosInstance.post('/api/v1/profilepic', formData);
-    console.log('[uploadProfilePic] Response:', res.data);
-    const data = res.data?.value || res.data?.data || res.data;
-    return { success: true, message: 'Profile picture updated successfully.', url: data?.profilePicUrl || data?.url || '' };
+    const res = await fetch('https://srgapp.dindoripranit.org/api/v1/profilepic', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${cleanToken}`,
+        'token': cleanToken || '',
+      },
+      body: formData,
+    });
+
+    const data = await res.json();
+    console.log('[uploadProfilePic] Response:', res.status, data);
+
+    if (!res.ok) {
+      const msg = data?.message || data?.error?.message || JSON.stringify(data) || `Server returned ${res.status}`;
+      return { success: false, message: msg };
+    }
+
+    const val = data?.value || data?.data || data;
+    return { success: true, message: 'Profile picture updated successfully.', url: val?.profilePicUrl || val?.url || '' };
   } catch (err: any) {
-    console.error('[uploadProfilePic] Error:', err.response?.status, err.response?.data);
-    const detail = err.response?.data?.message || err.response?.data?.error || err.response?.data || '';
-    const msg = (typeof detail === 'string' ? detail : JSON.stringify(detail)) || err.message || 'Failed to upload profile picture.';
-    return { success: false, message: msg };
+    console.error('[uploadProfilePic] Error:', err);
+    return { success: false, message: err.message || 'Failed to upload profile picture.' };
   }
 };
 
 /**
- * Upload resume via POST /api/v1/resume (multipart/form-data).
- * Uses axiosInstance (which auto-attaches JWT from Redux/localStorage).
+ * Upload resume via POST https://srgapp.dindoripranit.org/api/v1/resume
+ * Direct call (bypasses proxy).
  */
 export const uploadResume = async (file: File): Promise<{ success: boolean; message: string; url?: string; name?: string }> => {
   const formData = new FormData();
   formData.append('file', file, file.name);
 
-  console.log('[uploadResume] Sending file:', file.name, 'size:', file.size, 'type:', file.type);
+  // Get token from Redux store or localStorage
+  let token = store.getState().auth?.token;
+  if (!token) {
+    try {
+      const saved = localStorage.getItem('srg_auth_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        token = parsed?.token || parsed?.user?.token;
+      }
+    } catch (e) {}
+  }
+  const cleanToken = token?.startsWith('Bearer ') ? token.slice(7) : token;
+
+  console.log('[uploadResume] File:', file.name, 'size:', file.size, 'type:', file.type);
 
   try {
-    const res = await axiosInstance.post('/api/v1/resume', formData);
-    console.log('[uploadResume] Response:', res.data);
-    const data = res.data?.value || res.data?.data || res.data;
-    return { success: true, message: 'Resume updated successfully.', url: data?.resumeUrl || data?.url || '', name: data?.resumeName || file.name };
+    const res = await fetch('https://srgapp.dindoripranit.org/api/v1/resume', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${cleanToken}`,
+        'token': cleanToken || '',
+      },
+      body: formData,
+    });
+
+    const data = await res.json();
+    console.log('[uploadResume] Response:', res.status, data);
+
+    if (!res.ok) {
+      const msg = data?.message || data?.error?.message || JSON.stringify(data) || `Server returned ${res.status}`;
+      return { success: false, message: msg };
+    }
+
+    const val = data?.value || data?.data || data;
+    return { success: true, message: 'Resume updated successfully.', url: val?.resumeUrl || val?.url || '', name: val?.resumeName || file.name };
   } catch (err: any) {
-    console.error('[uploadResume] Error:', err.response?.status, err.response?.data);
-    const detail = err.response?.data?.message || err.response?.data?.error || err.response?.data || '';
-    const msg = (typeof detail === 'string' ? detail : JSON.stringify(detail)) || err.message || 'Failed to upload resume.';
-    return { success: false, message: msg };
+    console.error('[uploadResume] Error:', err);
+    return { success: false, message: err.message || 'Failed to upload resume.' };
   }
 };

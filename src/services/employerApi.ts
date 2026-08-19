@@ -7,6 +7,39 @@ import { baseApi } from './baseApi';
 import { JobApplication, Job } from '../types';
 
 /**
+ * Fetch candidate profile from the SRG backend directly (bypasses proxy CORS issues).
+ * GET /api/v1/viewcandidateprofile/{candidateId}
+ */
+export const fetchCandidateProfile = async (candidateId: string) => {
+  const token = (() => {
+    try {
+      const raw = localStorage.getItem('srg_auth_state');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return parsed.token || '';
+      }
+    } catch { /* ignore */ }
+    return '';
+  })();
+
+  const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
+  const url = `https://srgapp.dindoripranit.org/api/v1/viewcandidateprofile/${candidateId}`;
+
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Accept': '*/*',
+      'Authorization': `Bearer ${cleanToken}`,
+      'token': cleanToken,
+    },
+  });
+
+  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+  const json = await res.json();
+  return json;
+};
+
+/**
  * Normalize raw API response into JobApplication[].
  * Handles multiple response shapes the backend may return.
  */

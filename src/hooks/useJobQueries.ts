@@ -20,12 +20,13 @@ export const jobKeys = {
  * Hook to search and list jobs
  * GET /api/v1/jobsearch
  */
-export const useSearchJobsQuery = (params?: JobSearchParams) => {
+export const useSearchJobsQuery = (params?: JobSearchParams, options?: { enabled?: boolean }) => {
   return useQuery<JobSearchResult>({
     queryKey: ['searchJobs', params],
     queryFn: () => jobService.searchJobs(params),
     staleTime: 1000 * 60 * 2, // 2 minutes
     retry: 1,
+    enabled: options?.enabled !== undefined ? options.enabled : true,
   });
 };
 
