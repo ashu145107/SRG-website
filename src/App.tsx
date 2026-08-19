@@ -15,6 +15,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import DashboardHub from './pages/DashboardHub';
+import ProfilePage from './pages/ProfilePage';
 import ActivateAccount from './pages/ActivateAccount';
 import { ProtectedRoute } from './components/ui/UtilityComponents';
 
@@ -44,6 +45,15 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <DashboardHub />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
                 </ProtectedRoute>
               }
             />

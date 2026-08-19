@@ -38,6 +38,13 @@ axiosInstance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${cleanToken}`;
       config.headers['token'] = cleanToken;
     }
+
+    // If sending FormData (file uploads), remove Content-Type so axios
+    // auto-generates the correct multipart/form-data header with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+
     return config;
   },
   (error) => {
