@@ -352,7 +352,9 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               <div>
                 <label className="block text-[10px] text-slate-500 mb-1">किमान वेतन / Min Salary</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   name="salary"
                   min="1"
                   step="1"
@@ -364,7 +366,9 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               <div>
                 <label className="block text-[10px] text-slate-500 mb-1">कमाल वेतन / Max Salary</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   name="salaryTo"
                   min="1"
                   step="1"

@@ -21,17 +21,17 @@ import {
 import { useSearchJobsQuery } from '../hooks/useJobQueries';
 import {
   useGetCompaniesQuery,
-  useGetCompanyByIdQuery,
   useUpdateCompanyMutation
 } from '../services/companyApi';
 import {
   useGetCandidatesQuery,
-  useGetCandidateByIdQuery,
   useUpdateCandidateMutation,
   useGetApplicationsQuery,
   useApplyToJobMutation,
   useUpdateApplicationStatusMutation
 } from '../services/candidateApi';
+import { useGetMyJobApplicationsQuery, useGetMyRequirementsQuery } from '../services/employerApi';
+import { useGetMyProfileQuery } from '../services/profileApi';
 import {
   useGetHandlersQuery,
   useUpdateHandlerPermissionsMutation
@@ -102,7 +102,9 @@ import {
   Users,
   Send,
   Power,
-  Mail
+  Mail,
+  Search,
+  SlidersHorizontal
 } from 'lucide-react';
 import { MockDb } from '../services/mockDb';
 
@@ -927,6 +929,7 @@ function AdminUsersTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) 
 // ==========================================
 function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) {
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
+  const [selectedJobCode, setSelectedJobCode] = useState<string | undefined>(undefined);
   const [selectedJobIdForEdit, setSelectedJobIdForEdit] = useState<number | null>(null);
   const [isPostingNewJob, setIsPostingNewJob] = useState(false);
   const { data: jobs = [], refetch } = useGetJobsQuery();
@@ -957,7 +960,8 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
     return (
       <JobDetailsView
         jobId={selectedJobIdForDetail}
-        onBack={() => setSelectedJobIdForDetail(null)}
+        jobCode={selectedJobCode}
+        onBack={() => { setSelectedJobIdForDetail(null); setSelectedJobCode(undefined); }}
       />
     );
   }
@@ -1044,7 +1048,7 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
           </PrimaryButton>
         </div>
         <JobListingView
-          onViewDetails={(id) => setSelectedJobIdForDetail(id)}
+          onViewDetails={(id, jobCode) => { setSelectedJobIdForDetail(id); setSelectedJobCode(jobCode); }}
           onEditJob={(id) => setSelectedJobIdForEdit(id)}
         />
       </Card>
@@ -1214,19 +1218,69 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   const [activeTab, setActiveTab] = useState('pipeline');
 
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
+  const [selectedJobCode, setSelectedJobCode] = useState<string | undefined>(undefined);
   const [selectedJobIdForEdit, setSelectedJobIdForEdit] = useState<number | null>(null);
   const [isPostingNewJob, setIsPostingNewJob] = useState<boolean>(false);
+
+  // Pipeline search & filter state
+  const [pipelineSearch, setPipelineSearch] = useState('');
+  const [pipelineStatusFilter, setPipelineStatusFilter] = useState('');
+  const [pipelineJobFilter, setPipelineJobFilter] = useState('');
+  const [pipelinePage, setPipelinePage] = useState(1);
+  const PIPELINE_PAGE_SIZE = 10;
 
   const { data: locations = [] } = useGetLocationsQuery();
   const { data: jobCategories = [] } = useGetJobCategoriesQuery();
 
-  // Load recruiter profile
-  const { data: profile, refetch: refetchProfile } = useGetCompanyByIdQuery(companyId);
+  // Load recruiter profile from unified endpoint
+  const { data: profile, refetch: refetchProfile } = useGetMyProfileQuery();
   const [updateProfile] = useUpdateCompanyMutation();
 
-  // Load applicants pipelines & jobs
-  const { data: pipelineApps = [], refetch: refetchApps } = useGetApplicationsQuery({ companyId });
-  const { data: jobsList = [], refetch: refetchJobs } = useGetJobsQuery({ companyId });
+  // Load applicants pipelines & jobs (employer-specific endpoints with Bearer token)
+  const { data: pipelineApps = [], refetch: refetchApps } = useGetMyJobApplicationsQuery();
+  const { data: jobsList = [], refetch: refetchJobs } = useGetMyRequirementsQuery();
+
+  // Unique job titles from applications for filter dropdown
+  const uniqueJobTitles = React.useMemo(() => {
+    const titles = pipelineApps.map(a => a.jobTitle).filter(Boolean);
+    return [...new Set(titles)].sort();
+  }, [pipelineApps]);
+
+  // Filtered pipeline list based on search + dropdowns
+  const filteredPipelineApps = React.useMemo(() => {
+    let result = [...pipelineApps];
+
+    if (pipelineSearch.trim()) {
+      const phrase = pipelineSearch.toLowerCase();
+      result = result.filter(a =>
+        (a.candidateName || '').toLowerCase().includes(phrase) ||
+        (a.jobTitle || '').toLowerCase().includes(phrase) ||
+        (a.candidatePhone || '').toLowerCase().includes(phrase)
+      );
+    }
+
+    if (pipelineStatusFilter) {
+      result = result.filter(a => a.status === pipelineStatusFilter);
+    }
+
+    if (pipelineJobFilter) {
+      result = result.filter(a => a.jobTitle === pipelineJobFilter);
+    }
+
+    return result;
+  }, [pipelineApps, pipelineSearch, pipelineStatusFilter, pipelineJobFilter]);
+
+  // Paginated slice of filtered pipeline
+  const pipelineTotalPages = Math.max(1, Math.ceil(filteredPipelineApps.length / PIPELINE_PAGE_SIZE));
+  const paginatedPipelineApps = React.useMemo(() => {
+    const start = (pipelinePage - 1) * PIPELINE_PAGE_SIZE;
+    return filteredPipelineApps.slice(start, start + PIPELINE_PAGE_SIZE);
+  }, [filteredPipelineApps, pipelinePage]);
+
+  // Reset pipeline page when filters change
+  React.useEffect(() => {
+    setPipelinePage(1);
+  }, [pipelineSearch, pipelineStatusFilter, pipelineJobFilter]);
 
   // Job creation forms state
   const [vacancyTitle, setVacancyTitle] = useState('');
@@ -1404,73 +1458,159 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
             {pipelineApps.length === 0 ? (
               <EmptyState title="No Applicants Found" desc="Vacancies you post will gather seekers applied pipelines here." />
             ) : (
-              <div className="space-y-4">
-                {pipelineApps.map((app) => (
-                  <div key={app.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200/50 pb-2.5">
-                      <div className="space-y-1">
-                        <span className="text-xs text-orange-600 font-extrabold uppercase tracking-wide">
-                          अर्जदार: {app.candidateName}
-                        </span>
-                        <h4 className="text-sm font-bold text-blue-950">{app.jobTitle}</h4>
-                        <p className="text-[10px] text-gray-500 font-semibold block leading-none">
-                          मोबाईल: {app.candidatePhone} | अर्ज दिनांक: {app.appliedAt}
-                        </p>
-                      </div>
-
-                      <div>
-                        {app.status === 'Interview Scheduled' ? (
-                          <Badge type="secondary">
-                            🗓️ INTERVIEW: {app.interviewDate}
-                          </Badge>
-                        ) : app.status === 'Hired' ? (
-                          <Badge type="success">✓ HIRED & ACTIVE</Badge>
-                        ) : app.status === 'Rejected' ? (
-                          <Badge type="danger">REJECTED</Badge>
-                        ) : (
-                          <Badge type="warning">{app.status}</Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Interactive Action controllers */}
-                    <div className="flex flex-wrap gap-2 items-center">
-                      <button
-                        onClick={() => handleUpdateApplicantStatus(app.id, 'Reviewing')}
-                        className="px-2.5 py-1 bg-white hover:bg-gray-150 border border-slate-200 text-slate-800 text-[10px] font-bold rounded-lg transition-all"
-                      >
-                        तपासा / Reviewing
-                      </button>
-                      <button
-                        onClick={() => handleUpdateApplicantStatus(app.id, 'Interview Scheduled')}
-                        className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 text-[10px] font-bold rounded-lg transition-all"
-                      >
-                        मुलाखत / Schedule Interview
-                      </button>
-                      <button
-                        onClick={() => handleUpdateApplicantStatus(app.id, 'Hired')}
-                        className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-[10px] font-bold rounded-lg transition-all"
-                      >
-                        कामावर ठेवा / Hire Selected
-                      </button>
-                      <button
-                        onClick={() => handleUpdateApplicantStatus(app.id, 'Rejected')}
-                        className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-800 text-[10px] font-bold rounded-lg transition-all"
-                      >
-                        नाकारले / Reject Candidate
-                      </button>
-
-                      {/* Resume download mock button */}
-                      <button
-                        onClick={() => setToastMsg('Mock Resume Download complete! (Rahul_Resume.pdf)')}
-                        className="ml-auto flex items-center gap-1 px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-850 text-[10px] font-bold rounded-lg cursor-pointer"
-                      >
-                        <FileText className="w-3.5 h-3.5" /> CV / Resume
-                      </button>
-                    </div>
+              <>
+                {/* Search & Filter bar */}
+                <div className="flex flex-col sm:flex-row gap-3 pb-4 border-b border-slate-100">
+                  <div className="relative flex-1">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Search className="h-3.5 w-3.5 text-slate-400" />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Search by name, job title, phone..."
+                      value={pipelineSearch}
+                      onChange={(e) => setPipelineSearch(e.target.value)}
+                      className="w-full text-xs pl-9 pr-4 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                    />
                   </div>
-                ))}
-              </div>
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+                    <select
+                      value={pipelineStatusFilter}
+                      onChange={(e) => setPipelineStatusFilter(e.target.value)}
+                      className="text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800 font-semibold cursor-pointer"
+                    >
+                      <option value="">All Status</option>
+                      <option value="Applied">Applied</option>
+                      <option value="Reviewing">Reviewing</option>
+                      <option value="Interview Scheduled">Interview Scheduled</option>
+                      <option value="Shortlisted">Shortlisted</option>
+                      <option value="Hired">Hired</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                    <select
+                      value={pipelineJobFilter}
+                      onChange={(e) => setPipelineJobFilter(e.target.value)}
+                      className="text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800 font-semibold cursor-pointer"
+                    >
+                      <option value="">All Jobs</option>
+                      {uniqueJobTitles.map((title) => (
+                        <option key={title} value={title}>{title}</option>
+                      ))}
+                    </select>
+                    {(pipelineSearch || pipelineStatusFilter || pipelineJobFilter) && (
+                      <button
+                        onClick={() => { setPipelineSearch(''); setPipelineStatusFilter(''); setPipelineJobFilter(''); }}
+                        className="text-[10px] text-orange-600 font-bold hover:underline cursor-pointer whitespace-nowrap"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Results count */}
+                <div className="text-[10px] text-slate-400 font-bold pt-2">
+                  Showing {filteredPipelineApps.length === 0 ? 0 : ((pipelinePage - 1) * PIPELINE_PAGE_SIZE) + 1} to {Math.min(pipelinePage * PIPELINE_PAGE_SIZE, filteredPipelineApps.length)} of {filteredPipelineApps.length} applicants
+                </div>
+
+                {/* Applicant cards */}
+                <div className="space-y-4 pt-2">
+                  {paginatedPipelineApps.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-6 font-medium">No applicants match your search/filters.</p>
+                  ) : (
+                    paginatedPipelineApps.map((app) => (
+                      <div key={app.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200/50 pb-2.5">
+                          <div className="space-y-1">
+                            <span className="text-xs text-orange-600 font-extrabold uppercase tracking-wide">
+                              अर्जदार: {app.candidateName}
+                            </span>
+                            <h4 className="text-sm font-bold text-blue-950">{app.jobTitle}</h4>
+                            <p className="text-[10px] text-gray-500 font-semibold block leading-none">
+                              मोबाईल: {app.candidatePhone} | अर्ज दिनांक: {app.appliedAt}
+                            </p>
+                          </div>
+
+                          <div>
+                            {app.status === 'Interview Scheduled' ? (
+                              <Badge type="secondary">
+                                🗓️ INTERVIEW: {app.interviewDate}
+                              </Badge>
+                            ) : app.status === 'Hired' ? (
+                              <Badge type="success">✓ HIRED & ACTIVE</Badge>
+                            ) : app.status === 'Rejected' ? (
+                              <Badge type="danger">REJECTED</Badge>
+                            ) : (
+                              <Badge type="warning">{app.status}</Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Interactive Status dropdown + Resume */}
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase">Status:</label>
+                          <select
+                            value={app.status}
+                            onChange={(e) => handleUpdateApplicantStatus(app.id, e.target.value as JobApplication['status'])}
+                            className="px-2.5 py-1 bg-white border border-slate-200 text-slate-800 text-[10px] font-bold rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
+                          >
+                            <option value="Applied">Applied</option>
+                            <option value="Reviewing">Reviewing</option>
+                            <option value="Interview Scheduled">Interview Scheduled</option>
+                            <option value="Shortlisted">Shortlisted</option>
+                            <option value="Hired">Hired</option>
+                            <option value="Rejected">Rejected</option>
+                          </select>
+
+                          {/* Resume download mock button */}
+                          <button
+                            onClick={() => setToastMsg('Mock Resume Download complete! (Rahul_Resume.pdf)')}
+                            className="ml-auto flex items-center gap-1 px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-850 text-[10px] font-bold rounded-lg cursor-pointer"
+                          >
+                            <FileText className="w-3.5 h-3.5" /> CV / Resume
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Pagination controls */}
+                {pipelineTotalPages > 1 && (
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                    <button
+                      onClick={() => setPipelinePage(p => Math.max(1, p - 1))}
+                      disabled={pipelinePage === 1}
+                      className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 cursor-pointer"
+                    >
+                      ← Prev
+                    </button>
+                    <div className="flex gap-1">
+                      {Array.from({ length: pipelineTotalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setPipelinePage(page)}
+                          className={`px-2.5 py-1 text-[10px] font-bold rounded-lg cursor-pointer transition-colors ${
+                            page === pipelinePage
+                              ? 'bg-orange-600 text-white'
+                              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setPipelinePage(p => Math.min(pipelineTotalPages, p + 1))}
+                      disabled={pipelinePage === pipelineTotalPages}
+                      className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 cursor-pointer"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </Card>
         )}
@@ -1478,16 +1618,19 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         {/* 2. Job Listings tab */}
         {activeTab === 'listings' && (
           selectedJobIdForDetail ? (
-            <JobDetailsView jobId={selectedJobIdForDetail} onBack={() => setSelectedJobIdForDetail(null)} />
+            <JobDetailsView jobId={selectedJobIdForDetail} jobCode={selectedJobCode} onBack={() => { setSelectedJobIdForDetail(null); setSelectedJobCode(undefined); }} />
           ) : selectedJobIdForEdit ? (
             <EditJobForm jobId={selectedJobIdForEdit} onCancel={() => setSelectedJobIdForEdit(null)} onSuccess={() => { setSelectedJobIdForEdit(null); refetchJobs(); }} />
           ) : isPostingNewJob ? (
             <AddJobForm onCancel={() => setIsPostingNewJob(false)} onSuccess={() => { setIsPostingNewJob(false); refetchJobs(); }} />
           ) : (
             <JobListingView
-              onViewDetails={(id) => setSelectedJobIdForDetail(id)}
+              onViewDetails={(id, jobCode) => { setSelectedJobIdForDetail(id); setSelectedJobCode(jobCode); }}
               onEditJob={(id) => setSelectedJobIdForEdit(id)}
               onAddNewJob={() => setIsPostingNewJob(true)}
+              externalJobs={jobsList}
+              externalTotalCount={jobsList.length}
+              externalRefetch={refetchJobs}
             />
           )
         )}
@@ -1581,18 +1724,20 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
   const [activeTab, setActiveTab] = useState('search');
 
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
+  const [selectedJobCode, setSelectedJobCode] = useState<string | undefined>(undefined);
 
   // Optimistic tracking of newly applied job IDs for instant UI updates
   const [recentlyAppliedIds, setRecentlyAppliedIds] = useState<Set<string>>(new Set());
 
-  // Load seeker profile
-  const { data: profile, refetch: refetchProfile } = useGetCandidateByIdQuery(candidateId);
+  // Load seeker profile from unified endpoint
+  const { data: profile, refetch: refetchProfile } = useGetMyProfileQuery();
   const [updateProfile] = useUpdateCandidateMutation();
 
   // Load jobs lists (Approved only!)
   const { data: availableJobs = [], refetch: refetchJobs } = useGetJobsQuery({ approvedOnly: true });
   // Load jobs from TanStack Query (same source as JobListingView, has userJobStatus)
-  const { data: searchJobs = [] } = useSearchJobsQuery();
+  const { data: searchJobsData } = useSearchJobsQuery();
+  const searchJobs = searchJobsData?.jobs || [];
   // Load applications history tracking
   const { data: myApps = [], refetch: refetchMyApps } = useGetApplicationsQuery({ candidateId });
 
@@ -1791,19 +1936,21 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
           selectedJobIdForDetail ? (
             <JobDetailsView
               jobId={selectedJobIdForDetail}
-              onBack={() => setSelectedJobIdForDetail(null)}
+              jobCode={selectedJobCode}
+              onBack={() => { setSelectedJobIdForDetail(null); setSelectedJobCode(undefined); }}
               onApplySuccess={(appliedJobCode?: string) => {
                 const job = availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail);
                 const identifier = appliedJobCode || job?.jobCode || String(selectedJobIdForDetail);
                 setRecentlyAppliedIds((prev) => new Set(prev).add(identifier));
                 setSelectedJobIdForDetail(null);
+                setSelectedJobCode(undefined);
                 refetchMyApps();
               }}
               alreadyApplied={isJobApplied(selectedJobIdForDetail, availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail))}
             />
           ) : (
             <JobListingView
-              onViewDetails={(id) => setSelectedJobIdForDetail(id)}
+              onViewDetails={(id, jobCode) => { setSelectedJobIdForDetail(id); setSelectedJobCode(jobCode); }}
               appliedJobIds={availableJobs
                 .filter((j) => isJobApplied(Number(j.id), j))
                 .map((j) => Number(j.id))

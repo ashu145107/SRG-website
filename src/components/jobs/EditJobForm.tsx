@@ -547,7 +547,9 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               <div>
                 <label className="form-label">Minimum Salary *</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   name="salary"
                   min="1"
                   step="1"
@@ -561,7 +563,9 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               <div>
                 <label className="form-label">Maximum Salary *</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   name="salaryTo"
                   min="1"
                   step="1"

@@ -56,12 +56,18 @@ const normalizeJob = (item: any, idx: number): JobRequirement => {
   };
 };
 
+// Response type that includes total count for pagination
+export interface JobSearchResult {
+  jobs: JobRequirement[];
+  totalCount: number;
+}
+
 export const jobService = {
   /**
    * GET /api/v1/jobsearch for JOB SEEKERS and ADMIN.
    * For EMPLOYERS, fetches their company job requirements.
    */
-  searchJobs: async (params?: JobSearchParams): Promise<JobRequirement[]> => {
+  searchJobs: async (params?: JobSearchParams): Promise<JobSearchResult> => {
     const state = store.getState();
     let token = state.auth?.token;
     let user = state.auth?.user;
@@ -79,6 +85,8 @@ export const jobService = {
     }
 
     const searchPhrase = params?.searchPhrase?.trim() || '';
+    const page = params?.page || 1;
+    const limit = params?.limit || 15;
     const role = user?.role;
     const companyId = user?.companyId;
 
@@ -92,34 +100,34 @@ export const jobService = {
     if (isEmployer) {
       console.log('[jobService] searchJobs for EMPLOYER | companyId=', companyId);
       try {
-        const response = await axiosInstance.get(`/api/v1/jobrequirements/100/1`);
+        const response = await axiosInstance.get(`/api/v1/jobrequirements/${limit}/${page}`);
         const data = response.data;
         let list: any[] = [];
-        if (Array.isArray(data)) list = data;
-        else if (data?.value && Array.isArray(data.value)) list = data.value;
-        else if (data?.data && Array.isArray(data.data)) list = data.data;
-        else if (data?.items && Array.isArray(data.items)) list = data.items;
-        else if (data?.results && Array.isArray(data.results)) list = data.results;
+        let totalCount = 0;
+        if (Array.isArray(data)) { list = data; totalCount = data.length; }
+        else if (data?.value && Array.isArray(data.value)) { list = data.value; totalCount = data.value.length; }
+        else if (data?.data && Array.isArray(data.data)) { list = data.data; totalCount = data.data.length; }
+        else if (data?.items && Array.isArray(data.items)) { list = data.items; totalCount = data.totalCount || data.items.length; }
+        else if (data?.results && Array.isArray(data.results)) { list = data.results; totalCount = data.totalCount || data.results.length; }
 
         if (companyId && list.length > 0) {
           const filtered = list.filter((j: any) => String(j.companyId || j.userId) === String(companyId));
-          if (filtered.length > 0) return filtered.map((item, idx) => normalizeJob(item, idx));
+          if (filtered.length > 0) return { jobs: filtered.map((item, idx) => normalizeJob(item, idx)), totalCount: filtered.length };
         }
-        if (list.length > 0) return list.map((item, idx) => normalizeJob(item, idx));
+        if (list.length > 0) return { jobs: list.map((item, idx) => normalizeJob(item, idx)), totalCount };
       } catch (err) {
         console.warn('[jobService] Employer jobrequirements fetch notice:', err);
       }
-      return [];
+      return { jobs: [], totalCount: 0 };
     }
 
     console.log('[jobService] searchJobs for JOB SEEKER / ADMIN | role=', role, '| searchPhrase=', searchPhrase);
 
     const attempts: Array<{ url: string; params: any }> = [
-      // Direct call without page parameters
-      { url: '/api/v1/jobsearch', params: {} },
+      { url: '/api/v1/jobsearch', params: { page, limit } },
       ...(searchPhrase ? [
-        { url: '/api/v1/jobsearch', params: { searchPhrase } },
-        { url: '/api/v1/jobsearch', params: { search: searchPhrase } },
+        { url: '/api/v1/jobsearch', params: { searchPhrase, page, limit } },
+        { url: '/api/v1/jobsearch', params: { search: searchPhrase, page, limit } },
       ] : []),
     ];
 
@@ -138,18 +146,19 @@ export const jobService = {
 
         const data = response.data;
         let list: any[] = [];
+        let totalCount = 0;
 
-        if (Array.isArray(data)) list = data;
-        else if (data?.value && Array.isArray(data.value)) list = data.value;
-        else if (data?.data && Array.isArray(data.data)) list = data.data;
-        else if (data?.items && Array.isArray(data.items)) list = data.items;
-        else if (data?.results && Array.isArray(data.results)) list = data.results;
-        else if (data?.jobRequirements && Array.isArray(data.jobRequirements)) list = data.jobRequirements;
+        if (Array.isArray(data)) { list = data; totalCount = data.length; }
+        else if (data?.value && Array.isArray(data.value)) { list = data.value; totalCount = data.value.length; }
+        else if (data?.data && Array.isArray(data.data)) { list = data.data; totalCount = data.data.length; }
+        else if (data?.items && Array.isArray(data.items)) { list = data.items; totalCount = data.totalCount || data.items.length; }
+        else if (data?.results && Array.isArray(data.results)) { list = data.results; totalCount = data.totalCount || data.results.length; }
+        else if (data?.jobRequirements && Array.isArray(data.jobRequirements)) { list = data.jobRequirements; totalCount = data.totalCount || data.jobRequirements.length; }
 
         if (list.length > 0) {
           const normalized = list.map((item, idx) => normalizeJob(item, idx));
           console.log(`[jobService] ✅ Success → ${normalized.length} jobs fetched & normalized from /api/v1/jobsearch`);
-          return normalized;
+          return { jobs: normalized, totalCount: totalCount || normalized.length };
         }
 
       } catch (err: any) {
@@ -159,7 +168,7 @@ export const jobService = {
     }
 
     console.error('[jobService] All attempts failed for /api/v1/jobsearch. Returning []');
-    return [];
+    return { jobs: [], totalCount: 0 };
   },
 
   // Other methods (add, edit, details, apply)
@@ -205,7 +214,7 @@ export const jobService = {
 
     // Fallback: find job in jobsearch list by ID
     try {
-      const list = await jobService.searchJobs();
+      const { jobs: list } = await jobService.searchJobs();
       const found = list.find((j: any) => Number(j.id) === Number(id) || Number(j.jobRequirementId) === Number(id));
       if (found) return found;
     } catch (e) {}

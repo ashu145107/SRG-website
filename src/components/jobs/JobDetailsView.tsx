@@ -54,6 +54,14 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
   const user = useSelector((state: any) => state.auth?.user);
   const isAuthenticated = useSelector((state: any) => state.auth?.isAuthenticated);
 
+  const isEmployerOrStaff = user && (
+    user.role === 3 || user.role === '3' ||
+    user.role === 5 || user.role === '5' ||
+    String(user.role).toUpperCase() === 'COMPANY' ||
+    String(user.role).toUpperCase() === 'EMPLOYER' ||
+    String(user.role).toUpperCase() === 'STAFF'
+  );
+
   // Queries and mutations
   const { data: job, isLoading, error: loadError, refetch } = useJobDetailsQuery(jobId, jobCode);
   const applyJobMutation = useApplyJobMutation();
@@ -197,6 +205,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
               </div>
 
               {/* Desktop Apply Button */}
+              {!isEmployerOrStaff && (
               <div className="hidden sm:block shrink-0">
                 {hasApplied ? (
                   <span className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 shadow-xs">
@@ -213,6 +222,8 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
                   </button>
                 )}
               </div>
+              )}
+
             </div>
 
             {/* Core Specs Quick Bar */}
@@ -420,6 +431,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
       </div>
 
       {/* Mobile Sticky Footer - Sticky Apply Button on mobile */}
+      {!isEmployerOrStaff && (
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-150 px-4 py-3 z-40 flex justify-between items-center shadow-lg">
         <div>
           <span className="text-[10px] text-slate-400 block font-bold">MONTHLY RANGE</span>
@@ -442,6 +454,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
           </button>
         )}
       </div>
+      )}
 
       {/* Confirmation Dialog */}
       <ConfirmDialog

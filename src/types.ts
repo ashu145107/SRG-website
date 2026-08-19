@@ -58,6 +58,27 @@ export interface CandidateProfile {
   resumeName?: string;
 }
 
+export interface MyProfile {
+  id?: string;
+  userId?: string;
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  profilePicUrl?: string;
+  resumeUrl?: string;
+  resumeName?: string;
+  city?: string;
+  district?: string;
+  address?: string;
+  qualification?: string;
+  experienceYears?: number;
+  skills?: string[];
+  companyName?: string;
+  contactPerson?: string;
+  industry?: string;
+  isApproved?: boolean;
+}
+
 export interface CompanyProfile {
   id?: string;
   companyName?: string;
@@ -105,6 +126,11 @@ export interface Job {
   isApproved: boolean;
   jobCode?: string;
   userJobStatus?: string;
+  /** API fields from /myrequirements */
+  profileHeader?: string;
+  skill?: string;
+  workPlace?: string;
+  email?: string;
 }
 
 export interface JobApplication {

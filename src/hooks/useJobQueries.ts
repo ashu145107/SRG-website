@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import jobService from '../services/jobService';
+import jobService, { JobSearchResult } from '../services/jobService';
 import { JobRequirement, JobSearchParams, JobApplicationRequest } from '../services/jobTypes';
 
 // Query Keys for caching and invalidation
@@ -21,7 +21,7 @@ export const jobKeys = {
  * GET /api/v1/jobsearch
  */
 export const useSearchJobsQuery = (params?: JobSearchParams) => {
-  return useQuery<JobRequirement[]>({
+  return useQuery<JobSearchResult>({
     queryKey: ['searchJobs', params],
     queryFn: () => jobService.searchJobs(params),
     staleTime: 1000 * 60 * 2, // 2 minutes

@@ -7,34 +7,32 @@ import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useSearchJobsQuery } from '../../hooks/useJobQueries';
-import { JobRequirement } from '../../services/jobTypes';
-import { useGetIndustryTypesQuery } from '../../services/jobMasterApi';
-import {
-  getLabel,
-  educations,
-  roleTypes,
-  workModes,
-  salaryPeriods,
-} from './jobMappings';
 import {
   Search,
-  MapPin,
-  Briefcase,
-  Layers,
   RefreshCw,
   Eye,
   Edit,
   Check,
   PlusCircle,
-  FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Alert } from '../ui/FeedbackComponents';
+import { Job } from '../../types';
 
 interface JobListingViewProps {
-  onViewDetails: (id: number) => void;
+  onViewDetails: (id: number, jobCode?: string) => void;
   onEditJob?: (id: number) => void;
   onAddNewJob?: () => void;
   appliedJobIds?: number[];
+  /** When provided, component uses this data instead of fetching internally */
+  externalJobs?: Job[];
+  externalTotalCount?: number;
+  externalIsLoading?: boolean;
+  externalIsFetching?: boolean;
+  externalRefetch?: () => void;
 }
 
 export const JobListingView: React.FC<JobListingViewProps> = ({
@@ -42,69 +40,127 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
   onEditJob,
   onAddNewJob,
   appliedJobIds = [],
+  externalJobs,
+  externalTotalCount,
+  externalIsLoading,
+  externalIsFetching,
+  externalRefetch,
 }) => {
-  const { t, i18n } = useTranslation();
-  const lang = i18n.language === 'mr' ? 'mr' : 'en';
+  const { i18n } = useTranslation();
 
   const user = useSelector((state: any) => state.auth?.user);
-  const userRole = user?.role; // 'ADMIN' | 'HANDLER' | 'EMPLOYER' | 'CANDIDATE'
+  const userRole = user?.role;
 
   const isEmployerOrStaff =
     userRole === 'ADMIN' || userRole === 'HANDLER' || userRole === 'EMPLOYER';
 
-  // Filters state
+  // Search & Filter state
   const [searchPhrase, setSearchPhrase] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
-  const [selectedWorkMode, setSelectedWorkMode] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [filterSkill, setFilterSkill] = useState('');
+  const [filterWorkPlace, setFilterWorkPlace] = useState('');
 
-  const { data: industryTypes = [] } = useGetIndustryTypesQuery();
+  // Sort state (jobCode descending is default — recent first)
+  const [sortColumn, setSortColumn] = useState<string>('jobCode');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Fetch Jobs via TanStack Query
+  // Pagination state
+  const [pageSize, setPageSize] = useState(15);
+  const [pageNumber, setPageNumber] = useState(1);
+
+  // When external data is provided (employer view), skip internal API call
+  const useExternal = !!externalJobs;
+
   const {
-    data: jobs = [],
-    isLoading,
-    isFetching,
+    data: searchData,
+    isLoading: internalLoading,
+    isFetching: internalFetching,
     error,
-    refetch,
-  } = useSearchJobsQuery({
-    searchPhrase: searchPhrase || undefined,
-  });
+    refetch: internalRefetch,
+  } = useSearchJobsQuery(
+    useExternal
+      ? undefined
+      : { searchPhrase: searchPhrase || undefined, page: pageNumber, limit: pageSize }
+  );
+
+  const jobs = useExternal ? externalJobs! : (searchData?.jobs || []);
+  const totalCount = useExternal ? (externalTotalCount ?? externalJobs!.length) : (searchData?.totalCount || 0);
+  const isLoading = useExternal ? !!externalIsLoading : internalLoading;
+  const isFetching = useExternal ? !!externalIsFetching : internalFetching;
 
   const handleRefresh = () => {
-    refetch();
+    if (useExternal && externalRefetch) externalRefetch();
+    else internalRefetch();
   };
 
-  // Perform Client-Side Filtering on top of API Search (to provide seamless, instant UX)
-  const filteredJobs = jobs.filter((job) => {
-    // Hide already-applied jobs from Find Jobs listing
-    if (job.userJobStatus === 'Already applied') return false;
-    // 1. Location Filter
-    if (
-      selectedLocation &&
-      !job.jobLocation.toLowerCase().includes(selectedLocation.toLowerCase())
-    ) {
-      return false;
-    }
-    // 2. Work Mode Filter
-    if (selectedWorkMode && job.workModeId !== Number(selectedWorkMode)) {
-      return false;
-    }
-    // 3. Industry Type Filter
-    if (selectedCategory && job.industryTypeId !== Number(selectedCategory)) {
-      return false;
-    }
-    return true;
-  });
+  // Reset page on filter change
+  React.useEffect(() => {
+    setPageNumber(1);
+  }, [searchPhrase, filterSkill, filterWorkPlace]);
 
-  // Extract unique locations from listed jobs to populate filter dynamically
-  const uniqueLocations = Array.from(
-    new Set(jobs.map((j) => j.jobLocation).filter(Boolean))
-  );
+  // Unique values for filter dropdowns
+  const uniqueSkills = React.useMemo(() => {
+    const vals = jobs.map((j: any) => j.skill || j.skill || '').filter(Boolean);
+    return [...new Set(vals)].sort();
+  }, [jobs]);
+
+  const uniqueWorkPlaces = React.useMemo(() => {
+    const vals = jobs.map((j: any) => j.workPlace || j.jobLocation || '').filter(Boolean);
+    return [...new Set(vals)].sort();
+  }, [jobs]);
+
+  // Search + Filter + Sort
+  const filteredAndSortedJobs = React.useMemo(() => {
+    let result = [...jobs];
+
+    // 1. Search filter
+    if (searchPhrase.trim()) {
+      const phrase = searchPhrase.toLowerCase();
+      result = result.filter((j: any) =>
+        (j.jobCode || '').toLowerCase().includes(phrase) ||
+        (j.profileHeader || j.jobDesignation || '').toLowerCase().includes(phrase) ||
+        (j.companyName || '').toLowerCase().includes(phrase) ||
+        (j.workPlace || j.jobLocation || '').toLowerCase().includes(phrase) ||
+        (j.skill || '').toLowerCase().includes(phrase) ||
+        (j.email || '').toLowerCase().includes(phrase)
+      );
+    }
+
+    // 2. Skill filter
+    if (filterSkill) {
+      result = result.filter((j: any) => (j.skill || '') === filterSkill);
+    }
+
+    // 3. WorkPlace filter
+    if (filterWorkPlace) {
+      result = result.filter((j: any) => (j.workPlace || j.jobLocation || '') === filterWorkPlace);
+    }
+
+    // 4. Sort
+    result.sort((a: any, b: any) => {
+      let valA = a[sortColumn] !== undefined ? a[sortColumn] : '';
+      let valB = b[sortColumn] !== undefined ? b[sortColumn] : '';
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [jobs, searchPhrase, filterSkill, filterWorkPlace, sortColumn, sortOrder]);
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortColumn(column);
+      setSortOrder('asc');
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in text-left">
-      {/* Header and Add Action for Employers */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800">
@@ -118,9 +174,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
               : 'तुमच्या शैक्षणिक पात्रतेनुसार विविध नोकरीच्या संधी शोधा.'}
           </p>
         </div>
-
         <div className="flex items-center gap-2">
-          {/* Refresh Button */}
           <button
             onClick={handleRefresh}
             disabled={isFetching}
@@ -130,8 +184,6 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
             <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
             <span className="hidden md:inline">रीफ्रेश / Refresh</span>
           </button>
-
-          {/* Add Job Requirement Button for Employers/Admins */}
           {isEmployerOrStaff && onAddNewJob && (
             <button
               onClick={onAddNewJob}
@@ -144,86 +196,67 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
         </div>
       </div>
 
-      {/* Filter and Search Panel */}
-      <div className="bg-white rounded-2xl border border-slate-150 p-4 shadow-2xs space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          {/* Search Term Input */}
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+      {/* Search & Filter bar */}
+      <div className="bg-white rounded-2xl border border-slate-150 p-4 shadow-2xs">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Search className="h-4 w-4 text-slate-400" />
+            </span>
             <input
               type="text"
-              placeholder="नोकरी शोधा (उदा. Accountant, Manager...)"
+              placeholder="नोकरी शोधा (code, designation, company, skill...)"
               value={searchPhrase}
               onChange={(e) => setSearchPhrase(e.target.value)}
-              className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 transition-all bg-slate-50/50"
+              className="w-full text-xs pl-9 pr-4 py-2.5 border border-slate-200 bg-slate-50/50 rounded-xl focus:outline-none focus:border-orange-500 text-slate-800"
             />
           </div>
-
-          {/* Location Dropdown */}
-          <div className="relative">
-            <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-slate-400" />
             <select
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-              className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 transition-all bg-white appearance-none"
+              value={filterSkill}
+              onChange={(e) => setFilterSkill(e.target.value)}
+              className="text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-xl focus:outline-none focus:border-orange-500 text-slate-800 font-semibold cursor-pointer"
             >
-              <option value="">सर्व ठिकाणे / All Locations</option>
-              {uniqueLocations.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
-                </option>
+              <option value="">All Skills</option>
+              {uniqueSkills.map((s) => (
+                <option key={s} value={s}>{s}</option>
               ))}
             </select>
-          </div>
-
-          {/* Work Mode Dropdown */}
-          <div className="relative">
-            <Briefcase className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
             <select
-              value={selectedWorkMode}
-              onChange={(e) => setSelectedWorkMode(e.target.value)}
-              className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 transition-all bg-white appearance-none"
+              value={filterWorkPlace}
+              onChange={(e) => setFilterWorkPlace(e.target.value)}
+              className="text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-xl focus:outline-none focus:border-orange-500 text-slate-800 font-semibold cursor-pointer"
             >
-              <option value="">सर्व कामाच्या पद्धती / All Work Modes</option>
-              {workModes.map((mode) => (
-                <option key={mode.value} value={mode.value}>
-                  {mode.labelMr} / {mode.labelEn}
-                </option>
+              <option value="">All Work Places</option>
+              {uniqueWorkPlaces.map((w) => (
+                <option key={w} value={w}>{w}</option>
               ))}
             </select>
-          </div>
-
-          {/* Specialization Dropdown */}
-          <div className="relative">
-            <Layers className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 transition-all bg-white appearance-none"
-            >
-              <option value="">सर्व नोकरी क्षेत्रे / All Categories</option>
-              {industryTypes.map((spec) => (
-                <option key={spec.id} value={spec.id}>
-                  {spec.label}
-                </option>
-              ))}
-            </select>
+            {(searchPhrase || filterSkill || filterWorkPlace) && (
+              <button
+                onClick={() => { setSearchPhrase(''); setFilterSkill(''); setFilterWorkPlace(''); }}
+                className="text-[10px] text-orange-600 font-bold hover:underline cursor-pointer whitespace-nowrap"
+              >
+                Clear All
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Query Error State */}
+      {/* Error */}
       {error && (
         <div className="my-4">
           <Alert
             type="error"
             title="API Error"
-            message="थेट नोकरी माहिती लोड करताना एरर आली. कृपया इंटरनेट तपासा. / Failed to load live job details. Please retry."
+            message="Failed to load job details. Please check your connection and retry."
           />
         </div>
       )}
 
-      {/* Loading Skeleton Loader */}
+      {/* Loading */}
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((n) => (
@@ -237,114 +270,96 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
             </div>
           ))}
         </div>
-      ) : filteredJobs.length === 0 ? (
+      ) : filteredAndSortedJobs.length === 0 ? (
         /* Empty State */
         <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
           <div className="text-slate-350 text-4xl mb-3">📁</div>
           <h3 className="text-sm font-bold text-slate-700">जाहिराती आढळल्या नाहीत / No Jobs Found</h3>
-          <p className="text-xs text-slate-500 mt-1">
-            तुमच्या शोध निकषांशी जुळणारी एकही नोकरी सध्या उपलब्ध नाही.
-          </p>
+          <p className="text-xs text-slate-500 mt-1">तुमच्या शोध निकषांशी जुळणारी एकही नोकरी सध्या उपलब्ध नाही.</p>
           <button
-            onClick={() => {
-              setSearchPhrase('');
-              setSelectedLocation('');
-              setSelectedWorkMode('');
-              setSelectedCategory('');
-            }}
+            onClick={() => { setSearchPhrase(''); setFilterSkill(''); setFilterWorkPlace(''); }}
             className="mt-4 px-4 py-2 text-xs font-bold bg-slate-100 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-200 transition-all cursor-pointer"
           >
             फिल्टर्स साफ करा / Clear Filters
           </button>
         </div>
       ) : (
-        /* Responsive Views: Table for Desktop, Cards for Mobile */
         <>
-          {/* DESKTOP TABLE VIEW */}
+          {/* Results count */}
+          <div className="text-[10px] text-slate-400 font-bold">
+            Showing {filteredAndSortedJobs.length} of {totalCount} vacancies
+          </div>
+
+          {/* DESKTOP TABLE */}
           <div className="hidden lg:block bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-50/75 border-b border-slate-150 text-slate-700 font-extrabold uppercase tracking-wider">
-                    <th className="px-5 py-4 font-extrabold text-[10px] text-slate-500">नोकरी कोड / Code</th>
-                    <th className="px-5 py-4 font-extrabold text-[10px] text-slate-500">पद / Designation</th>
-                    <th className="px-5 py-4 font-extrabold text-[10px] text-slate-500">क्षेत्र / Category</th>
-                    <th className="px-5 py-4 font-extrabold text-[10px] text-slate-500">काम पद्धत / Mode</th>
-                    <th className="px-5 py-4 font-extrabold text-[10px] text-slate-500">ठिकाण / Location</th>
-                    <th className="px-5 py-4 font-extrabold text-[10px] text-slate-500">मासिक वेतनश्रेणी / Salary</th>
+                    <th onClick={() => handleSort('jobCode')} className="px-5 py-4 font-extrabold text-[10px] text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors whitespace-nowrap">
+                      <div className="flex items-center gap-1">Job Code <ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                    </th>
+                    <th onClick={() => handleSort('profileHeader')} className="px-5 py-4 font-extrabold text-[10px] text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
+                      <div className="flex items-center gap-1">Designation <ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                    </th>
+                    <th onClick={() => handleSort('companyName')} className="px-5 py-4 font-extrabold text-[10px] text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
+                      <div className="flex items-center gap-1">Company Name <ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                    </th>
+                    <th onClick={() => handleSort('workPlace')} className="px-5 py-4 font-extrabold text-[10px] text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
+                      <div className="flex items-center gap-1">Work Place <ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                    </th>
+                    <th onClick={() => handleSort('skill')} className="px-5 py-4 font-extrabold text-[10px] text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
+                      <div className="flex items-center gap-1">Skill <ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                    </th>
                     <th className="px-5 py-4 font-extrabold text-[10px] text-slate-500 text-right">कृती / Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {filteredJobs.map((job) => {
-                    const jobIdNum = Number(job.id || job.jobRequirementId || 1);
+                  {filteredAndSortedJobs.map((job: any, index: number) => {
+                    const jobIdNum = Number(job.id || index);
                     const isApplied = appliedJobIds.includes(jobIdNum);
-                    const designation = job.jobDesignation || job.profileHeader || 'Job Requirement';
-                    const location = job.jobLocation || job.workPlace || 'Nashik';
-                    const salaryFrom = typeof job.salary === 'number' ? job.salary : parseFloat(job.salary) || 0;
-                    const salaryToVal = typeof job.salaryTo === 'number' ? job.salaryTo : parseFloat(job.salaryTo) || salaryFrom;
 
                     return (
                       <tr key={jobIdNum} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-5 py-4 font-mono font-bold text-slate-500">
+                        <td className="px-5 py-4 font-mono font-bold text-slate-500 whitespace-nowrap">
                           {job.jobCode || `JOB-${jobIdNum}`}
                         </td>
                         <td className="px-5 py-4">
                           <span className="font-extrabold text-slate-900 block">
-                            {designation}
-                          </span>
-                          <span className="text-[10px] text-slate-400 block mt-0.5 line-clamp-1 max-w-[200px]">
-                            {job.profileHeader || designation}
+                            {job.profileHeader || job.jobDesignation || 'N/A'}
                           </span>
                         </td>
-                        <td className="px-5 py-4">
-                          <span className="px-2 py-0.5 bg-blue-50 text-blue-950 font-bold border border-blue-100 rounded-md text-[10px]">
-                            {job.industryTypeId || 'N/A'}
-                          </span>
+                        <td className="px-5 py-4 font-semibold text-slate-700 max-w-[150px] break-words">
+                          {job.companyName || 'N/A'}
                         </td>
-                        <td className="px-5 py-4">
-                          <span className="px-2 py-0.5 bg-slate-100 text-slate-850 font-bold border border-slate-200 rounded-md text-[10px]">
-                            {getLabel(workModes, job.workModeId, lang)}
-                          </span>
+                        <td className="px-5 py-4 font-bold text-slate-800 whitespace-nowrap">
+                          {job.workPlace || job.jobLocation || 'N/A'}
                         </td>
-                        <td className="px-5 py-4">
-                          <span className="font-bold text-slate-800">{location}</span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span className="font-extrabold text-slate-900 block">
-                            ₹{salaryFrom.toLocaleString()} - ₹{salaryToVal.toLocaleString()}
-                          </span>
-                          <span className="text-[10px] text-slate-400 block font-semibold">
-                            {getLabel(salaryPeriods, job.salaryPeriodId, lang)}
-                          </span>
+                        <td className="px-5 py-4 text-slate-500 break-words max-w-[200px]">
+                          {job.skill || 'N/A'}
                         </td>
                         <td className="px-5 py-4 text-right whitespace-nowrap">
                           <div className="inline-flex gap-2">
-                            {/* View details */}
                             <button
-                              onClick={() => onViewDetails(jobIdNum)}
+                              onClick={() => onViewDetails(jobIdNum, job.jobCode)}
                               className="py-1.5 px-3 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer text-slate-700"
                             >
                               <Eye className="w-3.5 h-3.5" />
-                              <span>तपशील / View</span>
+                              <span>View</span>
                             </button>
-
-                            {/* Edit vacancy if authorized */}
                             {isEmployerOrStaff && onEditJob && (
                               <button
                                 onClick={() => onEditJob(Number(job.id))}
                                 className="py-1.5 px-3 bg-orange-50 border border-orange-100 hover:bg-orange-100 hover:text-orange-950 text-orange-900 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
                               >
                                 <Edit className="w-3.5 h-3.5" />
-                                <span>संपादित करा / Edit</span>
+                                <span>Edit</span>
                               </button>
                             )}
-
-                            {/* Seeker Quick Apply indicator */}
                             {!isEmployerOrStaff && isApplied && (
                               <span className="inline-flex items-center gap-1 py-1.5 px-3 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-lg text-xs font-bold shadow-2xs">
                                 <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>सादर / Applied</span>
+                                <span>Applied</span>
                               </span>
                             )}
                           </div>
@@ -357,87 +372,64 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
             </div>
           </div>
 
-          {/* MOBILE CARDS VIEW */}
+          {/* MOBILE CARDS */}
           <div className="lg:hidden space-y-4">
-            {filteredJobs.map((job) => {
-              const jobIdNum = Number(job.id || job.jobRequirementId || 1);
+            {filteredAndSortedJobs.map((job: any, index: number) => {
+              const jobIdNum = Number(job.id || index);
               const isApplied = appliedJobIds.includes(jobIdNum);
-              const designation = job.jobDesignation || job.profileHeader || 'Job Requirement';
-              const location = job.jobLocation || job.workPlace || 'Nashik';
-              const salaryFrom = typeof job.salary === 'number' ? job.salary : parseFloat(job.salary) || 0;
-              const salaryToVal = typeof job.salaryTo === 'number' ? job.salaryTo : parseFloat(job.salaryTo) || salaryFrom;
 
               return (
                 <div
                   key={jobIdNum}
-                  className="bg-white rounded-2xl border border-slate-150 p-5 space-y-4 shadow-2xs relative"
+                  className="bg-white rounded-2xl border border-slate-150 p-5 space-y-3 shadow-2xs relative"
                 >
-                  {/* Top Header */}
                   <div className="flex justify-between items-start gap-2">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 bg-orange-50 text-orange-950 text-[9px] font-extrabold border border-orange-100 rounded-md">
-                          {getLabel(roleTypes, job.roleTypeId, lang)}
-                        </span>
-                        <span className="font-mono text-[9px] text-slate-400 font-bold">
-                          {job.jobCode || `JOB-${jobIdNum}`}
-                        </span>
-                      </div>
+                      <span className="font-mono text-[9px] text-slate-400 font-bold">
+                        {job.jobCode || `JOB-${jobIdNum}`}
+                      </span>
                       <h3 className="text-base font-black text-slate-900 leading-tight block">
-                        {designation}
+                        {job.profileHeader || job.jobDesignation || 'N/A'}
                       </h3>
-                      <p className="text-xs font-bold text-slate-500 leading-tight block">{job.profileHeader || designation}</p>
                     </div>
                   </div>
 
-                  {/* Core specs list */}
                   <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-[11px] text-slate-600">
                     <div>
-                      <span className="text-slate-400 block font-bold text-[9px] mb-0.5">LOCATION</span>
-                      <span className="font-extrabold text-slate-800 block">{location}</span>
+                      <span className="text-slate-400 block font-bold text-[9px] mb-0.5">COMPANY</span>
+                      <span className="font-extrabold text-slate-800 block">{job.companyName || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block font-bold text-[9px] mb-0.5">WORK MODE</span>
-                      <span className="font-extrabold text-slate-800 block">
-                        {getLabel(workModes, job.workModeId, lang)}
-                      </span>
+                      <span className="text-slate-400 block font-bold text-[9px] mb-0.5">WORK PLACE</span>
+                      <span className="font-extrabold text-slate-800 block">{job.workPlace || job.jobLocation || 'N/A'}</span>
                     </div>
-                    <div>
-                      <span className="text-slate-400 block font-bold text-[9px] mb-0.5">SALARY</span>
-                      <span className="font-extrabold text-slate-800 block">
-                        ₹{salaryFrom.toLocaleString()} - ₹{salaryToVal.toLocaleString()}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block font-bold text-[9px] mb-0.5">VACANCIES</span>
-                      <span className="font-extrabold text-slate-800 block">{job.noOfVacancy || 1} Positions</span>
+                    <div className="col-span-2">
+                      <span className="text-slate-400 block font-bold text-[9px] mb-0.5">SKILL</span>
+                      <span className="font-extrabold text-slate-800 block">{job.skill || 'N/A'}</span>
                     </div>
                   </div>
 
-                  {/* Actions footer */}
                   <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                     <button
-                      onClick={() => onViewDetails(jobIdNum)}
+                      onClick={() => onViewDetails(jobIdNum, job.jobCode)}
                       className="py-2 px-4 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer text-slate-700 flex-1"
                     >
                       <Eye className="w-3.5 h-3.5" />
-                      <span>तपशील / View</span>
+                      <span>View</span>
                     </button>
-
                     {isEmployerOrStaff && onEditJob && (
                       <button
                         onClick={() => onEditJob(Number(job.id))}
                         className="py-2 px-4 bg-orange-50 border border-orange-100 text-orange-900 hover:bg-orange-100 hover:text-orange-950 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer flex-1"
                       >
                         <Edit className="w-3.5 h-3.5" />
-                        <span>सुधारा / Edit</span>
+                        <span>Edit</span>
                       </button>
                     )}
-
                     {!isEmployerOrStaff && isApplied && (
                       <span className="inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl text-xs font-bold flex-1 text-center">
                         <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>सादर / Applied</span>
+                        <span>Applied</span>
                       </span>
                     )}
                   </div>
@@ -446,6 +438,62 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
             })}
           </div>
         </>
+      )}
+
+      {/* Pagination */}
+      {!isLoading && totalCount > 0 && (
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
+          <div className="text-xs text-slate-500">
+            Showing {totalCount === 0 ? 0 : (pageNumber - 1) * pageSize + 1} to{' '}
+            {Math.min(pageNumber * pageSize, totalCount)} of {totalCount} vacancies
+          </div>
+          <div className="flex items-center gap-1 text-xs flex-wrap">
+            <button
+              onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
+              disabled={pageNumber === 1 || isFetching}
+              className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition-all cursor-pointer flex items-center justify-center"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            {Array.from({ length: Math.min(5, Math.ceil(totalCount / pageSize)) }, (_, i) => {
+              const totalPages = Math.ceil(totalCount / pageSize);
+              const startPage = Math.max(1, pageNumber - 2);
+              return startPage + i <= totalPages ? startPage + i : null;
+            }).filter(Boolean).map((page) => (
+              <button
+                key={page}
+                onClick={() => setPageNumber(page!)}
+                disabled={isFetching}
+                className={`min-w-[32px] h-8 rounded-lg font-bold border transition-all cursor-pointer ${
+                  pageNumber === page
+                    ? 'bg-blue-950 border-blue-950 text-white shadow-2xs'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            {Math.ceil(totalCount / pageSize) > 5 && pageNumber < Math.ceil(totalCount / pageSize) - 2 && (
+              <span className="text-slate-400 px-1">...</span>
+            )}
+            {Math.ceil(totalCount / pageSize) > 5 && pageNumber < Math.ceil(totalCount / pageSize) - 2 && (
+              <button
+                onClick={() => setPageNumber(Math.ceil(totalCount / pageSize))}
+                disabled={isFetching}
+                className="min-w-[32px] h-8 rounded-lg font-bold border bg-white border-slate-200 text-slate-600 hover:bg-slate-50 transition-all cursor-pointer"
+              >
+                {Math.ceil(totalCount / pageSize)}
+              </button>
+            )}
+            <button
+              onClick={() => setPageNumber(prev => Math.min(prev + 1, Math.ceil(totalCount / pageSize)))}
+              disabled={pageNumber === Math.ceil(totalCount / pageSize) || isFetching}
+              className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition-all cursor-pointer flex items-center justify-center"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

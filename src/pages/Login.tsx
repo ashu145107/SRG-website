@@ -7,13 +7,16 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { setCredentials } from '../store/authSlice';
+import { setCredentials, logout } from '../store/authSlice';
 import { useLoginMutation } from '../services/authApi';
+import { MockDb } from '../services/mockDb';
 import { TextBox, PasswordBox } from '../components/ui/Inputs';
 import { PrimaryButton } from '../components/ui/Buttons';
-import { Alert, Toast } from '../components/ui/FeedbackComponents';
+import { Alert, Toast, Modal } from '../components/ui/FeedbackComponents';
 import { LanguageSwitcher } from '../components/ui/UtilityComponents';
-import { ShieldCheck, ArrowLeft, Users, Building } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, Users, Building, AlertTriangle, ArrowRight } from 'lucide-react';
+import { LoginTab, isRoleAllowedForTab, getCorrectTabForRole, getMismatchMessage } from '../utils/roleTabMap';
+import { UserRole } from '../types';
 
 export default function Login() {
   const { t } = useTranslation();
@@ -38,6 +41,24 @@ export default function Login() {
   // Success Toast message
   const [toastMessage, setToastMessage] = useState('');
 
+  // Role mismatch popup state
+  const [mismatchPopup, setMismatchPopup] = useState<{ message: string; correctTab: LoginTab } | null>(null);
+
+  // Pre-login validation: check if email belongs to a known demo account with a different role
+  const validateEmailForTab = (email: string, tab: LoginTab): boolean => {
+    const inputVal = email.trim().toLowerCase();
+    const users = MockDb.getUsers();
+    const foundUser = users.find(u => u.email.toLowerCase() === inputVal || u.name.toLowerCase() === inputVal);
+
+    if (foundUser && !isRoleAllowedForTab(foundUser.role, tab)) {
+      const msg = getMismatchMessage(foundUser.role, tab);
+      const correctTab = getCorrectTabForRole(foundUser.role);
+      setMismatchPopup({ message: msg, correctTab });
+      return false;
+    }
+    return true;
+  };
+
   // API mutations
   const [login, { isLoading: isLoginLoading }] = useLoginMutation();
 
@@ -60,8 +81,23 @@ export default function Login() {
       return;
     }
 
+    // Pre-login check: if the email belongs to a known account with wrong role, block immediately
+    if (!validateEmailForTab(email, activeTab)) {
+      return;
+    }
+
     try {
       const response = await login({ email: email.trim(), password }).unwrap();
+
+      // Post-login check: verify the returned user's role matches the selected tab
+      if (!isRoleAllowedForTab(response.user.role, activeTab)) {
+        const msg = getMismatchMessage(response.user.role, activeTab);
+        const correctTab = getCorrectTabForRole(response.user.role);
+        dispatch(logout());
+        setMismatchPopup({ message: msg, correctTab });
+        return;
+      }
+
       dispatch(setCredentials(response));
       setToastMessage(`लॉगिन यशस्वी / Login Successful! Redirecting...`);
       
@@ -343,6 +379,47 @@ export default function Login() {
       {toastMessage && (
         <Toast message={toastMessage} type="success" onClose={() => setToastMessage('')} />
       )}
+
+      {/* Role Mismatch Popup Modal */}
+      <Modal
+        isOpen={!!mismatchPopup}
+        onClose={() => setMismatchPopup(null)}
+        title="चुकीचा लॉगिन टॅब / Wrong Login Tab"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+            <p className="text-sm text-amber-800 font-medium leading-relaxed">
+              {mismatchPopup?.message}
+            </p>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+            <p className="text-xs text-slate-600 font-semibold leading-relaxed">
+              सूचना: प्रत्येक वापरकर्त्यांना त्यांच्या प्रकारानुसार योग्य लॉगिन टॅब निवडावा लागेल.
+              <br />
+              Note: Each user must select the correct login tab corresponding to their role type.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <PrimaryButton
+              onClick={() => {
+                if (mismatchPopup?.correctTab) {
+                  setActiveTab(mismatchPopup.correctTab);
+                  setEmail('');
+                  setPassword('');
+                  setFormError('');
+                }
+                setMismatchPopup(null);
+              }}
+              className="flex items-center gap-2"
+            >
+              योग्य टॅबवर जा / Go to Correct Tab <ArrowRight className="w-4 h-4" />
+            </PrimaryButton>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -34,6 +34,7 @@ export interface JobRequirement {
   benefits: string;
   weeklyOffId: number;
   jobCode: string;
+  companyName?: string;
   userJobStatus?: string;
   /** UI-only alias — maps to `specialization` for backend */
   companyTypeId?: number;

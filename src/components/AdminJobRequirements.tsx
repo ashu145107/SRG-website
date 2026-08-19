@@ -50,6 +50,7 @@ export function AdminJobRequirements() {
         j =>
           (j.jobCode || '').toLowerCase().includes(phrase) ||
           (j.profileHeader || '').toLowerCase().includes(phrase) ||
+          (j.companyName || '').toLowerCase().includes(phrase) ||
           (j.workPlace || '').toLowerCase().includes(phrase) ||
           (j.skill || '').toLowerCase().includes(phrase)
       );
@@ -157,8 +158,14 @@ export function AdminJobRequirements() {
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
-                <th className="px-4 py-3.5 font-bold">
-                  Company Name
+                <th
+                  onClick={() => handleSort('companyName')}
+                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    Company Name
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </div>
                 </th>
                 <th
                   onClick={() => handleSort('workPlace')}
@@ -216,7 +223,7 @@ export function AdminJobRequirements() {
                       {job.profileHeader || job.jobDesignation}
                     </td>
                     <td className="px-4 py-3.5 text-slate-700 font-semibold max-w-[150px] break-words">
-                      {job.postingNotes ? 'SAMARTH GLOTECH AUTOMATION PVT.LTD' : 'Ligms India pvt ltd'}
+                      {job.companyName || 'N/A'}
                     </td>
                     <td className="px-4 py-3.5 text-slate-700 font-medium whitespace-nowrap">
                       {job.workPlace || job.jobLocation}
@@ -328,6 +335,12 @@ export function AdminJobRequirements() {
                 <span className="font-bold text-slate-400 col-span-1">Profile Header:</span>
                 <span className="font-extrabold text-slate-900 col-span-2">{selectedJob.profileHeader || selectedJob.jobDesignation || 'N/A'}</span>
               </div>
+              {selectedJob.companyName && (
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                  <span className="font-bold text-slate-400 col-span-1">Company:</span>
+                  <span className="font-extrabold text-slate-900 col-span-2">{selectedJob.companyName}</span>
+                </div>
+              )}
               <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Work Place:</span>
                 <span className="font-bold text-slate-900 col-span-2">{selectedJob.workPlace || selectedJob.jobLocation || 'N/A'}</span>
