@@ -160,7 +160,8 @@ export const uploadProfilePic = async (file: File): Promise<{ success: boolean; 
 
     // API-level error even when HTTP 200
     if (data?.isSuccess === false || data?.isFailure === true || data?.error) {
-      const msg = data?.message || data?.error?.message || data?.error || JSON.stringify(data);
+      const raw = data?.message || data?.error?.message || data?.error || JSON.stringify(data);
+      const msg = typeof raw === 'string' ? raw : JSON.stringify(raw);
       return { success: false, message: msg };
     }
 
@@ -215,12 +216,13 @@ export const uploadResume = async (file: File): Promise<{ success: boolean; mess
 
     // API-level error even when HTTP 200
     if (data?.isSuccess === false || data?.isFailure === true || data?.error) {
-      const msg = data?.message || data?.error?.message || data?.error || JSON.stringify(data);
+      const raw = data?.message || data?.error?.message || data?.error || JSON.stringify(data);
+      const msg = typeof raw === 'string' ? raw : JSON.stringify(raw);
       return { success: false, message: msg };
     }
 
     const val = data?.value || data?.data || data;
-    return { success: true, message: 'Resume updated successfully.', url: val?.resumeUrl || val?.url || '', name: val?.resumeName || file.name };
+    return { success: true, message: data?.message || val?.message || val?.resultMessage || 'Resume updated successfully.', url: val?.resumeUrl || val?.url || '', name: val?.resumeName || file.name };
   } catch (err: any) {
     console.error('[uploadResume] Error:', err);
     return { success: false, message: err.message || 'Failed to upload resume.' };

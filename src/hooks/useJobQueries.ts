@@ -85,6 +85,7 @@ export const useApplyJobMutation = () => {
     onSuccess: () => {
       // Refresh search query states to reflect changes in applied status
       queryClient.invalidateQueries({ queryKey: jobKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['searchJobs'] });
     },
   });
 };

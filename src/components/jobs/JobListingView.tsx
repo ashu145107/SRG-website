@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { useSearchJobsQuery } from '../../hooks/useJobQueries';
+import { useSearchJobsQuery, useApplyJobMutation } from '../../hooks/useJobQueries';
 import {
   Search,
   RefreshCw,
@@ -16,8 +16,14 @@ import {
   PlusCircle,
   ChevronLeft,
   ChevronRight,
-  ArrowUpDown,
   SlidersHorizontal,
+  MapPin,
+  Briefcase,
+  IndianRupee,
+  Building2,
+  CalendarDays,
+  Loader2,
+  Send,
 } from 'lucide-react';
 import { Alert } from '../ui/FeedbackComponents';
 import { Job } from '../../types';
@@ -59,13 +65,31 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
   const [filterSkill, setFilterSkill] = useState('');
   const [filterWorkPlace, setFilterWorkPlace] = useState('');
 
-  // Sort state (jobCode descending is default — recent first)
-  const [sortColumn, setSortColumn] = useState<string>('jobCode');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  // Sort state (recent is default — matches Naukri.com "most recent first")
+  const [sortKey, setSortKey] = useState('recent');
 
   // Pagination state
   const [pageSize, setPageSize] = useState(15);
   const [pageNumber, setPageNumber] = useState(1);
+
+  // Quick Apply state
+  const applyJobMutation = useApplyJobMutation();
+  const [applyingIds, setApplyingIds] = useState<Set<number>>(new Set());
+
+  const handleQuickApply = async (id: number) => {
+    setApplyingIds((prev) => new Set(prev).add(id));
+    try {
+      await applyJobMutation.mutateAsync([String(id)]);
+    } catch (_) {
+      // toast handled globally; nothing else to do
+    } finally {
+      setApplyingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
 
   // When external data is provided (employer view), skip internal API call
   const useExternal = !!externalJobs;
@@ -135,28 +159,24 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
       result = result.filter((j: any) => (j.workPlace || j.jobLocation || '') === filterWorkPlace);
     }
 
-    // 4. Sort
-    result.sort((a: any, b: any) => {
-      let valA = a[sortColumn] !== undefined ? a[sortColumn] : '';
-      let valB = b[sortColumn] !== undefined ? b[sortColumn] : '';
-      if (typeof valA === 'string') valA = valA.toLowerCase();
-      if (typeof valB === 'string') valB = valB.toLowerCase();
-      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
+    // 4. Sort (Naukri-style: recent by default, or by a chosen field)
+    if (sortKey === 'designation') {
+      result.sort((a: any, b: any) =>
+        String(a.profileHeader || a.jobDesignation || '').localeCompare(String(b.profileHeader || b.jobDesignation || ''))
+      );
+    } else if (sortKey === 'company') {
+      result.sort((a: any, b: any) => String(a.companyName || '').localeCompare(String(b.companyName || '')));
+    } else if (sortKey === 'workplace') {
+      result.sort((a: any, b: any) => String(a.workPlace || a.jobLocation || '').localeCompare(String(b.workPlace || b.jobLocation || '')));
+    } else if (sortKey === 'salary') {
+      result.sort((a: any, b: any) => (Number(b.salaryTo) || 0) - (Number(a.salaryTo) || 0));
+    } else {
+      // recent — newest posted first
+      result.sort((a: any, b: any) => Number(b.id) - Number(a.id));
+    }
 
     return result;
-  }, [jobs, searchPhrase, filterSkill, filterWorkPlace, sortColumn, sortOrder]);
-
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortColumn(column);
-      setSortOrder('asc');
-    }
-  };
+  }, [jobs, searchPhrase, filterSkill, filterWorkPlace, sortKey]);
 
   return (
     <div className="space-y-6 animate-fade-in text-left">
@@ -233,6 +253,18 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                 <option key={w} value={w}>{w}</option>
               ))}
             </select>
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value)}
+              className="flex-1 sm:flex-none min-w-0 max-w-full sm:w-36 text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-xl focus:outline-none focus:border-orange-500 text-slate-800 font-semibold cursor-pointer"
+              title="Sort by"
+            >
+              <option value="recent">Sort: Most Recent</option>
+              <option value="designation">Sort: Designation</option>
+              <option value="company">Sort: Company</option>
+              <option value="workplace">Sort: Location</option>
+              <option value="salary">Sort: Salary (High → Low)</option>
+            </select>
             {(searchPhrase || filterSkill || filterWorkPlace) && (
               <button
                 onClick={() => { setSearchPhrase(''); setFilterSkill(''); setFilterWorkPlace(''); }}
@@ -258,15 +290,16 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
 
       {/* Loading */}
       {isLoading ? (
-        <div className="space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-xs divide-y divide-slate-100">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="bg-white p-5 rounded-2xl border border-slate-100 animate-pulse flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="space-y-2 flex-1">
-                <div className="h-5 bg-slate-200 rounded-md w-1/3"></div>
+            <div key={n} className="p-5 animate-pulse flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="space-y-2 flex-1 w-full">
+                <div className="h-5 bg-slate-200 rounded-md w-2/5"></div>
                 <div className="h-3.5 bg-slate-150 rounded-md w-1/4"></div>
-                <div className="h-3.5 bg-slate-150 rounded-md w-1/2"></div>
+                <div className="h-3.5 bg-slate-150 rounded-md w-3/5"></div>
+                <div className="h-3 bg-slate-100 rounded-md w-2/3"></div>
               </div>
-              <div className="h-8 bg-slate-200 rounded-xl w-24"></div>
+              <div className="h-9 bg-slate-200 rounded-xl w-32 shrink-0"></div>
             </div>
           ))}
         </div>
@@ -290,147 +323,124 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
             Showing {filteredAndSortedJobs.length} of {totalCount} vacancies
           </div>
 
-          {/* DESKTOP TABLE */}
-          <div className="hidden lg:block bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/75 border-b border-slate-150 text-slate-700 font-extrabold uppercase tracking-wider">
-                    <th onClick={() => handleSort('jobCode')} className="px-5 py-4 font-extrabold text-[10px] text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors whitespace-nowrap">
-                      <div className="flex items-center gap-1">Job Code <ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
-                    </th>
-                    <th onClick={() => handleSort('profileHeader')} className="px-5 py-4 font-extrabold text-[10px] text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
-                      <div className="flex items-center gap-1">Designation <ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
-                    </th>
-                    <th onClick={() => handleSort('companyName')} className="px-5 py-4 font-extrabold text-[10px] text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
-                      <div className="flex items-center gap-1">Company Name <ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
-                    </th>
-                    <th onClick={() => handleSort('workPlace')} className="px-5 py-4 font-extrabold text-[10px] text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
-                      <div className="flex items-center gap-1">Work Place <ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
-                    </th>
-                    <th onClick={() => handleSort('skill')} className="px-5 py-4 font-extrabold text-[10px] text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
-                      <div className="flex items-center gap-1">Skill <ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
-                    </th>
-                    <th className="px-5 py-4 font-extrabold text-[10px] text-slate-500 text-right">कृती / Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {filteredAndSortedJobs.map((job: any, index: number) => {
-                    const jobIdNum = Number(job.id || index);
-                    const isApplied = appliedJobIds.includes(jobIdNum);
-
-                    return (
-                      <tr key={jobIdNum} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-5 py-4 font-mono font-bold text-slate-500 whitespace-nowrap">
-                          {job.jobCode || `JOB-${jobIdNum}`}
-                        </td>
-                        <td className="px-5 py-4">
-                          <span className="font-extrabold text-slate-900 block">
-                            {job.profileHeader || job.jobDesignation || 'N/A'}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 font-semibold text-slate-700 max-w-[150px] break-words">
-                          {job.companyName || 'N/A'}
-                        </td>
-                        <td className="px-5 py-4 font-bold text-slate-800 whitespace-nowrap">
-                          {job.workPlace || job.jobLocation || 'N/A'}
-                        </td>
-                        <td className="px-5 py-4 text-slate-500 break-words max-w-[200px]">
-                          {job.skill || 'N/A'}
-                        </td>
-                        <td className="px-5 py-4 text-right whitespace-nowrap">
-                          <div className="inline-flex gap-2">
-                            <button
-                              onClick={() => onViewDetails(jobIdNum, job.jobCode)}
-                              className="py-1.5 px-3 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer text-slate-700"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              <span>View</span>
-                            </button>
-                            {isEmployerOrStaff && onEditJob && (
-                              <button
-                                onClick={() => onEditJob(Number(job.id))}
-                                className="py-1.5 px-3 bg-orange-50 border border-orange-100 hover:bg-orange-100 hover:text-orange-950 text-orange-900 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                              >
-                                <Edit className="w-3.5 h-3.5" />
-                                <span>Edit</span>
-                              </button>
-                            )}
-                            {!isEmployerOrStaff && isApplied && (
-                              <span className="inline-flex items-center gap-1 py-1.5 px-3 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-lg text-xs font-bold shadow-2xs">
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Applied</span>
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* MOBILE CARDS */}
-          <div className="lg:hidden space-y-4">
+          {/* NAUKRI-STYLE JOB LIST */}
+          <div className="bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-xs divide-y divide-slate-100">
             {filteredAndSortedJobs.map((job: any, index: number) => {
               const jobIdNum = Number(job.id || index);
               const isApplied = appliedJobIds.includes(jobIdNum);
+              const isApplying = applyingIds.has(jobIdNum);
+              const designation = job.profileHeader || job.jobDesignation || 'N/A';
+              const workPlace = job.workPlace || job.jobLocation || 'N/A';
+              const experience = `${job.experiance ?? 0} - ${job.experianceTo ?? 2} yrs`;
+              const fmt = (v: any) => {
+                const n = Number(v);
+                if (!n) return '';
+                return n >= 100000 ? `${n / 100000} L` : `${n}`;
+              };
+              const salaryFrom = fmt(job.salary);
+              const salaryTo = fmt(job.salaryTo);
+              const salaryText = salaryFrom && salaryTo
+                ? `₹${salaryFrom} - ₹${salaryTo}`
+                : salaryFrom
+                  ? `₹${salaryFrom}`
+                  : 'Salary Negotiable';
+              const expiry = job.expiryDate
+                ? (() => {
+                    const d = new Date(job.expiryDate);
+                    return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-IN');
+                  })()
+                : '';
 
               return (
                 <div
                   key={jobIdNum}
-                  className="bg-white rounded-2xl border border-slate-150 p-5 space-y-3 shadow-2xs relative"
+                  className="group p-4 lg:p-5 flex flex-col lg:flex-row lg:items-center gap-4 transition-colors hover:bg-slate-50/70"
                 >
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="space-y-1">
-                      <span className="font-mono text-[9px] text-slate-400 font-bold">
-                        {job.jobCode || `JOB-${jobIdNum}`}
-                      </span>
-                      <h3 className="text-base font-black text-slate-900 leading-tight block">
-                        {job.profileHeader || job.jobDesignation || 'N/A'}
-                      </h3>
+                  <div
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => onViewDetails(jobIdNum, job.jobCode)}
+                    title="View job details"
+                  >
+                    <span className="font-mono text-[9px] text-slate-400 font-bold">
+                      {job.jobCode || `JOB-${jobIdNum}`}
+                    </span>
+                    <h3 className="mt-0.5 text-[15px] lg:text-base font-bold text-slate-900 leading-snug group-hover:text-orange-600 transition-colors">
+                      {designation}
+                    </h3>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                      <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="font-semibold text-slate-700">{job.companyName || 'N/A'}</span>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-[11px] text-slate-600">
-                    <div>
-                      <span className="text-slate-400 block font-bold text-[9px] mb-0.5">COMPANY</span>
-                      <span className="font-extrabold text-slate-800 block">{job.companyName || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block font-bold text-[9px] mb-0.5">WORK PLACE</span>
-                      <span className="font-extrabold text-slate-800 block">{job.workPlace || job.jobLocation || 'N/A'}</span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-slate-400 block font-bold text-[9px] mb-0.5">SKILL</span>
-                      <span className="font-extrabold text-slate-800 block">{job.skill || 'N/A'}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                    <button
-                      onClick={() => onViewDetails(jobIdNum, job.jobCode)}
-                      className="py-2 px-4 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer text-slate-700 flex-1"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>View</span>
-                    </button>
-                    {isEmployerOrStaff && onEditJob && (
-                      <button
-                        onClick={() => onEditJob(Number(job.id))}
-                        className="py-2 px-4 bg-orange-50 border border-orange-100 text-orange-900 hover:bg-orange-100 hover:text-orange-950 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer flex-1"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                        <span>Edit</span>
-                      </button>
+                    {job.skill && (
+                      <p className="mt-1.5 text-xs italic text-slate-500 line-clamp-1">{job.skill}</p>
                     )}
-                    {!isEmployerOrStaff && isApplied && (
-                      <span className="inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl text-xs font-bold flex-1 text-center">
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Applied</span>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] font-semibold text-slate-600">
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                        {workPlace}
                       </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Briefcase className="w-3 h-3 text-slate-400 shrink-0" />
+                        {experience}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <IndianRupee className="w-3 h-3 text-slate-400 shrink-0" />
+                        {salaryText}
+                      </span>
+                      {expiry && (
+                        <span className="inline-flex items-center gap-1">
+                          <CalendarDays className="w-3 h-3 text-slate-400 shrink-0" />
+                          Last date: {expiry}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 lg:flex-col lg:items-stretch shrink-0">
+                    {isEmployerOrStaff && onEditJob ? (
+                      <>
+                        <button
+                          onClick={() => onViewDetails(jobIdNum, job.jobCode)}
+                          className="py-2 px-4 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer text-slate-700 flex-1 lg:w-40"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View Details</span>
+                        </button>
+                        <button
+                          onClick={() => onEditJob(Number(job.id))}
+                          className="py-2 px-4 bg-orange-50 border border-orange-100 text-orange-900 hover:bg-orange-100 hover:text-orange-950 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-1 lg:w-40"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {isApplied ? (
+                          <span className="inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl text-xs font-bold shadow-2xs flex-1 lg:w-40">
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Applied</span>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleQuickApply(jobIdNum)}
+                            disabled={isApplying}
+                            className="py-2 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex-1 lg:w-40"
+                          >
+                            {isApplying
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <Send className="w-3.5 h-3.5" />}
+                            <span>{isApplying ? 'Applying...' : 'Apply Now'}</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => onViewDetails(jobIdNum, job.jobCode)}
+                          className="py-2 px-4 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer text-slate-700 flex-1 lg:w-40"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View Details</span>
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

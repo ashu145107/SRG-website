@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { useGetAdminJobApplicationsQuery } from '../services/adminApi';
 import { JobApplication } from '../types';
 import { Mail, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2, ExternalLink } from 'lucide-react';
+import { Loader } from './ui/FeedbackComponents';
 
 export function AdminJobApplications() {
   const [pageSize, setPageSize] = useState(15);
@@ -192,9 +193,8 @@ export function AdminJobApplications() {
             <tbody className="divide-y divide-slate-100 bg-white">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-orange-500" />
-                    माहिती लोड होत आहे / Loading applications...
+                  <td colSpan={8} className="px-4 py-2 text-center text-slate-400">
+                    <Loader />
                   </td>
                 </tr>
               ) : error ? (
@@ -218,7 +218,7 @@ export function AdminJobApplications() {
                     <td className="px-4 py-3.5 font-bold text-slate-800 whitespace-nowrap">
                       {app.candidateId ? (
                         <a
-                          href={`#/candidate/${app.candidateId}`}
+                          href={`#/dashboard?view=candidate&id=${app.candidateId}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Open candidate profile in new tab"

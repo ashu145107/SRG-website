@@ -450,7 +450,7 @@ export default function Register() {
       <Navbar activePage="register" compact />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col px-4 py-8 sm:py-12">
+      <main className="flex-1 flex flex-col px-4 pt-4 pb-8 sm:pt-5 sm:pb-12">
         <div className="m-auto w-full max-w-lg md:max-w-3xl lg:max-w-5xl text-center space-y-3 mb-6">
           {/* Brand Seal */}
           <div className="mx-auto w-16 h-16 bg-white rounded-2xl shadow-md border border-theme-lightViolet flex items-center justify-center p-1.5 transform hover:scale-105 transition-transform">
@@ -466,7 +466,7 @@ export default function Register() {
           </p>
         </div>
 
-        <div className="w-full max-w-lg md:max-w-3xl lg:max-w-5xl">
+        <div className="w-full max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto">
           <div className="bg-white/95 backdrop-blur-md py-6 sm:py-8 px-5 sm:px-10 rounded-3xl border border-theme-lightViolet/80 shadow-2xl space-y-6">
 
             {isRegisteredSuccess ? (

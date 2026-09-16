@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle, CheckCircle, Info, XCircle, X } from 'lucide-react';
 
 interface AlertProps {
@@ -14,6 +15,7 @@ interface AlertProps {
 }
 
 export const Alert: React.FC<AlertProps> = ({ type = 'info', title, message, onClose }) => {
+  const text = typeof message === 'string' ? message : JSON.stringify(message);
   const stylesMap = {
     success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
     info: 'bg-blue-50 border-blue-200 text-blue-800',
@@ -33,7 +35,7 @@ export const Alert: React.FC<AlertProps> = ({ type = 'info', title, message, onC
       <div className="mt-0.5">{IconMap[type]}</div>
       <div className="flex-1">
         {title && <span className="block font-bold text-sm mb-0.5">{title}</span>}
-        <span className="block text-xs leading-relaxed">{message}</span>
+        <span className="block text-xs leading-relaxed">{text}</span>
       </div>
       {onClose && (
         <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-lg text-current">
@@ -57,6 +59,13 @@ export const Toast: React.FC<ToastProps> = ({ message, type = 'success', onClose
     return () => clearTimeout(timer);
   }, [onClose, durationMs]);
 
+  const fallback = type === 'success' ? 'Operation completed.' : type === 'error' ? 'Something went wrong.' : '';
+  const text = typeof message === 'string' && message.trim()
+    ? message
+    : message == null ? fallback
+    : type === 'success' && typeof message === 'object' && Object.keys(message).length === 0 ? fallback
+    : JSON.stringify(message);
+
   const styles = {
     success: 'bg-gray-900 border-emerald-500/30 text-white',
     info: 'bg-gray-900 border-blue-500/30 text-white',
@@ -74,7 +83,7 @@ export const Toast: React.FC<ToastProps> = ({ message, type = 'success', onClose
   return (
     <div className={`fixed bottom-5 right-5 z-50 p-4 border rounded-xl flex items-center gap-3 shadow-lg max-w-sm animate-slide-in ${styles[type]}`}>
       {Icons[type]}
-      <span className="text-xs font-medium flex-1 text-left">{message}</span>
+      <span className="text-xs font-medium flex-1 text-left">{text}</span>
       <button onClick={onClose} className="text-gray-400 hover:text-white rounded-lg">
         <X className="w-4 h-4" />
       </button>
@@ -87,9 +96,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  maxWidthClass?: string;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidthClass = 'max-w-lg' }) => {
   if (!isOpen) return null;
 
   return (
@@ -98,14 +108,14 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
       <div className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity" onClick={onClose} />
       
       {/* Modal Card */}
-      <div className="relative bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col z-10 p-6 animate-fade-in text-left">
-        <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-4">
+      <div className={`relative bg-white rounded-2xl w-full ${maxWidthClass} shadow-2xl flex flex-col z-10 p-6 animate-fade-in text-left max-h-[92vh]`}>
+        <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-4 shrink-0">
           <h3 className="text-lg font-bold text-blue-950">{title}</h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto max-h-[70vh]">{children}</div>
+        <div className="flex-1 overflow-y-auto">{children}</div>
       </div>
     </div>
   );
@@ -148,17 +158,26 @@ export const ConfirmDialog: React.FC<{
 };
 
 export const Loader: React.FC<{ fullScreen?: boolean }> = ({ fullScreen = false }) => {
+  const { i18n } = useTranslation();
+  const isMr = i18n.language === 'mr';
+  const brandText = isMr ? 'श्री स्वामी समर्थ' : 'Shree Swami Samarth';
+
   const content = (
     <div className="flex flex-col items-center justify-center gap-3">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-600 border-l-transparent"></div>
-      <span className="text-xs font-semibold text-gray-500">श्री स्वामी समर्थ...</span>
+      <div className="relative w-8 h-8">
+        <div className="absolute inset-0 rounded-full border-2 border-theme-lavender/20"></div>
+        <div className="absolute inset-0 rounded-full border-2 border-t-theme-lavender animate-spin"></div>
+      </div>
+      <span className="text-xs font-bold tracking-wide text-theme-darkViolet/60">
+        {isMr ? `${brandText}...` : `${brandText}...`}
+      </span>
     </div>
   );
 
   if (fullScreen) {
     return <div className="fixed inset-0 bg-white/90 z-50 flex items-center justify-center">{content}</div>;
   }
-  return <div className="py-8 flex items-center justify-center">{content}</div>;
+  return <div className="py-6 flex items-center justify-center">{content}</div>;
 };
 
 export const Skeleton: React.FC<{ className?: string }> = ({ className = '' }) => {

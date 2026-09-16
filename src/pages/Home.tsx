@@ -281,6 +281,17 @@ export default function Home() {
     date: init.date
   });
 
+  // Hero action cards: rendered as floating badges on desktop, as a responsive
+  // grid on mobile/tablet so they never overlap the hero image.
+  const heroCards = [
+    { en: 'Find a Job', mr: 'नोकरी शोधा', subEn: '', subMr: '', icon: Briefcase, chipBg: 'bg-theme-lavender text-white', big: false, pos: 'left-0 top-6', from: 'from-left', go: () => scrollToId('jobs') },
+    { en: 'Hire Talent', mr: 'उमेदवार निवडा', subEn: '', subMr: '', icon: UserPlus, chipBg: 'bg-theme-terracotta text-white', big: false, pos: 'right-0 top-0', from: 'from-top', go: () => handleEnterGateway('COMPANY') },
+    { en: 'Skill Training', mr: 'कौशल्य प्रशिक्षण', subEn: 'MPSC / UPSC & trades', subMr: 'MPSC / UPSC आणि व्यवसाय', icon: GraduationCap, chipBg: 'bg-theme-deepTeal/15 text-theme-deepTeal', big: true, pos: '-left-3 top-[40%]', from: 'from-left', go: () => scrollToId('services') },
+    { en: 'Start a Business', mr: 'व्यवसाय सुरू करा', subEn: 'Udyojakta Manch', subMr: 'उद्योजकता मंच', icon: Store, chipBg: 'bg-theme-lavender/15 text-theme-lavender', big: true, pos: '-right-3 top-[36%]', from: 'from-right', go: () => scrollToId('services') },
+    { en: 'SHG / Bachat Gat', mr: 'बचत गट', subEn: 'Register, train and sell', subMr: 'नोंदणी, प्रशिक्षण आणि विक्री', icon: HandCoins, chipBg: 'bg-theme-mint/25 text-theme-deepTeal', big: true, pos: 'left-0 bottom-10', from: 'from-bottom', go: () => handleEnterGateway('SHG') },
+    { en: 'Employment Fairs', mr: 'रोजगार मेळावे', subEn: 'Meet companies directly', subMr: 'कंपन्यांना थेट भेटा', icon: Users, chipBg: 'bg-theme-gold/20 text-theme-gold', big: true, pos: 'right-0 bottom-2', from: 'from-right', go: () => scrollToId('jobs') },
+  ];
+
   const openModal = (which: 'query' | 'feedback') => {
     if (which === 'query') setQueryOpen(true);
     else setFeedbackOpen(true);
@@ -396,73 +407,84 @@ export default function Home() {
             </div>
 
             {/* RIGHT */}
-            <div className="relative h-[480px] sm:h-[580px] lg:h-[640px]">
-              <div
-                className="absolute left-1/2 -translate-x-1/2 top-8 w-[260px] h-[380px] min-[340px]:w-[300px] min-[340px]:h-[420px] sm:w-[380px] sm:h-[500px] rounded-[3rem] rotate-3"
-                style={{ background: 'linear-gradient(150deg,#6D4AFF 0%,#E23E77 55%,#FFB020 100%)' }}
-              ></div>
+            <div className="relative">
+              {/* ---------- MOBILE / TABLET : centered animated image + card grid ---------- */}
+              <div className="lg:hidden">
+                <div className="relative mx-auto w-full max-w-sm h-[340px] sm:h-[430px]">
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 top-6 w-[220px] h-[300px] min-[340px]:w-[250px] min-[380px]:w-[270px] sm:w-[320px] sm:h-[400px] rounded-[2.5rem] rotate-3"
+                    style={{ background: 'linear-gradient(150deg,#6D4AFF 0%,#E23E77 55%,#FFB020 100%)' }}
+                  ></div>
 
-              <div className="ring-dash absolute left-1/2 -translate-x-1/2 top-4 w-[300px] h-[420px] min-[340px]:w-[336px] min-[340px]:h-[456px] sm:w-[420px] sm:h-[540px] rounded-[3.5rem] border-2 border-dashed border-theme-lavender/35"></div>
+                  <div className="ring-dash absolute left-1/2 -translate-x-1/2 top-3 w-[260px] h-[330px] min-[340px]:w-[290px] min-[380px]:w-[310px] sm:w-[360px] sm:h-[440px] rounded-[3rem] border-2 border-dashed border-theme-lavender/35"></div>
 
-              <div className="absolute left-1/2 -translate-x-1/2 top-8 w-[260px] h-[380px] min-[340px]:w-[300px] min-[340px]:h-[420px] sm:w-[380px] sm:h-[500px] rounded-[3rem] overflow-hidden shadow-2xl z-10 bg-white">
-                <img src="/home/hero-person.jpg" alt={L('Swayamrojgar Vibhag', 'स्वयंरोजगार विभाग')} className="w-full h-full object-cover" />
+                  <div className="absolute left-1/2 -translate-x-1/2 top-6 w-[220px] h-[300px] min-[340px]:w-[250px] min-[380px]:w-[270px] sm:w-[320px] sm:h-[400px] rounded-[2.5rem] overflow-hidden shadow-2xl z-10 bg-white">
+                    <img src="/home/hero-person.jpg" alt={L('Swayamrojgar Vibhag', 'स्वयंरोजगार विभाग')} className="w-full h-full object-cover" />
+                  </div>
+
+                  <div className="deco text-theme-gold text-3xl font-bold right-4 top-1 ico-bob">+</div>
+                  <div className="deco text-theme-lavender text-2xl font-bold left-2 top-1/3 ico-bob s2">+</div>
+                  <div className="deco text-theme-mint text-2xl font-bold right-1/4 bottom-6 ico-bob s3">+</div>
+                  <div className="deco right-5 bottom-14 w-6 h-6 rounded-full border-[3px] border-theme-gold"></div>
+                  <div className="deco left-4 bottom-6 w-9 h-9 rounded-full border-[4px] border-theme-terracotta/50"></div>
+                </div>
+
+                {/* Action cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-7 max-w-3xl mx-auto">
+                  {heroCards.map((c, i) => (
+                    <a
+                      key={c.en}
+                      onClick={c.go}
+                      className="float-card from-bottom glass px-3.5 py-3 rounded-2xl z-20 text-left flex items-center gap-2.5 hover:-translate-y-0.5 transition cursor-pointer"
+                      style={{ animationDelay: `${0.2 + i * 0.12}s, ${1.2 + i * 0.12}s` }}
+                    >
+                      <span className={`w-9 h-9 rounded-lg ${c.chipBg} flex items-center justify-center shrink-0`}>
+                        <c.icon className="text-sm w-4 h-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-extrabold text-theme-darkViolet leading-tight">{L(c.en, c.mr)}</div>
+                        {c.big && <div className="text-[10px] text-theme-darkViolet/60 truncate">{L(c.subEn, c.subMr)}</div>}
+                      </div>
+                    </a>
+                  ))}
+                </div>
               </div>
 
-              <div className="deco text-theme-gold text-3xl font-bold right-6 top-10 ico-bob">+</div>
-              <div className="deco text-theme-lavender text-2xl font-bold left-4 top-1/3 ico-bob s2">+</div>
-              <div className="deco text-theme-mint text-2xl font-bold right-1/4 bottom-10 ico-bob s3">+</div>
-              <div className="deco right-8 bottom-28 w-6 h-6 rounded-full border-[3px] border-theme-gold"></div>
-              <div className="deco left-6 bottom-14 w-10 h-10 rounded-full border-[4px] border-theme-terracotta/50"></div>
+              {/* ---------- DESKTOP : floating cards around the image ---------- */}
+              <div className="hidden lg:block relative h-[640px]">
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 top-8 w-[380px] h-[500px] rounded-[3rem] rotate-3"
+                  style={{ background: 'linear-gradient(150deg,#6D4AFF 0%,#E23E77 55%,#FFB020 100%)' }}
+                ></div>
 
-              <a onClick={() => scrollToId('jobs')} className="float-card from-left d1 absolute left-0 top-6 glass pl-3 pr-5 py-2.5 rounded-full z-20 flex items-center gap-2.5 hover:-translate-y-0.5 transition cursor-pointer">
-                <span className="w-9 h-9 rounded-full bg-theme-lavender text-white flex items-center justify-center shrink-0"><Briefcase className="text-sm w-4 h-4" /></span>
-                <span className="text-sm font-extrabold text-theme-darkViolet whitespace-nowrap">{L('Find a Job', 'नोकरी शोधा')}</span>
-              </a>
+                <div className="ring-dash absolute left-1/2 -translate-x-1/2 top-4 w-[420px] h-[540px] rounded-[3.5rem] border-2 border-dashed border-theme-lavender/35"></div>
 
-              <a onClick={() => handleEnterGateway('COMPANY')} className="float-card from-top d2 absolute right-0 top-0 glass pl-3 pr-5 py-2.5 rounded-full z-20 flex items-center gap-2.5 hover:-translate-y-0.5 transition cursor-pointer">
-                <span className="w-9 h-9 rounded-full bg-theme-terracotta text-white flex items-center justify-center shrink-0"><UserPlus className="text-sm w-4 h-4" /></span>
-                <span className="text-sm font-extrabold text-theme-darkViolet whitespace-nowrap">{L('Hire Talent', 'उमेदवार निवडा')}</span>
-              </a>
-
-              <a onClick={() => scrollToId('services')} className="float-card from-left d3 absolute -left-3 top-[40%] glass px-4 py-3 rounded-2xl z-20 text-left w-48 hover:-translate-y-0.5 transition cursor-pointer">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-9 h-9 rounded-lg bg-theme-deepTeal/15 text-theme-deepTeal flex items-center justify-center shrink-0"><GraduationCap className="text-sm w-4 h-4" /></span>
-                  <div>
-                    <div className="text-[13px] font-extrabold text-theme-darkViolet leading-tight">{L('Skill Training', 'कौशल्य प्रशिक्षण')}</div>
-                    <div className="text-[10px] text-theme-darkViolet/60">{L('MPSC / UPSC & trades', 'MPSC / UPSC आणि व्यवसाय')}</div>
-                  </div>
+                <div className="absolute left-1/2 -translate-x-1/2 top-8 w-[380px] h-[500px] rounded-[3rem] overflow-hidden shadow-2xl z-10 bg-white">
+                  <img src="/home/hero-person.jpg" alt={L('Swayamrojgar Vibhag', 'स्वयंरोजगार विभाग')} className="w-full h-full object-cover" />
                 </div>
-              </a>
 
-              <a onClick={() => scrollToId('services')} className="float-card from-right d4 absolute -right-3 top-[36%] glass px-4 py-3 rounded-2xl z-20 text-left w-48 hover:-translate-y-0.5 transition cursor-pointer">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-9 h-9 rounded-lg bg-theme-lavender/15 text-theme-lavender flex items-center justify-center shrink-0"><Store className="text-sm w-4 h-4" /></span>
-                  <div>
-                    <div className="text-[13px] font-extrabold text-theme-darkViolet leading-tight">{L('Start a Business', 'व्यवसाय सुरू करा')}</div>
-                    <div className="text-[10px] text-theme-darkViolet/60">{L('Udyojakta Manch', 'उद्योजकता मंच')}</div>
-                  </div>
-                </div>
-              </a>
+                <div className="deco text-theme-gold text-3xl font-bold right-6 top-10 ico-bob">+</div>
+                <div className="deco text-theme-lavender text-2xl font-bold left-4 top-1/3 ico-bob s2">+</div>
+                <div className="deco text-theme-mint text-2xl font-bold right-1/4 bottom-10 ico-bob s3">+</div>
+                <div className="deco right-8 bottom-28 w-6 h-6 rounded-full border-[3px] border-theme-gold"></div>
+                <div className="deco left-6 bottom-14 w-10 h-10 rounded-full border-[4px] border-theme-terracotta/50"></div>
 
-              <a onClick={() => handleEnterGateway('SHG')} className="float-card from-bottom d5 absolute left-0 bottom-10 glass px-4 py-3 rounded-2xl z-20 text-left w-52 hover:-translate-y-0.5 transition cursor-pointer">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-9 h-9 rounded-lg bg-theme-mint/25 text-theme-deepTeal flex items-center justify-center shrink-0"><HandCoins className="text-sm w-4 h-4" /></span>
-                  <div>
-                    <div className="text-[13px] font-extrabold text-theme-darkViolet leading-tight">{L('SHG / Bachat Gat', 'बचत गट')}</div>
-                    <div className="text-[10px] text-theme-darkViolet/60">{L('Register, train and sell', 'नोंदणी, प्रशिक्षण आणि विक्री')}</div>
-                  </div>
-                </div>
-              </a>
-
-              <a onClick={() => scrollToId('jobs')} className="float-card from-right d6 absolute right-0 bottom-2 glass px-4 py-3 rounded-2xl z-20 text-left w-52 hover:-translate-y-0.5 transition cursor-pointer">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-9 h-9 rounded-lg bg-theme-gold/20 text-theme-gold flex items-center justify-center shrink-0"><Users className="text-sm w-4 h-4" /></span>
-                  <div>
-                    <div className="text-[13px] font-extrabold text-theme-darkViolet leading-tight">{L('Employment Fairs', 'रोजगार मेळावे')}</div>
-                    <div className="text-[10px] text-theme-darkViolet/60">{L('Meet companies directly', 'कंपन्यांना थेट भेटा')}</div>
-                  </div>
-                </div>
-              </a>
+                {heroCards.map((c, i) => (
+                  <a
+                    key={c.en}
+                    onClick={c.go}
+                    className={`float-card ${c.from} d${i + 1} absolute ${c.pos} glass rounded-full z-20 flex items-center gap-2.5 hover:-translate-y-0.5 transition cursor-pointer ${c.big ? 'px-4 py-3 rounded-2xl text-left w-48' : 'pl-3 pr-5 py-2.5 whitespace-nowrap'}`}
+                  >
+                    <span className={`w-9 h-9 rounded-lg ${c.big ? 'rounded-lg' : 'rounded-full'} ${c.chipBg} flex items-center justify-center shrink-0`}>
+                      <c.icon className="text-sm w-4 h-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className={`${c.big ? 'text-[13px]' : 'text-sm'} font-extrabold text-theme-darkViolet leading-tight`}>{L(c.en, c.mr)}</div>
+                      {c.big && <div className="text-[10px] text-theme-darkViolet/60 truncate">{L(c.subEn, c.subMr)}</div>}
+                    </div>
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
         </div>

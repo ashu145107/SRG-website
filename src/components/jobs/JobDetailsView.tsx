@@ -31,6 +31,7 @@ import {
   CheckCircle,
   HelpCircle,
   Phone,
+  Loader2,
 } from 'lucide-react';
 
 interface JobDetailsViewProps {
@@ -40,6 +41,19 @@ interface JobDetailsViewProps {
   alreadyApplied?: boolean;
   jobCode?: string;
 }
+
+const SpecRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-3 text-xs py-2.5">
+    <span className="text-slate-500 font-bold">{label}</span>
+    <span className="font-extrabold text-slate-800 text-right break-words">{children}</span>
+  </div>
+);
+
+const formatDate = (v: any): string => {
+  if (!v) return 'N/A';
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
+};
 
 export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
   jobId,
@@ -182,9 +196,9 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
       )}
 
       {/* Main Responsive Grid: 2 columns for large, stack for mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
         {/* Left column (Main Details) - lg:col-span-2 */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 min-w-0 space-y-6">
           {/* Header Card */}
           <div className="bg-white rounded-2xl border border-slate-150 shadow-xs p-6 relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-orange-600" />
@@ -216,9 +230,10 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
                   <button
                     onClick={handleApplyClick}
                     disabled={isApplying}
-                    className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+                    className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    अर्ज करा / Apply Now
+                    {isApplying && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>{isApplying ? 'अर्ज सबमिट करत आहे... / Submitting...' : 'अर्ज करा / Apply Now'}</span>
                   </button>
                 )}
               </div>
@@ -324,65 +339,45 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
         </div>
 
         {/* Right column (Sidebar specs) */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-150 p-6 space-y-5 relative">
+        <div className="min-w-0 space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-150 p-6 space-y-5 relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1 bg-blue-900" />
             <h3 className="text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-2">
               कामाची रूपरेषा / Job Specifications
             </h3>
 
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-bold">कामाचे ठिकाण / Workplace:</span>
-                <span className="font-extrabold text-slate-800">{job.workPlace || 'Office Office'}</span>
-              </div>
+            <div className="divide-y divide-slate-100">
+              <SpecRow label="कामाचे ठिकाण / Workplace:">
+                {job.workPlace || 'Office Office'}
+              </SpecRow>
 
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-bold">शिक्षण / Qualification:</span>
-                <span className="font-extrabold text-slate-800">
-                  {getLabel(educations, job.educationId, lang)}
-                </span>
-              </div>
+              <SpecRow label="शिक्षण / Qualification:">
+                {getLabel(educations, job.educationId, lang)}
+              </SpecRow>
 
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-bold">क्षेत्र / Specialization:</span>
-                <span className="font-extrabold text-slate-800">
-                  {job.industryTypeId || 'N/A'}
-                </span>
-              </div>
+              <SpecRow label="क्षेत्र / Specialization:">
+                {job.industryTypeId || 'N/A'}
+              </SpecRow>
 
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-bold">वेतन कालावधी / Salary Period:</span>
-                <span className="font-extrabold text-slate-800">
-                  {getLabel(salaryPeriods, job.salaryPeriodId, lang)}
-                </span>
-              </div>
+              <SpecRow label="वेतन कालावधी / Salary Period:">
+                {getLabel(salaryPeriods, job.salaryPeriodId, lang)}
+              </SpecRow>
 
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-bold">लिंग निवड / Gender Preference:</span>
-                <span className="font-extrabold text-slate-800">
-                  {job.genderPreference === 'Any' ? 'दोन्ही / Any Gender' : job.genderPreference}
-                </span>
-              </div>
+              <SpecRow label="लिंग निवड / Gender Preference:">
+                {job.genderPreference === 'Any' ? 'दोन्ही / Any Gender' : job.genderPreference}
+              </SpecRow>
 
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-bold">वय मर्यादा / Age Range:</span>
-                <span className="font-extrabold text-slate-800">{job.ageRange || '18-45'}</span>
-              </div>
+              <SpecRow label="वय मर्यादा / Age Range:">
+                {job.ageRange || '18-45'}
+              </SpecRow>
 
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-bold">साप्ताहिक सुट्टी / Weekly Off:</span>
-                <span className="font-extrabold text-slate-800">
-                  {getLabel(weeklyOffs, job.weeklyOffId, lang)}
-                </span>
-              </div>
+              <SpecRow label="साप्ताहिक सुट्टी / Weekly Off:">
+                {getLabel(weeklyOffs, job.weeklyOffId, lang)}
+              </SpecRow>
 
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-bold">कामाची पाळी / Shift:</span>
-                <span className="font-extrabold text-slate-800">
-                  {getLabel(shiftTypes, job.shiftTypeId, lang)}
-                </span>
-              </div>
+              <SpecRow label="कामाची पाळी / Shift:">
+                {getLabel(shiftTypes, job.shiftTypeId, lang)}
+              </SpecRow>
             </div>
           </div>
 
@@ -395,7 +390,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
             <div className="space-y-3.5 text-xs text-slate-700">
               <div>
                 <span className="text-[10px] text-slate-400 block font-bold leading-none mb-1">INTERVIEW MODE</span>
-                <span className="font-bold text-slate-800">
+                <span className="font-bold text-slate-800 block break-words">
                   {getLabel(interviewModes, job.interviewModeId, lang)}
                 </span>
               </div>
@@ -411,11 +406,11 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
           {/* Posting date / Expiry date */}
           <div className="bg-white rounded-2xl border border-slate-150 p-6 space-y-4 text-xs text-slate-600">
             <div className="flex items-center gap-2.5">
-              <Calendar className="w-4.5 h-4.5 text-slate-400" />
-              <div>
+              <Calendar className="w-4.5 h-4.5 text-slate-400 shrink-0" />
+              <div className="min-w-0">
                 <span className="text-slate-400 block text-[10px] font-bold leading-none mb-0.5">EXPIRE DATE</span>
-                <span className="font-bold text-slate-800">
-                  {new Date(job.expiryDate).toLocaleDateString()}
+                <span className="font-bold text-slate-800 block break-words">
+                  {formatDate(job.expiryDate)}
                 </span>
               </div>
             </div>
@@ -448,9 +443,10 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
           <button
             onClick={handleApplyClick}
             disabled={isApplying}
-            className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer"
+            className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            अर्ज करा / Apply
+            {isApplying && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <span>{isApplying ? 'Submitting...' : 'अर्ज करा / Apply'}</span>
           </button>
         )}
       </div>

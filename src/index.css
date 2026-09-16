@@ -111,24 +111,9 @@
 }
 .fr-card:hover::after { animation: shine .9s ease forwards; }
 
-/* --- Page background : soft mesh + grid --- */
-body { position: relative; background-color: #F7F5FF; color: #1B1150; }
-body::before {
-  content:''; position:fixed; inset:0; z-index:-2; pointer-events:none;
-  background:
-    radial-gradient(60rem 40rem at 8% -10%, rgba(109,74,255,.16), transparent 60%),
-    radial-gradient(50rem 36rem at 100% 8%, rgba(18,181,160,.14), transparent 60%),
-    radial-gradient(46rem 34rem at 50% 108%, rgba(255,176,32,.14), transparent 60%);
-}
-body::after {
-  content:''; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.5;
-  background-image:
-    linear-gradient(to right, rgba(27,17,80,.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(27,17,80,.045) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse at 50% 0%, #000 25%, transparent 78%);
-  -webkit-mask-image: radial-gradient(ellipse at 50% 0%, #000 25%, transparent 78%);
-}
+/* --- Page background : solid --- */
+html, body { background-color: #ffffff; color: #1B1150; }
+
 
 /* --- Glossy gradient text --- */
 .gloss {
@@ -311,3 +296,68 @@ body::after {
 /* Decorative marks */
 .deco { position: absolute; z-index: 5; }
 @keyframes spinSlow { to { transform: rotate(360deg); } }
+
+/* --- Notification bell dropdown ---
+   Responsive via explicit media queries:
+   mobile-first base, then bootstrap-style breakpoints (sm=640px, lg=1024px). */
+.srg-notification-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: min(calc(100vw - 2rem), 24rem);
+  max-height: min(70vh, 30rem);
+}
+
+.srg-notification-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  max-height: 60vh;
+}
+
+/* Very small phones : keep decent side margins */
+@media (max-width: 420px) {
+  .srg-notification-panel { width: calc(100vw - 1.25rem); }
+}
+
+/* Phones & small tablets (defaults above) */
+@media (max-width: 639.98px) {
+  .srg-notification-panel { width: min(calc(100vw - 2rem), 24rem); }
+  .srg-notification-list  { max-height: 62vh; }
+}
+
+/* Tablets (portrait + landscape) */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .srg-notification-panel { width: 26rem; max-height: min(75vh, 28rem); }
+  .srg-notification-list  { max-height: 22rem; }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .srg-notification-panel { width: 28rem; max-height: 30rem; }
+  .srg-notification-list  { max-height: 25rem; }
+}
+
+/* Short phones in landscape : keep panel on screen */
+@media (max-height: 480px) {
+  .srg-notification-panel { max-height: calc(100vh - 0.5rem); }
+  .srg-notification-list  { max-height: calc(100vh - 9rem); }
+}
+
+/* Mobile: detach from the (possibly overflowing) navbar ancestor,
+   center the panel on the viewport instead. top is set inline via JS.
+   Declared last so it wins over the rules above when both match. */
+.srg-notification-panel--fixed {
+  position: fixed;
+  left: 50%;
+  right: auto;
+  top: auto;
+  transform: translateX(-50%);
+  max-height: calc(100vh - 3rem);
+}

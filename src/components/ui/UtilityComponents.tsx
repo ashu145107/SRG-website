@@ -13,7 +13,7 @@ import { HandlerPermissions } from '../../types';
 
 export const LanguageSwitcher: React.FC = () => {
   const { i18n } = useTranslation();
-  const currentLang = i18n.language || 'mr';
+  const currentLang = i18n.language || 'en';
 
   const toggleLanguage = (lang: 'mr' | 'en') => {
     i18n.changeLanguage(lang);

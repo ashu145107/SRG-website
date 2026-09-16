@@ -89,6 +89,8 @@
     "submitLogin": "प्रवेश करा",
     "submitRegister": "नोंदणी करा",
     "forgotPassword": "पासवर्ड विसरलात?",
+    "emailOrMobile": "तुमचा नोंदणीकृत ईमेल आयडी किंवा मोबाईल नंबर प्रविष्ट करा",
+    "or": "किंवा",
     "noAccount": "नवीन खाते तयार करायचे आहे का? नोंदणी करा",
     "hasAccount": "आधीच खाते आहे? लॉगिन करा",
     "otpTitle": "OTP पडताळणी",
@@ -108,10 +110,19 @@
     "shgTrainings": "बचतगट प्रशिक्षण व बाजारपेठ",
     "adminTitle": "प्रशासक नियंत्रण डॅशबोर्ड",
     "superAdmin": "मुख्य प्रशासक",
+    "backToRequirements": "सर्व नोकरी आवश्यकता",
+    "backToCandidates": "सर्व नोंदणीकृत वापरकर्ते",
+    "backToCompanies": "सर्व नोंदणीकृत कंपन्या",
+    "backToRequirementApplications": "या आवश्यकतेसाठीचे अर्ज",
     "handlerTitle": "मदतनीस डॅशबोर्ड",
     "unauthorized": "अनधिकृत प्रवेश",
     "save": "जतन करा",
     "edit": "बदला",
     "delete": "हटवा"
+  },
+  "notifications": {
+    "title": "सूचना",
+    "markAllRead": "सर्व वाचले",
+    "noNotifications": "सूचना नाही"
   }
 }

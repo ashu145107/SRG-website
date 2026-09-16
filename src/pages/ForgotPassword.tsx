@@ -10,8 +10,8 @@ import { useForgotPasswordMutation } from '../services/authApi';
 import { TextBox } from '../components/ui/Inputs';
 import { PrimaryButton } from '../components/ui/Buttons';
 import { Alert } from '../components/ui/FeedbackComponents';
-import { ArrowLeft, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
+import { ArrowLeft, CheckCircle2, XCircle, Loader2, KeyRound } from 'lucide-react';
 
 interface DialogState {
   type: 'success' | 'error';
@@ -31,17 +31,31 @@ export default function ForgotPassword() {
     e.preventDefault();
     setErrorText('');
 
-    if (!email.trim()) {
-      setErrorText(t('auth.emailRequired', 'नोंदणीकृत ईमेल प्रविष्ट करा / Please enter your registered email.'));
+    const emailVal = email.trim();
+    const mobileVal = mobile.trim();
+
+    if (!emailVal && !mobileVal) {
+      setErrorText(
+        t(
+          'auth.emailOrMobileRequired',
+          'नोंदणीकृत ईमेल किंवा मोबाईल नंबर प्रविष्ट करा / Please enter your registered email or mobile number.'
+        )
+      );
       return;
     }
-    if (!/^\d{10}$/.test(mobile.trim())) {
-      setErrorText(t('auth.mobileRequired', '10 अंकी मोबाईल नंबर प्रविष्ट करा / Please enter a 10-digit mobile number.'));
+    if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+      setErrorText(t('auth.emailInvalid', 'वैध ईमेल पत्ता प्रविष्ट करा / Please enter a valid email address.'));
+      return;
+    }
+    if (mobileVal && !/^\d{10}$/.test(mobileVal)) {
+      setErrorText(
+        t('auth.mobileInvalid', '10 अंकी मोबाईल नंबर प्रविष्ट करा / Please enter a valid 10-digit mobile number.')
+      );
       return;
     }
 
     try {
-      const result = await forgot({ email: email.trim(), mobile: mobile.trim() }).unwrap();
+      const result = await forgot({ email: emailVal, mobile: mobileVal }).unwrap();
       if (result.isSuccess) {
         setDialog({
           type: 'success',
@@ -63,45 +77,59 @@ export default function ForgotPassword() {
 
   return (
     <div className="min-h-screen bg-theme-cream flex flex-col antialiased font-sans">
+      {/* Top Unified Navbar */}
       <Navbar activePage="forgot-password" compact />
 
       <main className="flex-1 flex flex-col px-4 py-8 sm:py-12 text-left">
-        <div className="m-auto w-full max-w-md text-center">
-          <Link to="/login" className="inline-flex items-center gap-2 text-xs font-bold text-theme-darkViolet/60 hover:text-theme-lavender transition-colors mb-4">
+        <div className="m-auto w-full max-w-2xl space-y-6">
+          <Link to="/login" className="inline-flex items-center gap-2 text-xs font-bold text-theme-darkViolet/60 hover:text-theme-lavender transition-colors cursor-pointer">
             <ArrowLeft className="w-3.5 h-3.5" /> {t('auth.backToLogin', 'Back to Login')}
           </Link>
-          <h2 className="text-2xl font-extrabold text-theme-darkViolet tracking-tight">
-            {t('auth.forgotPassword')}
-          </h2>
-          <p className="text-xs font-bold text-theme-lavender uppercase tracking-widest mt-1">
-            {t('auth.brandSevaMarg', 'श्री स्वामी सेवा मार्ग, दिंडोरी')}
-          </p>
-        </div>
+          <div className="inline-flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-theme-lightViolet/70 border border-theme-lightViolet flex items-center justify-center shrink-0">
+              <KeyRound className="w-6 h-6 text-theme-lavender" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-extrabold text-theme-darkViolet tracking-tight">
+                {t('auth.forgotPassword')}
+              </h2>
+              <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                {t('auth.emailOrMobile', 'तुमचा नोंदणीकृत ईमेल आयडी किंवा मोबाईल नंबर प्रविष्ट करा / Enter your registered email or mobile number')}
+              </p>
+            </div>
+          </div>
 
-        <div className="mt-8 m-auto w-full max-w-md">
-          <div className="bg-white py-8 px-6 sm:px-10 rounded-3xl border border-theme-lightViolet/80 shadow-2xl space-y-6">
+          <div className="bg-white py-8 px-6 sm:px-10 rounded-3xl border border-theme-lightViolet/80 shadow-2xl">
             <form className="space-y-5" onSubmit={handleSubmit}>
               {errorText && <Alert type="danger" message={errorText} />}
 
-              <TextBox
-                label={t('auth.email')}
-                type="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+              <div className="grid sm:grid-cols-2 gap-5">
+                <TextBox
+                  label={t('auth.email')}
+                  type="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
 
-              <TextBox
-                label={t('auth.mobile', 'मोबाईल नंबर / Mobile Number')}
-                type="tel"
-                inputMode="numeric"
-                maxLength={10}
-                placeholder="10-digit mobile number"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                required
-              />
+                <div className="flex items-center gap-3 sm:hidden">
+                  <span className="flex-1 h-px bg-theme-lightViolet" aria-hidden="true"></span>
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+                    {t('auth.or', 'किंवा / OR')}
+                  </span>
+                  <span className="flex-1 h-px bg-theme-lightViolet" aria-hidden="true"></span>
+                </div>
+
+                <TextBox
+                  label={t('auth.mobile', 'मोबाईल नंबर / Mobile Number')}
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="10-digit mobile number"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                />
+              </div>
 
               <PrimaryButton type="submit" loading={isLoading} className="w-full py-3">
                 {isLoading ? (

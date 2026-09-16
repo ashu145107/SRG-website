@@ -6,7 +6,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { logout } from '../store/authSlice';
 import { useTranslation } from 'react-i18next';
 import {
@@ -73,7 +73,9 @@ import { PermissionGuard } from '../components/ui/UtilityComponents';
 import { AddJobForm } from '../components/jobs/AddJobForm';
 import { EditJobForm } from '../components/jobs/EditJobForm';
 import { JobDetailsView } from '../components/jobs/JobDetailsView';
+import { NotificationBell } from '../components/NotificationBell';
 import { JobListingView } from '../components/jobs/JobListingView';
+import { JobRequirementDetailView } from '../components/jobs/JobRequirementDetailView';
 import { UserRole, Job, JobApplication, SHGProfile, CompanyProfile, CandidateProfile, Training } from '../types';
 import {
   LogOut,
@@ -104,7 +106,8 @@ import {
   History,
   UserCircle,
   LockKeyhole,
-  ChevronDown
+  ChevronDown,
+  ArrowLeft
 } from 'lucide-react';
 import { MockDb } from '../services/mockDb';
 
@@ -113,6 +116,8 @@ import { AdminRegisteredCompanies } from '../components/AdminRegisteredCompanies
 import { AdminRegisteredUsers } from '../components/AdminRegisteredUsers';
 import { AdminJobRequirements } from '../components/AdminJobRequirements';
 import { AdminJobApplications } from '../components/AdminJobApplications';
+import { AdminCandidateProfileView } from '../components/AdminCandidateProfileView';
+import { AdminCompanyProfileView } from '../components/AdminCompanyProfileView';
 
 export default function DashboardHub() {
   const { t, i18n } = useTranslation();
@@ -133,10 +138,77 @@ export default function DashboardHub() {
   }
 
   const [toastMsg, setToastMsg] = useState('');
+  // Job requirement detail mode: open via #/dashboard?view=jobRequirement&id=<id>
+  // Candidate detail mode:       open via #/dashboard?view=candidate&id=<id>
+  // Company detail mode:         open via #/dashboard?view=company&id=<id>
+  const [searchParams] = useSearchParams();
+  const isAdminBoard = user.role === UserRole.SUPER_ADMIN || user.role === UserRole.ADMIN;
+  const urlView = searchParams.get('view');
+  const urlReqId = Number(searchParams.get('id') || 0);
+  const urlCandidateId = searchParams.get('id') || '';
+  const urlCompanyId = searchParams.get('id') || '';
+  const urlOriginView = searchParams.get('from') || '';
+  const urlOriginReqId = Number(searchParams.get('fromId') || 0);
+  const isReqDetailMode =
+    isAdminBoard && urlView === 'jobRequirement' && !Number.isNaN(urlReqId) && urlReqId > 0;
+  const isCandidateDetailMode = isAdminBoard && urlView === 'candidate' && urlCandidateId !== '';
+  const isCompanyDetailMode = isAdminBoard && urlView === 'company' && urlCompanyId !== '';
+
   const defaultTab =
-    user.role === UserRole.SHG ? 'trainings'
-      : 'overview';
+    user.role === UserRole.SHG
+      ? 'trainings'
+      : isReqDetailMode
+        ? 'job_requirements'
+        : isCandidateDetailMode
+          ? 'registered_users'
+          : isCompanyDetailMode
+            ? 'registered_companies'
+            : 'overview';
   const [activeTab, setActiveTab] = useState(defaultTab);
+
+  const [detailReqId, setDetailReqId] = useState<number>(isReqDetailMode ? urlReqId : 0);
+  const [detailCandidateId, setDetailCandidateId] = useState<string>(isCandidateDetailMode ? urlCandidateId : '');
+  const [detailCompanyId, setDetailCompanyId] = useState<string>(isCompanyDetailMode ? urlCompanyId : '');
+  // When a candidate was opened from a job requirement's applications, remember
+  // the originating requirement so "back" returns to that applications list.
+  const [candidateFromReqId, setCandidateFromReqId] = useState<number>(
+    isCandidateDetailMode && urlOriginView === 'jobRequirement' ? urlOriginReqId : 0
+  );
+
+  // Keep detail modes in sync with URL changes (e.g. candidate -> job requirement back-navigation).
+  useEffect(() => {
+    if (isReqDetailMode) {
+      setActiveTab('job_requirements');
+      setDetailReqId(urlReqId);
+      setDetailCandidateId('');
+      setDetailCompanyId('');
+      setCandidateFromReqId(0);
+    } else if (isCandidateDetailMode) {
+      setActiveTab('registered_users');
+      setDetailReqId(0);
+      setDetailCandidateId(urlCandidateId);
+      setDetailCompanyId('');
+      setCandidateFromReqId(urlOriginView === 'jobRequirement' ? urlOriginReqId : 0);
+    } else if (isCompanyDetailMode) {
+      setActiveTab('registered_companies');
+      setDetailReqId(0);
+      setDetailCandidateId('');
+      setDetailCompanyId(urlCompanyId);
+      setCandidateFromReqId(0);
+    } else {
+      setDetailReqId(0);
+      setDetailCandidateId('');
+      setDetailCompanyId('');
+      setCandidateFromReqId(0);
+    }
+  }, [isReqDetailMode, isCandidateDetailMode, isCompanyDetailMode, urlReqId, urlCandidateId, urlCompanyId, urlOriginView, urlOriginReqId]);
+
+  // Leaving a detail-bearing tab closes its detail view.
+  useEffect(() => {
+    if (activeTab !== 'job_requirements') setDetailReqId(0);
+    if (activeTab !== 'registered_users') setDetailCandidateId('');
+    if (activeTab !== 'registered_companies') setDetailCompanyId('');
+  }, [activeTab]);
 
   // Multi-state for modals
   const [showJobModal, setShowJobModal] = useState(false);
@@ -197,6 +269,8 @@ return (
                 </span>
               </div>
             )}
+{/* Notification Bell */}
+            <NotificationBell variant="dark" />
             {/* Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
@@ -290,8 +364,8 @@ return (
                 <Tag className="w-4 h-4" /> Seva / सेवा (Overview)
               </button>
 
-              <button
-                onClick={() => setActiveTab('registered_companies')}
+<button
+                onClick={() => { setActiveTab('registered_companies'); setDetailCompanyId(''); }}
                 className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 cursor-pointer ${
                   activeTab === 'registered_companies' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                 }`}
@@ -299,8 +373,8 @@ return (
                 <Building2 className="w-4 h-4" /> Registered Company / नोंदणीकृत कंपनी
               </button>
 
-              <button
-                onClick={() => setActiveTab('registered_users')}
+<button
+                onClick={() => { setActiveTab('registered_users'); setDetailCandidateId(''); }}
                 className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 cursor-pointer ${
                   activeTab === 'registered_users' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                 }`}
@@ -308,8 +382,8 @@ return (
                 <Users className="w-4 h-4" /> Registered User / नोंदणीकृत वापरकर्ते
               </button>
 
-              <button
-                onClick={() => setActiveTab('job_requirements')}
+<button
+                onClick={() => { setActiveTab('job_requirements'); setDetailReqId(0); }}
                 className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 cursor-pointer ${
                   activeTab === 'job_requirements' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                 }`}
@@ -341,30 +415,76 @@ return (
               </button>
             </div>
 
-            <div className="lg:col-span-9 space-y-6">
-              {/* Overview Tab */}
-              {activeTab === 'overview' && (
-                <AdminOverviewTab />
-              )}
+<div className="lg:col-span-9 space-y-6">
+              {activeTab === 'job_requirements' && detailReqId > 0 ? (
+                <>
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setDetailReqId(0)}
+                    className="inline-flex items-center gap-2 text-xs font-bold text-theme-darkViolet/60 hover:text-theme-lavender transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" /> {t('dashboard.backToRequirements', 'सर्व नोकरी आवश्यकता / All Job Requirements')}
+                  </Link>
+                  <JobRequirementDetailView requirementId={detailReqId} />
+                </>
+              ) : activeTab === 'registered_users' && detailCandidateId ? (
+                <>
+                  <Link
+                    to={candidateFromReqId > 0 ? `/dashboard?view=jobRequirement&id=${candidateFromReqId}` : '/dashboard'}
+                    onClick={() => setDetailCandidateId('')}
+                    className="inline-flex items-center gap-2 text-xs font-bold text-theme-darkViolet/60 hover:text-theme-lavender transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />{' '}
+                    {candidateFromReqId > 0
+                      ? t('dashboard.backToRequirementApplications', 'या आवश्यकतेसाठीचे अर्ज / Applications for this Requirement')
+                      : t('dashboard.backToCandidates', 'सर्व नोंदणीकृत वापरकर्ते / All Registered Users')}
+                  </Link>
+                  <AdminCandidateProfileView
+                    candidateId={detailCandidateId}
+                    onBack={() => {
+                      setDetailCandidateId('');
+                      if (candidateFromReqId > 0) navigate(`/dashboard?view=jobRequirement&id=${candidateFromReqId}`);
+                    }}
+                  />
+                </>
+              ) : activeTab === 'registered_companies' && detailCompanyId ? (
+                <>
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setDetailCompanyId('')}
+                    className="inline-flex items-center gap-2 text-xs font-bold text-theme-darkViolet/60 hover:text-theme-lavender transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" /> {t('dashboard.backToCompanies', 'सर्व नोंदणीकृत कंपन्या / All Registered Companies')}
+                  </Link>
+                  <AdminCompanyProfileView companyId={detailCompanyId} onBack={() => setDetailCompanyId('')} />
+                </>
+              ) : (
+                <>
+                  {/* Overview Tab */}
+                  {activeTab === 'overview' && (
+                    <AdminOverviewTab />
+                  )}
 
-              {/* Registered Companies Paginated List */}
-              {activeTab === 'registered_companies' && (
-                <AdminRegisteredCompanies />
-              )}
+                  {/* Registered Companies Paginated List */}
+                  {activeTab === 'registered_companies' && (
+                    <AdminRegisteredCompanies />
+                  )}
 
-              {/* Registered Users Paginated List */}
-              {activeTab === 'registered_users' && (
-                <AdminRegisteredUsers />
-              )}
+                  {/* Registered Users Paginated List */}
+                  {activeTab === 'registered_users' && (
+                    <AdminRegisteredUsers />
+                  )}
 
-              {/* Job Requirements Paginated List */}
-              {activeTab === 'job_requirements' && (
-                <AdminJobRequirements />
-              )}
+                  {/* Job Requirements Paginated List */}
+                  {activeTab === 'job_requirements' && (
+                    <AdminJobRequirements />
+                  )}
 
-              {/* Job Applications Paginated List */}
-              {activeTab === 'job_applications' && (
-                <AdminJobApplications />
+                  {/* Job Applications Paginated List */}
+                  {activeTab === 'job_applications' && (
+                    <AdminJobApplications />
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -512,7 +632,7 @@ return (
       {/* Floating toast notify systems */}
       {toastMsg && (
         <Toast
-          message={toastMsg.startsWith('ERROR:') ? toastMsg.slice(6) : toastMsg}
+          message={(toastMsg.startsWith('ERROR:') ? toastMsg.slice(6) : toastMsg) || 'Something went wrong.'}
           type={toastMsg.startsWith('ERROR:') ? 'error' : 'success'}
           onClose={() => setToastMsg('')}
         />
@@ -889,20 +1009,6 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
     );
   }
 
-  if (selectedJobIdForEdit) {
-    return (
-      <EditJobForm
-        jobId={selectedJobIdForEdit}
-        onCancel={() => setSelectedJobIdForEdit(null)}
-        onSuccess={() => {
-          setSelectedJobIdForEdit(null);
-          setToastMsg('नोकरी यशस्वीरित्या अद्ययावत केली! / Job updated successfully!');
-          refetch();
-        }}
-      />
-    );
-  }
-
   if (isPostingNewJob) {
     return (
       <AddJobForm
@@ -975,6 +1081,26 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
           onEditJob={(id) => setSelectedJobIdForEdit(id)}
         />
       </Card>
+
+      {/* Edit Job popup modal */}
+      <Modal
+        isOpen={selectedJobIdForEdit !== null}
+        onClose={() => setSelectedJobIdForEdit(null)}
+        title="नोकरी आवश्यकता संपादित करा / Edit Job Requirement"
+        maxWidthClass="max-w-3xl"
+      >
+        {selectedJobIdForEdit !== null && (
+          <EditJobForm
+            jobId={selectedJobIdForEdit}
+            onCancel={() => setSelectedJobIdForEdit(null)}
+            onSuccess={() => {
+              setSelectedJobIdForEdit(null);
+              setToastMsg('नोकरी यशस्वीरित्या अद्ययावत केली! / Job updated successfully!');
+              refetch();
+            }}
+          />
+        )}
+      </Modal>
     </div>
   );
 }
@@ -1590,19 +1716,34 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         {activeTab === 'listings' && (
           selectedJobIdForDetail ? (
             <JobDetailsView jobId={selectedJobIdForDetail} jobCode={selectedJobCode} onBack={() => { setSelectedJobIdForDetail(null); setSelectedJobCode(undefined); }} />
-          ) : selectedJobIdForEdit ? (
-            <EditJobForm jobId={selectedJobIdForEdit} onCancel={() => setSelectedJobIdForEdit(null)} onSuccess={() => { setSelectedJobIdForEdit(null); refetchJobs(); }} />
           ) : isPostingNewJob ? (
             <AddJobForm onCancel={() => setIsPostingNewJob(false)} onSuccess={() => { setIsPostingNewJob(false); refetchJobs(); }} />
           ) : (
-            <JobListingView
-              onViewDetails={(id, jobCode) => { setSelectedJobIdForDetail(id); setSelectedJobCode(jobCode); }}
-              onEditJob={(id) => setSelectedJobIdForEdit(id)}
-              onAddNewJob={() => setIsPostingNewJob(true)}
-              externalJobs={jobsList}
-              externalTotalCount={jobsList.length}
-              externalRefetch={refetchJobs}
-            />
+            <>
+              <JobListingView
+                onViewDetails={(id, jobCode) => { setSelectedJobIdForDetail(id); setSelectedJobCode(jobCode); }}
+                onEditJob={(id) => setSelectedJobIdForEdit(id)}
+                onAddNewJob={() => setIsPostingNewJob(true)}
+                externalJobs={jobsList}
+                externalTotalCount={jobsList.length}
+                externalRefetch={refetchJobs}
+              />
+              {/* Edit Job popup modal */}
+              <Modal
+                isOpen={selectedJobIdForEdit !== null}
+                onClose={() => setSelectedJobIdForEdit(null)}
+                title="नोकरी आवश्यकता संपादित करा / Edit Job Requirement"
+                maxWidthClass="max-w-3xl"
+              >
+                {selectedJobIdForEdit !== null && (
+                  <EditJobForm
+                    jobId={selectedJobIdForEdit}
+                    onCancel={() => setSelectedJobIdForEdit(null)}
+                    onSuccess={() => { setSelectedJobIdForEdit(null); refetchJobs(); }}
+                  />
+                )}
+              </Modal>
+            </>
           )
         )}
 
@@ -1710,7 +1851,7 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
   // Load jobs lists (Approved only!) — skip until user/token are ready
   const { data: availableJobs = [], refetch: refetchJobs } = useGetJobsQuery({ approvedOnly: true }, { skip: !user });
   // Load jobs from TanStack Query (same source as JobListingView, has userJobStatus)
-  const { data: searchJobsData } = useSearchJobsQuery(undefined, { enabled: !!user });
+  const { data: searchJobsData, refetch: refetchSearchJobs } = useSearchJobsQuery(undefined, { enabled: !!user });
   const searchJobs = searchJobsData?.jobs || [];
   // Load applications history tracking
   const { data: myApps = [], refetch: refetchMyApps } = useGetApplicationsQuery({ candidateId }, { skip: !user || !candidateId });
@@ -1844,6 +1985,17 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
     return false;
   };
 
+  const appliedJobIds = React.useMemo(() => {
+    const ids = new Set<number>();
+    const addFrom = (list: any[]) =>
+      list.forEach((j: any) => {
+        if (isJobApplied(Number(j.id), j)) ids.add(Number(j.id));
+      });
+    addFrom(availableJobs);
+    addFrom(searchJobs);
+    return [...ids];
+  }, [availableJobs, searchJobs, recentlyAppliedIds]);
+
   const apiAppliedCount = Math.max(
     searchJobs.filter((j: any) => j.userJobStatus === 'Already applied' || j.userJobStatus === 'Already Applied').length,
     availableJobs.filter((j) => j.userJobStatus === 'Already applied').length
@@ -1935,22 +2087,29 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
               jobCode={selectedJobCode}
               onBack={() => { setSelectedJobIdForDetail(null); setSelectedJobCode(undefined); }}
               onApplySuccess={(appliedJobCode?: string) => {
-                const job = availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail);
+                const job =
+                  availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail) ||
+                  (searchJobs as any[]).find((j: any) => Number(j.id) === selectedJobIdForDetail);
                 const identifier = appliedJobCode || job?.jobCode || String(selectedJobIdForDetail);
-                setRecentlyAppliedIds((prev) => new Set(prev).add(identifier));
+                setRecentlyAppliedIds((prev) =>
+                  new Set(prev).add(identifier).add(String(selectedJobIdForDetail ?? ''))
+                );
                 setSelectedJobIdForDetail(null);
                 setSelectedJobCode(undefined);
                 refetchMyApps();
+                refetchJobs();
+                refetchSearchJobs();
               }}
-              alreadyApplied={isJobApplied(selectedJobIdForDetail, availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail))}
+              alreadyApplied={isJobApplied(
+                selectedJobIdForDetail,
+                availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail) ||
+                  (searchJobs as any[]).find((j: any) => Number(j.id) === selectedJobIdForDetail)
+              )}
             />
           ) : (
             <JobListingView
               onViewDetails={(id, jobCode) => { setSelectedJobIdForDetail(id); setSelectedJobCode(jobCode); }}
-              appliedJobIds={availableJobs
-                .filter((j) => isJobApplied(Number(j.id), j))
-                .map((j) => Number(j.id))
-                .filter(Boolean)}
+              appliedJobIds={appliedJobIds}
             />
           )
         )}
@@ -2005,9 +2164,18 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                 // Optimistic entries from recent applies in this session
                 recentlyAppliedIds.forEach((code) => {
                   if (!mergedApps.some((a) => String(a.numericId) === code || a.jobCode === code)) {
-                    const job = availableJobs.find((j) => String(j.id) === code || j.jobCode === code);
+                    const job =
+                      availableJobs.find((j) => String(j.id) === code || j.jobCode === code) ||
+                      (searchJobs as any[]).find((j: any) => String(j.id) === code || j.jobCode === code);
                     if (job) {
-                      mergedApps.unshift({ id: `local-${code}`, jobTitle: job.title, companyName: job.companyName, status: 'Applied', numericId: Number(job.id), jobCode: job.jobCode });
+                      mergedApps.unshift({
+                        id: `local-${code}`,
+                        jobTitle: job.jobDesignation || job.profileHeader || job.title,
+                        companyName: job.companyName,
+                        status: 'Applied',
+                        numericId: Number(job.id),
+                        jobCode: job.jobCode,
+                      });
                     }
                   }
                 });

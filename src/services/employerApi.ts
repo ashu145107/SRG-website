@@ -36,6 +36,7 @@ export const fetchCandidateProfile = async (candidateId: string) => {
 
   if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
   const json = await res.json();
+  console.log('[fetchCandidateProfile] raw response:', json);
   return json;
 };
 

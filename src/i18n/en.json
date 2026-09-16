@@ -89,6 +89,8 @@
     "submitLogin": "Login",
     "submitRegister": "Register",
     "forgotPassword": "Forgot Password?",
+    "emailOrMobile": "Enter your registered email address OR mobile number",
+    "or": "OR",
     "noAccount": "Don't have an account? Register here",
     "hasAccount": "Already have an account? Login",
     "otpTitle": "OTP Verification",
@@ -108,10 +110,19 @@
     "shgTrainings": "Training enrollments & Showcase",
     "adminTitle": "Admin Control Dashboard",
     "superAdmin": "Super Admin Console",
+    "backToRequirements": "All Job Requirements",
+    "backToCandidates": "All Registered Users",
+    "backToCompanies": "All Registered Companies",
+    "backToRequirementApplications": "Applications for this Requirement",
     "handlerTitle": "Liaison / Handler Panel",
     "unauthorized": "Access Restricted",
     "save": "Save Changes",
     "edit": "Edit Profile",
     "delete": "Delete"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "noNotifications": "No notifications yet"
   }
 }

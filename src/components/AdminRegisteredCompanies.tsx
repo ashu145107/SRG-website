@@ -4,9 +4,11 @@
  */
 
 import React, { useState } from 'react';
-import { useGetAdminCompaniesQuery } from '../services/adminApi';
+import { useGetAdminCompaniesQuery, useAddCompanyMutation } from '../services/adminApi';
 import { CompanyProfile } from '../types';
+import { useGetCompanyTypesQuery, useGetIndustryTypesQuery } from '../services/jobMasterApi';
 import { Building2, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2, Plus, ExternalLink } from 'lucide-react';
+import { Loader, Toast } from './ui/FeedbackComponents';
 
 export function AdminRegisteredCompanies() {
   const [pageSize, setPageSize] = useState(15);
@@ -20,11 +22,58 @@ export function AdminRegisteredCompanies() {
   // Detail Modal state
   const [selectedCompany, setSelectedCompany] = useState<CompanyProfile | null>(null);
 
+  // Add Company Modal state
+  const [showAddCompany, setShowAddCompany] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+
   // Fetch paginated data
-  const { data, isLoading, isFetching, error } = useGetAdminCompaniesQuery({
+  const { data, isLoading, isFetching, error, refetch } = useGetAdminCompaniesQuery({
     pageSize,
     pageNumber,
   });
+
+  // Master data for add-company form
+  const { data: companyTypes = [] } = useGetCompanyTypesQuery();
+  const { data: industryTypes = [] } = useGetIndustryTypesQuery();
+
+  const [addCompany, { isLoading: isAddingCompany }] = useAddCompanyMutation();
+
+  const [form, setForm] = useState({
+    fullname: '',
+    mobile: '',
+    address: '',
+    email: '',
+    contactPerson: '',
+    alternateContactPerson: '',
+    alternateContactNumber: '',
+    companyTypeId: 0,
+    industryTypeId: 0,
+    discription: '',
+    website: '',
+    alternateEmail: '',
+  });
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+
+  const handleAddCompanySubmit = async () => {
+    try {
+      const res: any = await addCompany({ ...form, companyTypeId: Number(form.companyTypeId) || 1, industryTypeId: Number(form.industryTypeId) || 1 });
+      if (res?.error) {
+        const msg = typeof res.error.data === 'string' ? res.error.data : 'कंपनी नोंदणी अयशस्वी. / Company registration failed.';
+        setToastType('error');
+        setToastMsg(msg);
+        return;
+      }
+      const msg = res?.data?.message || 'कंपनी यशस्वीरित्या नोंदणी केली! / Company registered successfully!';
+      setToastType('success');
+      setToastMsg(msg);
+      setShowAddCompany(false);
+      setForm({ fullname: '', mobile: '', address: '', email: '', contactPerson: '', alternateContactPerson: '', alternateContactNumber: '', companyTypeId: 0, industryTypeId: 0, discription: '', website: '', alternateEmail: '' });
+      refetch();
+    } catch (err: any) {
+      setToastType('error');
+      setToastMsg('कंपनी नोंदणी अयशस्वी. / Company registration failed. ' + (err?.message || err));
+    }
+  };
 
   const companiesList = data?.items || [];
   const totalCount = data?.totalCount || 0;
@@ -88,9 +137,7 @@ export function AdminRegisteredCompanies() {
           </p>
         </div>
         <button
-          onClick={() => {
-            alert('This feature is currently available in the Admin approval list tab.');
-          }}
+          onClick={() => setShowAddCompany(true)}
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-950 hover:bg-orange-600 text-white font-bold text-xs rounded-lg shadow-sm transition-all cursor-pointer self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" /> Add new Company
@@ -212,9 +259,8 @@ export function AdminRegisteredCompanies() {
             <tbody className="divide-y divide-slate-100 bg-white">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-orange-500" />
-                    माहिती लोड होत आहे / Loading companies...
+                  <td colSpan={7} className="px-4 py-2 text-center text-slate-400">
+                    <Loader />
                   </td>
                 </tr>
               ) : error ? (
@@ -237,7 +283,7 @@ export function AdminRegisteredCompanies() {
                   <tr key={company.id || index} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3.5 font-black text-blue-900 whitespace-nowrap">
                       <a
-                        href={`#/company/${company.id || index + 1}`}
+                        href={`#/dashboard?view=company&id=${company.id || index + 1}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         title="Open company profile in new tab"
@@ -402,6 +448,218 @@ export function AdminRegisteredCompanies() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Add Company Dialog Modal */}
+      {showAddCompany && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-2xl overflow-hidden flex flex-col text-left max-h-[92vh]">
+            <div className="bg-blue-950 text-white p-4.5 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-orange-400" />
+                <h3 className="font-extrabold text-sm sm:text-base">
+                  नवीन कंपनी नोंदणी / Register New Company
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowAddCompany(false)}
+                className="p-1 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 overflow-y-auto text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1.5">
+                    कंपनीचे नाव / Company Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="addcomp-fullname"
+                    value={form.fullname}
+                    onChange={(e) => setForm({ ...form, fullname: e.target.value })}
+                    placeholder="e.g. Acme Pvt. Ltd."
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1.5">
+                    मोबाईल क्रमांक / Mobile Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="addcomp-mobile"
+                    value={form.mobile}
+                    onChange={(e) => setForm({ ...form, mobile: e.target.value })}
+                    placeholder="e.g. 9876543210"
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1.5">
+                    ईमेल / Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="addcomp-email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder="e.g. info@acme.com"
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1.5">
+                    संपर्क व्यक्ती / Contact Person <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="addcomp-contactperson"
+                    value={form.contactPerson}
+                    onChange={(e) => setForm({ ...form, contactPerson: e.target.value })}
+                    placeholder="e.g. Rahul Sharma"
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1.5">
+                    कंपनी प्रकार / Company Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="addcomp-companytype"
+                    value={form.companyTypeId}
+                    onChange={(e) => setForm({ ...form, companyTypeId: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                  >
+                    <option value={0}>-- निवडा / Select --</option>
+                    {companyTypes.map((ct) => (
+                      <option key={ct.id} value={ct.id}>{ct.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1.5">
+                    उद्योग प्रकार / Industry Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="addcomp-industrytype"
+                    value={form.industryTypeId}
+                    onChange={(e) => setForm({ ...form, industryTypeId: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                  >
+                    <option value={0}>-- निवडा / Select --</option>
+                    {industryTypes.map((it) => (
+                      <option key={it.id} value={it.id}>{it.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1.5">
+                    पर्यायी संपर्क व्यक्ती / Alt. Contact Person
+                  </label>
+                  <input
+                    id="addcomp-altcontactperson"
+                    value={form.alternateContactPerson}
+                    onChange={(e) => setForm({ ...form, alternateContactPerson: e.target.value })}
+                    placeholder="Optional"
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1.5">
+                    पर्यायी संपर्क क्रमांक / Alt. Contact Number
+                  </label>
+                  <input
+                    id="addcomp-altnumber"
+                    value={form.alternateContactNumber}
+                    onChange={(e) => setForm({ ...form, alternateContactNumber: e.target.value })}
+                    placeholder="Optional"
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1.5">
+                    पर्यायी ईमेल / Alt. Email
+                  </label>
+                  <input
+                    id="addcomp-altemail"
+                    type="email"
+                    value={form.alternateEmail}
+                    onChange={(e) => setForm({ ...form, alternateEmail: e.target.value })}
+                    placeholder="Optional"
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1.5">
+                    वेबसाइट / Website
+                  </label>
+                  <input
+                    id="addcomp-website"
+                    value={form.website}
+                    onChange={(e) => setForm({ ...form, website: e.target.value })}
+                    placeholder="e.g. https://acme.com"
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-600 mb-1.5">
+                  पत्ता / Address <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="addcomp-address"
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  rows={2}
+                  placeholder="Company registered address"
+                  className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-600 mb-1.5">
+                  वर्णन / Description
+                </label>
+                <textarea
+                  id="addcomp-discription"
+                  value={form.discription}
+                  onChange={(e) => setForm({ ...form, discription: e.target.value })}
+                  rows={2}
+                  placeholder="Brief description about the company (optional)"
+                  className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="bg-slate-50 px-6 py-4 flex justify-end gap-2 border-t border-slate-100 shrink-0">
+              <button
+                onClick={() => setShowAddCompany(false)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-350 text-slate-700 font-bold text-xs rounded-lg transition-all cursor-pointer"
+              >
+                रद्द करा / Cancel
+              </button>
+              <button
+                onClick={handleAddCompanySubmit}
+                disabled={isAddingCompany || !form.fullname.trim() || !form.mobile.trim() || !form.email.trim() || !form.contactPerson.trim() || !form.address.trim() || !form.companyTypeId || !form.industryTypeId}
+                className="inline-flex items-center gap-2 px-5 py-2 bg-blue-950 hover:bg-orange-600 text-white font-bold text-xs rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isAddingCompany ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> नोंदणी होत आहे...
+                  </>
+                ) : (
+                  <>नोंदणी करा / Register</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toastMsg && (
+        <Toast message={toastMsg} type={toastType} onClose={() => setToastMsg('')} />
       )}
     </div>
   );

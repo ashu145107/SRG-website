@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { RootState } from '../store';
 import { logout } from '../store/authSlice';
 import { LanguageSwitcher } from './ui/UtilityComponents';
+import { NotificationBell } from './NotificationBell';
 import { Menu, X, ChevronDown, User, LogOut, LayoutDashboard, Briefcase, Users, Phone, Info } from 'lucide-react';
 
 interface NavbarProps {
@@ -166,6 +167,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
 
             {isAuthenticated && user ? (
               <div className="flex items-center gap-2.5">
+                <NotificationBell variant="light" />
                 <Link
                   to="/dashboard"
                   className="btn-gloss inline-flex items-center gap-2 bg-theme-lavender text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30"
@@ -266,6 +268,12 @@ export function Navbar({ activePage, compact }: NavbarProps) {
           <div className="border-t border-theme-lightViolet/80 pt-3 space-y-2">
             {isAuthenticated && user ? (
               <>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-theme-darkViolet">
+                    {isMr ? 'सूचना / Notifications' : 'Notifications'}
+                  </span>
+                  <NotificationBell variant="light" />
+                </div>
                 <Link
                   to="/dashboard"
                   onClick={() => setMobileMenuOpen(false)}

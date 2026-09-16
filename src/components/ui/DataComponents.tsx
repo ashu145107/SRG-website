@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { HelpCircle, Mail, AlertTriangle } from 'lucide-react';
+import { Loader } from './FeedbackComponents';
 
 interface DataTableProps<T> {
   columns: {
@@ -105,9 +106,8 @@ export function DataTable<T extends { id: string | number }>({
 export function ServerSideTable<T extends { id: string | number }>(props: DataTableProps<T> & { loading?: boolean }) {
   if (props.loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-gray-100">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mb-2"></div>
-        <span className="text-xs text-gray-500">माहिती लोड होत आहे...</span>
+      <div className="bg-white rounded-xl border border-gray-100">
+        <Loader />
       </div>
     );
   }

@@ -6,7 +6,9 @@
 import React, { useState } from 'react';
 import { useGetAdminJobRequirementsQuery } from '../services/adminApi';
 import { JobRequirement } from '../services/jobTypes';
-import { Briefcase, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
+import { Briefcase, Eye, Edit, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
+import { Loader } from './ui/FeedbackComponents';
+import { EditJobForm } from './jobs/EditJobForm';
 
 export function AdminJobRequirements() {
   const [pageSize, setPageSize] = useState(15);
@@ -20,8 +22,11 @@ export function AdminJobRequirements() {
   // Detail Modal state
   const [selectedJob, setSelectedJob] = useState<JobRequirement | null>(null);
 
+  // Edit Modal state (popup form)
+  const [editingJobId, setEditingJobId] = useState<number | null>(null);
+
   // Fetch paginated data
-  const { data, isLoading, isFetching, error } = useGetAdminJobRequirementsQuery({
+  const { data, isLoading, isFetching, error, refetch } = useGetAdminJobRequirementsQuery({
     pageSize,
     pageNumber,
   });
@@ -193,9 +198,8 @@ export function AdminJobRequirements() {
             <tbody className="divide-y divide-slate-100 bg-white">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-orange-500" />
-                    माहिती लोड होत आहे / Loading requirements...
+                  <td colSpan={6} className="px-4 py-2 text-center text-slate-400">
+                    <Loader />
                   </td>
                 </tr>
               ) : error ? (
@@ -218,7 +222,7 @@ export function AdminJobRequirements() {
                   <tr key={job.id || index} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3.5 font-black text-blue-900 whitespace-nowrap">
                       <a
-                        href={`#/job/${job.id}`}
+                        href={`#/dashboard?view=jobRequirement&id=${job.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         title="Open job details in new tab"
@@ -240,13 +244,22 @@ export function AdminJobRequirements() {
                       {job.skill}
                     </td>
                     <td className="px-4 py-3.5 text-center whitespace-nowrap">
-                      <button
-                        onClick={() => setSelectedJob(job)}
-                        className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center justify-center cursor-pointer"
-                        title="View Requirements"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => setEditingJobId(Number(job.id))}
+                          className="p-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors inline-flex items-center justify-center cursor-pointer"
+                          title="Edit Requirements"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setSelectedJob(job)}
+                          className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center justify-center cursor-pointer"
+                          title="View Requirements"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -394,6 +407,39 @@ export function AdminJobRequirements() {
               >
                 बंद करा / Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Job Requirement Popup Modal */}
+      {editingJobId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-3xl overflow-hidden flex flex-col text-left max-h-[92vh]">
+            <div className="bg-blue-950 text-white px-5 py-4 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-orange-400" />
+                <h3 className="font-extrabold text-sm sm:text-base">
+                  नोकरी आवश्यकता संपादित करा / Edit Job Requirement
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingJobId(null)}
+                className="p-1 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              <EditJobForm
+                jobId={editingJobId}
+                onCancel={() => setEditingJobId(null)}
+                onSuccess={() => {
+                  setEditingJobId(null);
+                  refetch();
+                }}
+              />
             </div>
           </div>
         </div>

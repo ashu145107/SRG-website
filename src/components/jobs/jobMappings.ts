@@ -67,7 +67,10 @@ export const specializations: MappingItem[] = [
 ];
 
 export const getLabel = (mappings: MappingItem[], value: number, lang: 'mr' | 'en' = 'en'): string => {
+  if (value === undefined || value === null) {
+    return lang === 'mr' ? 'नाही' : 'N/A';
+  }
   const item = mappings.find(m => m.value === Number(value));
-  if (!item) return `Unknown (${value})`;
+  if (!item) return lang === 'mr' ? 'नाही' : 'N/A';
   return lang === 'mr' ? item.labelMr : item.labelEn;
 };

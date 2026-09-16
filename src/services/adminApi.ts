@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { baseApi } from './baseApi';
+import { baseApi, getApiBaseUrl, getClientIp } from './baseApi';
 import { CompanyProfile, CandidateProfile, JobApplication } from '../types';
 import { JobRequirement } from './jobTypes';
 
@@ -126,8 +126,8 @@ const normalizeUser = (item: any): CandidateProfile => {
     experience: toNum(experienceVal),
     specialization: toStr(specializationVal),
     skills,
-    resumeUrl: toStr(item.resumeUrl || item.resume_File_Path || item.resumeFileName),
-    resumeName: toStr(item.resumeName || item.resumeFileName),
+    resumeUrl: toStr(education.resume_File_Path || item.resumeUrl || item.resume_File_Path || item.resumeFilePath || item.resumeFileName || item.resume),
+    resumeName: toStr(education.resumeName || item.resumeName || item.resumeFileName),
   };
 };
 
@@ -337,6 +337,136 @@ export const adminApi = baseApi.injectEndpoints({
         return { data: null };
       },
       providesTags: (result, error, arg) => [{ type: 'Company', id: String(arg) }]
+    }),
+
+    /**
+     * GET candidate detail for admin view.
+     * 1) Try viewcandidateprofile/{id} (returns the full nested profile).
+     * 2) Fallback: scan the user registration list which includes resume fields.
+     */
+    getAdminCandidateDetail: builder.query<CandidateProfile | null, string>({
+      queryFn: async (candidateId, api, extraOptions, baseQuery) => {
+        try {
+          const single = await baseQuery(`/api/v1/viewcandidateprofile/${candidateId}`);
+          if (single.data) {
+            const raw = (single.data as any).value ?? (single.data as any).data ?? single.data;
+            const normalized = normalizeUser(raw);
+            console.log('[adminApi] getAdminCandidateDetail viewcandidateprofile result:', normalized);
+            // If the single endpoint returned resume data, we're done.
+            if (normalized.resumeUrl) return { data: normalized };
+            // Otherwise still return the data (just without resume) and let the fallback augment.
+            return { data: normalized };
+          }
+        } catch (err) {
+          console.error('[adminApi] getAdminCandidateDetail viewcandidateprofile failed:', err);
+        }
+        try {
+          // Fallback: search the paginated user list for a matching candidate.
+          // Scan up to 500 users (multiple pages of 100) to find the match.
+          for (let page = 1; page <= 5; page++) {
+            const listResult = await baseQuery(`/api/v1/userregistration/100/${page}`);
+            if (!listResult.data) break;
+            const parsed = parsePaginatedResponse<any>(listResult.data);
+            const found = parsed.items
+              .map(normalizeUser)
+              .find((u: any) => String(u.id || u.userId || '') === String(candidateId));
+            if (found) {
+              console.log('[adminApi] getAdminCandidateDetail list fallback found:', found);
+              return { data: found };
+            }
+            // Stop scanning if we've exhausted all pages.
+            if (parsed.items.length < 100) break;
+          }
+        } catch (err) {
+          console.error('[adminApi] getAdminCandidateDetail list fallback failed:', err);
+        }
+        return { data: null };
+      },
+      providesTags: (result, error, arg) => [{ type: 'Candidate', id: String(arg) }]
+    }),
+
+    addCompany: builder.mutation<
+      { isSuccess: boolean; message?: string; companyId?: string },
+      {
+        fullname: string;
+        mobile: string;
+        address: string;
+        email: string;
+        talukaId?: number;
+        districtId?: number;
+        stateId?: number;
+        contactPerson: string;
+        alternateContactPerson?: string;
+        alternateContactNumber?: string;
+        companyTypeId: number;
+        industryTypeId: number;
+        discription?: string;
+        website?: string;
+        alternateEmail?: string;
+        createdIp?: string;
+      }
+    >({
+      queryFn: async (payload) => {
+        try {
+          const clientIp = await getClientIp();
+
+          const apiBody = {
+            fullname: payload.fullname,
+            mobile: payload.mobile,
+            address: payload.address,
+            email: payload.email,
+            talukaId: Number(payload.talukaId) || 0,
+            districtId: Number(payload.districtId) || 0,
+            stateId: Number(payload.stateId) || 0,
+            createdIp: clientIp || payload.createdIp || '0.0.0.0',
+            contactPerson: payload.contactPerson,
+            alternateContactPerson: payload.alternateContactPerson || '',
+            alternateContactNumber: payload.alternateContactNumber || '',
+            companyTypeId: Number(payload.companyTypeId) || 1,
+            industryTypeId: Number(payload.industryTypeId) || 1,
+            discription: payload.discription || '',
+            website: payload.website || '',
+            alternateEmail: payload.alternateEmail || ''
+          };
+
+          const res = await fetch(`${getApiBaseUrl()}/api/v1/companyregistration`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(apiBody)
+          });
+
+          if (!res.ok) {
+            return {
+              error: {
+                status: res.status,
+                data: `कंपनी नोंदणी सर्व्हर त्रुटी / Company registration failed. Status: ${res.status}`
+              }
+            };
+          }
+
+          const data = await res.json();
+          if (data && data.isSuccess) {
+            return {
+              data: {
+                isSuccess: true,
+                message: data.message || data.resultMessage || 'कंपनी यशस्वीरित्या नोंदणी केली! / Company registered successfully!',
+                companyId: String(data.companyId || data.id || data.companyRegistrationId || '')
+              }
+            };
+          }
+
+          const errMsg = data?.error?.message || data?.message || 'कंपनी नोंदणी अयशस्वी. / Company registration failed.';
+          return { error: { status: 400, data: String(errMsg) } };
+        } catch (err: any) {
+          return {
+            error: {
+              status: 500,
+              data: `कंपनी नोंदणी नेटवर्क त्रुटी / Company registration Network Error: ${err?.message || err}`
+            }
+          };
+        }
+      },
+      invalidatesTags: ['Company']
     })
   })
 });
@@ -347,5 +477,7 @@ export const {
   useGetAdminJobRequirementsQuery,
   useGetAdminJobApplicationsQuery,
   useGetRequirementDetailQuery,
-  useGetAdminCompanyDetailQuery
+  useGetAdminCompanyDetailQuery,
+  useGetAdminCandidateDetailQuery,
+  useAddCompanyMutation
 } = adminApi;

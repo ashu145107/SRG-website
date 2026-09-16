@@ -15,7 +15,6 @@ import { RootState } from '../store';
 import { useGetMyProfileQuery, uploadProfilePic, uploadResume } from '../services/profileApi';
 import { Toast } from '../components/ui/FeedbackComponents';
 import { Loader } from '../components/ui/FeedbackComponents';
-import { UserRole } from '../types';
 import {
   ArrowLeft,
   UserCircle,
@@ -25,8 +24,7 @@ import {
   CheckCircle,
   LogOut,
   ChevronDown,
-  Eye,
-  Download
+  Eye
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
@@ -193,7 +191,8 @@ export default function ProfilePage() {
   }
 
   const showToast = (message: string, type: 'success' | 'error') => {
-    setToastMsg(message);
+    const fallback = type === 'success' ? 'Operation successful.' : 'Something went wrong.';
+    setToastMsg(message && message.trim() ? message : fallback);
     setToastType(type);
   };
 
@@ -239,14 +238,14 @@ export default function ProfilePage() {
   const tabs = [
     { key: 'details' as const, label: 'Basic Details', icon: <UserCircle className="w-4 h-4" /> },
     { key: 'pic' as const, label: 'Profile Picture', icon: <Camera className="w-4 h-4" /> },
-    ...(user.role === UserRole.CANDIDATE ? [{ key: 'resume' as const, label: 'Resume', icon: <FileUp className="w-4 h-4" /> }] : []),
+    { key: 'resume' as const, label: 'Resume', icon: <FileUp className="w-4 h-4" /> },
   ];
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col antialiased font-sans">
       {/* Navbar */}
       <nav className="bg-blue-950 text-white border-b border-blue-900/40 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link to="/dashboard" className="flex items-center gap-1.5 text-xs font-bold text-orange-400 hover:text-orange-300 transition-colors">
               <ArrowLeft className="w-4 h-4" /> Dashboard
@@ -267,7 +266,7 @@ export default function ProfilePage() {
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 max-w-4xl mx-auto px-3 sm:px-6 py-6 lg:py-10 w-full">
+      <main className="flex-1 max-w-6xl mx-auto px-3 sm:px-6 py-6 lg:py-10 w-full">
         {/* Page header */}
         <div className="mb-6">
           <h1 className="text-2xl font-black text-blue-950">My Profile</h1>
@@ -302,7 +301,7 @@ export default function ProfilePage() {
               {profileLoading ? (
                 <Loader />
               ) : profile ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {[
                     { label: 'Full Name', value: profile.fullName || user.name || '-' },
                     { label: 'Email', value: profile.email || user.email || '-' },
@@ -425,61 +424,22 @@ export default function ProfilePage() {
           )}
 
           {/* ---- TAB 3: Resume ---- */}
-          {activeTab === 'resume' && user.role === UserRole.CANDIDATE && (
-            <div className="flex flex-col items-center gap-6 py-6">
+          {activeTab === 'resume' && (
+            <div className="flex flex-col gap-6 py-6">
               {/* Current resume info */}
               {profile?.resumeUrl ? (
-                <div className="w-full max-w-2xl space-y-4">
-                  {/* Resume card */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 flex items-center gap-4">
-                    <FileText className="w-10 h-10 text-blue-600 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-blue-900 truncate">{profile.resumeName || 'Resume'}</p>
-                      <p className="text-[10px] text-blue-500 mt-0.5 truncate">{profile.resumeUrl}</p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => {
-                          const w = window.open('', '_blank');
-                          if (w) {
-                            w.document.write(`
-                              <html><head><title>${profile.resumeName || 'Resume'}</title></head>
-                              <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f1f5f9;">
-                                <iframe src="${profile.resumeUrl}" style="width:100%;height:100vh;border:none;"></iframe>
-                              </body></html>
-                            `);
-                          }
-                        }}
-                        className="px-3 py-2 text-[11px] font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5"
-                      >
-                        <Eye className="w-3.5 h-3.5" /> Preview
-                      </button>
-                      <a
-                        href={profile.resumeUrl}
-                        download={profile.resumeName || 'resume'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-2 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5"
-                      >
-                        <Download className="w-3.5 h-3.5" /> Download
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* Inline PDF preview */}
-                  <div className="w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm">
-                    <iframe
-                      src={profile.resumeUrl}
-                      title="Resume Preview"
-                      className="w-full h-[400px] sm:h-[500px]"
-                    />
-                  </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 flex items-center gap-4">
+                  <FileText className="w-8 h-8 text-blue-600 shrink-0" />
+                  <p className="text-sm font-bold text-blue-900 truncate flex-1 min-w-0">My Resume</p>
+                  <button
+                    onClick={() => window.open(profile.resumeUrl, '_blank')}
+                    className="px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5 shrink-0"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> View
+                  </button>
                 </div>
               ) : (
-                <div className="w-full max-w-md bg-slate-50 border border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center gap-2">
-                  <FileText className="w-12 h-12 text-gray-300" />
-                  <p className="text-xs text-gray-400 font-medium">No resume uploaded yet</p>
-                </div>
+                <p className="text-xs text-gray-400 font-medium text-center py-16">No resume uploaded yet</p>
               )}
 
               {/* Hidden file input */}

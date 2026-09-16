@@ -10,7 +10,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { logout } from '../store/authSlice';
 import { useChangePasswordMutation } from '../services/authApi';
-import { TextBox, PasswordBox } from '../components/ui/Inputs';
+import { PasswordBox } from '../components/ui/Inputs';
 import { PrimaryButton } from '../components/ui/Buttons';
 import { Alert } from '../components/ui/FeedbackComponents';
 import { ArrowLeft, LogOut, LockKeyhole, CheckCircle2, XCircle, Check, X } from 'lucide-react';
@@ -113,15 +113,15 @@ export default function ChangePassword() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col antialiased font-sans">
-      {/* Navbar */}
+      {/* Slim dark top bar */}
       <nav className="bg-theme-darkViolet text-white border-b border-theme-lightViolet/20 sticky top-0 z-40 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/dashboard" className="flex items-center gap-1.5 text-xs font-bold text-theme-gold hover:text-white transition-colors">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-12 flex items-center justify-between">
+          <Link to="/dashboard" className="flex items-center gap-1.5 text-xs font-bold text-theme-gold hover:text-white transition-colors cursor-pointer">
             <ArrowLeft className="w-4 h-4" /> {t('auth.backToDashboard', 'डॅशबोर्ड / Dashboard')}
           </Link>
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-black text-white">{user?.name}</p>
+              <p className="text-xs font-black text-white leading-none">{user?.name}</p>
             </div>
             <button
               onClick={() => { dispatch(logout()); navigate('/'); }}
@@ -134,35 +134,24 @@ export default function ChangePassword() {
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 max-w-md mx-auto px-4 sm:px-6 py-10 lg:py-16 w-full">
-        <div className="text-center mb-8">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-theme-lightViolet/70 border border-theme-lightViolet flex items-center justify-center mb-4">
-            <LockKeyhole className="w-7 h-7 text-theme-lavender" />
+      <main className="flex-1 max-w-2xl mx-auto px-4 sm:px-8 py-6 lg:py-10 w-full">
+        <div className="mb-6 text-left">
+          <div className="inline-flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-theme-lightViolet/70 border border-theme-lightViolet flex items-center justify-center">
+              <LockKeyhole className="w-6 h-6 text-theme-lavender" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-theme-darkViolet">{t('auth.changePassword', 'पासवर्ड बदला / Change Password')}</h1>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                {t('auth.changePwdSub', 'तुमचा सुरक्षा पासवर्ड अद्ययावत करा / Update your account security password.')}
+              </p>
+            </div>
           </div>
-          <h1 className="text-2xl font-black text-theme-darkViolet">{t('auth.changePassword', 'पासवर्ड बदला / Change Password')}</h1>
-          <p className="text-xs text-slate-500 font-medium mt-1">
-            {t('auth.changePwdSub', 'तुमचा सुरक्षा पासवर्ड अद्ययावत करा / Update your account security password.')}
-          </p>
         </div>
 
         <div className="bg-white rounded-3xl border border-theme-lightViolet/80 shadow-2xl px-6 sm:px-10 py-8 space-y-6">
           <form className="space-y-5" onSubmit={handleSubmit}>
             {errorText && <Alert type="danger" message={errorText} />}
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                {t('auth.userId', 'वापरकर्ता ID / User ID')}
-              </label>
-              <input
-                type="text"
-                readOnly
-                value={userId ? String(userId) : String(user?.id || '—')}
-                className="w-full px-4 py-2.5 bg-gray-100 border border-theme-lightViolet/40 rounded-xl text-sm text-gray-600 font-bold cursor-not-allowed"
-              />
-              <p className="text-[10px] text-slate-400 mt-1.5 font-medium">
-                {t('auth.userIdAuto', 'वापरकर्ता ID आपोआप तुमच्या खात्यातून आणला जातो. / User ID is fetched automatically from your account.')}
-              </p>
-            </div>
 
             <PasswordBox
               label={t('auth.oldPassword', 'जुना पासवर्ड / Old Password')}

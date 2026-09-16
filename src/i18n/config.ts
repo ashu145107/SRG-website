@@ -8,7 +8,7 @@ import { initReactI18next } from 'react-i18next';
 import enTranslation from './en.json';
 import mrTranslation from './mr.json';
 
-const savedLanguage = localStorage.getItem('app_lang') || 'mr';
+const savedLanguage = localStorage.getItem('app_lang') || 'en';
 
 i18n
   .use(initReactI18next)
@@ -22,7 +22,7 @@ i18n
       },
     },
     lng: savedLanguage,
-    fallbackLng: 'mr',
+    fallbackLng: 'en',
     interpolation: {
       escapeValue: false, // React already safeguards against XSS
     },
