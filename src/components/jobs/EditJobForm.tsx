@@ -511,7 +511,7 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               Experience Range
             </h3>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="form-label">Minimum Experience</label>
                 <input
@@ -543,7 +543,7 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               Salary Range
             </h3>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="form-label">Minimum Salary *</label>
                 <input

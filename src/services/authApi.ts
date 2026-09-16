@@ -452,6 +452,103 @@ export const authApi = baseApi.injectEndpoints({
       }
     }),
 
+    forgotPassword: builder.mutation<
+      { isSuccess: boolean; isFailure: boolean; value?: string; error?: { code: string; message: string } },
+      { email: string; mobile: string }
+    >({
+      queryFn: async ({ email, mobile }) => {
+        try {
+          const clientIp = await getClientIp();
+          const res = await fetch(`${getApiBaseUrl()}/api/v1/forgotpassword`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+              email: email.trim(),
+              mobile: mobile.trim(),
+              ipAddress: clientIp || '1'
+            })
+          });
+
+          if (!res.ok) {
+            return {
+              error: {
+                status: res.status,
+                data: `सर्व्हर त्रुटी / API Server connection failed. Status: ${res.status}`
+              }
+            };
+          }
+
+          const responseData = await res.json();
+          return {
+            data: {
+              isSuccess: Boolean(responseData?.isSuccess),
+              isFailure: Boolean(responseData?.isFailure),
+              value: responseData?.value || '',
+              error: responseData?.error || undefined
+            }
+          };
+        } catch (err: any) {
+          return {
+            error: {
+              status: 500,
+              data: `नेटवर्क कनेक्शन एरर / Server Connection Error: ${err.message || err}`
+            }
+          };
+        }
+      }
+    }),
+
+    changePassword: builder.mutation<
+      { isSuccess: boolean; isFailure: boolean; value?: string; error?: { code: string; message: string } },
+      { userId: number; oldPassword: string; newPassword: string }
+    >({
+      queryFn: async ({ userId, oldPassword, newPassword }) => {
+        try {
+          const res = await fetch(`${getApiBaseUrl()}/api/v1/changepassword`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+              userId: Number(userId) || 0,
+              oldPassword: oldPassword,
+              newPassword: newPassword
+            })
+          });
+
+          if (!res.ok) {
+            return {
+              error: {
+                status: res.status,
+                data: `सर्व्हर त्रुटी / API Server connection failed. Status: ${res.status}`
+              }
+            };
+          }
+
+          const responseData = await res.json();
+          return {
+            data: {
+              isSuccess: Boolean(responseData?.isSuccess),
+              isFailure: Boolean(responseData?.isFailure),
+              value: responseData?.value || '',
+              error: responseData?.error || undefined
+            }
+          };
+        } catch (err: any) {
+          return {
+            error: {
+              status: 500,
+              data: `नेटवर्क कनेक्शन एरर / Server Connection Error: ${err.message || err}`
+            }
+          };
+        }
+      }
+    }),
+
     activateAccount: builder.mutation<
       { isSuccess: boolean; isFailure: boolean; value: any; error?: { code: string; message: string } },
       { code: string }
@@ -497,5 +594,7 @@ export const {
   useCompanyRegisterMutation,
   useVerifyOtpMutation,
   useResetPasswordMutation,
+  useForgotPasswordMutation,
+  useChangePasswordMutation,
   useActivateAccountMutation
 } = authApi;

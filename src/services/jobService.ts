@@ -91,8 +91,8 @@ export const jobService = {
     const companyId = user?.companyId;
 
     const isEmployer =
-      role === 3 ||
-      role === '3' ||
+      (role as any) === 3 ||
+      (role as any) === '3' ||
       String(role).toUpperCase() === 'COMPANY' ||
       String(role).toUpperCase() === 'EMPLOYER';
 

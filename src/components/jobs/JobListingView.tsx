@@ -199,7 +199,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
       {/* Search & Filter bar */}
       <div className="bg-white rounded-2xl border border-slate-150 p-4 shadow-2xs">
         <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
               <Search className="h-4 w-4 text-slate-400" />
             </span>
@@ -211,12 +211,12 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
               className="w-full text-xs pl-9 pr-4 py-2.5 border border-slate-200 bg-slate-50/50 rounded-xl focus:outline-none focus:border-orange-500 text-slate-800"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="w-4 h-4 text-slate-400" />
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <SlidersHorizontal className="w-4 h-4 text-slate-400 shrink-0" />
             <select
               value={filterSkill}
               onChange={(e) => setFilterSkill(e.target.value)}
-              className="text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-xl focus:outline-none focus:border-orange-500 text-slate-800 font-semibold cursor-pointer"
+              className="flex-1 sm:flex-none min-w-0 max-w-full sm:w-36 text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-xl focus:outline-none focus:border-orange-500 text-slate-800 font-semibold cursor-pointer"
             >
               <option value="">All Skills</option>
               {uniqueSkills.map((s) => (
@@ -226,7 +226,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
             <select
               value={filterWorkPlace}
               onChange={(e) => setFilterWorkPlace(e.target.value)}
-              className="text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-xl focus:outline-none focus:border-orange-500 text-slate-800 font-semibold cursor-pointer"
+              className="flex-1 sm:flex-none min-w-0 max-w-full sm:w-44 text-xs px-3 py-2.5 border border-slate-200 bg-white rounded-xl focus:outline-none focus:border-orange-500 text-slate-800 font-semibold cursor-pointer"
             >
               <option value="">All Work Places</option>
               {uniqueWorkPlaces.map((w) => (
@@ -236,7 +236,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
             {(searchPhrase || filterSkill || filterWorkPlace) && (
               <button
                 onClick={() => { setSearchPhrase(''); setFilterSkill(''); setFilterWorkPlace(''); }}
-                className="text-[10px] text-orange-600 font-bold hover:underline cursor-pointer whitespace-nowrap"
+                className="text-[10px] text-orange-600 font-bold hover:underline cursor-pointer whitespace-nowrap shrink-0"
               >
                 Clear All
               </button>

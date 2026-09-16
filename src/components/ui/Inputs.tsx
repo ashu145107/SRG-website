@@ -20,8 +20,8 @@ export const TextBox = React.forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={`input-txt-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
           className={`w-full px-4 py-2.5 bg-gray-50 border ${
-            error ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-orange-500'
-          } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-900 placeholder-gray-400`}
+            error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
+          } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900 placeholder-gray-400`}
           {...props}
         />
         {error && <span className="block text-xs text-red-500 mt-1">{error}</span>}
@@ -43,8 +43,8 @@ export const PasswordBox = React.forwardRef<HTMLInputElement, InputProps>(
             type={show ? 'text' : 'password'}
             id={`input-pwd-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
             className={`w-full pl-4 pr-11 py-2.5 bg-gray-50 border ${
-              error ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-orange-500'
-            } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-900 placeholder-gray-400`}
+              error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
+            } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900 placeholder-gray-400`}
             {...props}
           />
           <button
@@ -72,7 +72,7 @@ export const SearchBox = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={`input-search-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
-            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-gray-900 placeholder-gray-400"
+            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender focus:border-theme-lavender text-gray-900 placeholder-gray-400"
             {...props}
           />
         </div>
@@ -97,8 +97,8 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
           id={`input-area-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
           rows={3}
           className={`w-full px-4 py-2.5 bg-gray-50 border ${
-            error ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-orange-500'
-          } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-900 placeholder-gray-400`}
+            error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
+          } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900 placeholder-gray-400`}
           {...props}
         />
         {error && <span className="block text-xs text-red-500 mt-1">{error}</span>}
@@ -137,8 +137,8 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, InputProps & { c
             type="text"
             id={`input-curr-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
             className={`w-full pl-8 pr-4 py-2.5 bg-gray-50 border ${
-              error ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-orange-500'
-            } rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-900`}
+              error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
+            } rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900`}
             {...props}
           />
         </div>
@@ -188,7 +188,7 @@ export const OTPInput: React.FC<{
             value={v}
             onChange={(e) => handleChange(e, i)}
             onKeyDown={(e) => handleKeyDown(e, i)}
-            className="w-12 h-12 text-center text-lg font-bold border border-gray-200 uppercase bg-gray-50 focus:bg-white focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 rounded-xl transition-all"
+            className="w-12 h-12 text-center text-lg font-bold border border-gray-200 uppercase bg-gray-50 focus:bg-white focus:border-theme-lavender focus:outline-none focus:ring-1 focus:ring-theme-lavender rounded-xl transition-all"
           />
         ))}
       </div>

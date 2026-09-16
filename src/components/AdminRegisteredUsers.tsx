@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { useGetAdminUsersQuery } from '../services/adminApi';
 import { CandidateProfile } from '../types';
-import { Users, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
+import { Users, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2, ExternalLink } from 'lucide-react';
 
 export function AdminRegisteredUsers() {
   const [pageSize, setPageSize] = useState(15);
@@ -51,8 +51,9 @@ export function AdminRegisteredUsers() {
           (c.fullName || '').toLowerCase().includes(phrase) ||
           (c.phone || '').toLowerCase().includes(phrase) ||
           (c.email || '').toLowerCase().includes(phrase) ||
-          (c.qualification || '').toLowerCase().includes(phrase) ||
-          (c.city || '').toLowerCase().includes(phrase)
+          (c.education || c.qualification || '').toLowerCase().includes(phrase) ||
+          (c.specialization || '').toLowerCase().includes(phrase) ||
+          (c.district || c.talukaName || c.city || '').toLowerCase().includes(phrase)
       );
     }
 
@@ -141,6 +142,15 @@ export function AdminRegisteredUsers() {
             <thead className="bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-wider">
               <tr>
                 <th
+                  onClick={() => handleSort('id')}
+                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    ID
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </div>
+                </th>
+                <th
                   onClick={() => handleSort('fullName')}
                   className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors"
                 >
@@ -160,7 +170,7 @@ export function AdminRegisteredUsers() {
                 </th>
                 <th
                   onClick={() => handleSort('email')}
-                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors"
+                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors hidden md:table-cell"
                 >
                   <div className="flex items-center gap-1">
                     Email
@@ -176,12 +186,18 @@ export function AdminRegisteredUsers() {
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
-                <th className="px-4 py-3.5 font-bold">
-                  Specialization
+                <th
+                  onClick={() => handleSort('specialization')}
+                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors hidden md:table-cell"
+                >
+                  <div className="flex items-center gap-1">
+                    Specialization
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </div>
                 </th>
                 <th
                   onClick={() => handleSort('experienceYears')}
-                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors text-center"
+                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors text-center hidden md:table-cell"
                 >
                   <div className="flex items-center justify-center gap-1">
                     Experience
@@ -189,8 +205,8 @@ export function AdminRegisteredUsers() {
                   </div>
                 </th>
                 <th
-                  onClick={() => handleSort('city')}
-                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors"
+                  onClick={() => handleSort('district')}
+                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors hidden md:table-cell"
                 >
                   <div className="flex items-center gap-1">
                     District
@@ -205,14 +221,14 @@ export function AdminRegisteredUsers() {
             <tbody className="divide-y divide-slate-100 bg-white">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-orange-500" />
                     माहिती लोड होत आहे / Loading candidates...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center">
+                  <td colSpan={9} className="px-4 py-10 text-center">
                     <div className="inline-flex flex-col items-center gap-2 text-red-600 font-medium">
                       <span className="text-sm">❌ API लोड करण्यात अयशस्वी</span>
                       <span className="text-xs text-slate-500">Failed to load candidates from API. Please check your connection and try again.</span>
@@ -221,33 +237,45 @@ export function AdminRegisteredUsers() {
                 </tr>
               ) : filteredAndSortedList.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-slate-400 font-medium">
+                  <td colSpan={9} className="px-4 py-8 text-center text-slate-400 font-medium">
                     कोणतेही रेकॉर्ड सापडले नाही / No candidates found
                   </td>
                 </tr>
               ) : (
-                filteredAndSortedList.map((candidate) => (
-                  <tr key={candidate.id} className="hover:bg-slate-50/50 transition-colors">
+                filteredAndSortedList.map((candidate, index) => (
+                  <tr key={candidate.id || index} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3.5 font-black text-blue-900 whitespace-nowrap">
+                      <a
+                        href={`#/candidate/${candidate.id || index + 1}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open candidate profile in new tab"
+                        className="underline decoration-blue-300 underline-offset-2 hover:text-blue-600 hover:decoration-blue-600 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        {candidate.id || `U${index + 1}`}
+                        <ExternalLink className="w-3 h-3 text-blue-400" />
+                      </a>
+                    </td>
                     <td className="px-4 py-3.5 font-bold text-slate-800 break-words max-w-[150px]">
                       {candidate.fullName}
                     </td>
                     <td className="px-4 py-3.5 text-slate-700 whitespace-nowrap">
-                      {candidate.phone}
+                      {candidate.phone || candidate.mobile || 'N/A'}
                     </td>
-                    <td className="px-4 py-3.5 text-slate-600 break-all max-w-[150px]">
+                    <td className="px-4 py-3.5 text-slate-600 break-all max-w-[150px] hidden md:table-cell">
                       {candidate.email}
                     </td>
                     <td className="px-4 py-3.5 text-slate-700">
                       {candidate.qualification || 'Graduate'}
                     </td>
-                    <td className="px-4 py-3.5 text-slate-500 italic">
-                      {candidate.skills && candidate.skills.length > 0 ? candidate.skills.slice(0, 2).join(', ') : 'General'}
+                    <td className="px-4 py-3.5 text-slate-700 hidden md:table-cell">
+                      {candidate.specialization || 'General'}
                     </td>
-                    <td className="px-4 py-3.5 text-slate-900 font-extrabold text-center">
+                    <td className="px-4 py-3.5 text-slate-900 font-extrabold text-center hidden md:table-cell">
                       {candidate.experienceYears !== undefined ? `${candidate.experienceYears} Years` : '0'}
                     </td>
-                    <td className="px-4 py-3.5 text-slate-700">
-                      {candidate.city || 'Nashik'}
+                    <td className="px-4 py-3.5 text-slate-700 hidden md:table-cell">
+                      {candidate.district || candidate.talukaName || candidate.city || 'N/A'}
                     </td>
                     <td className="px-4 py-3.5 text-center whitespace-nowrap">
                       <button
@@ -343,32 +371,32 @@ export function AdminRegisteredUsers() {
             </div>
 
             <div className="p-6 space-y-4 text-xs sm:text-sm overflow-y-auto max-h-[70vh]">
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Full Name:</span>
                 <span className="font-extrabold text-slate-900 col-span-2">{selectedCandidate.fullName || selectedCandidate.candidateName}</span>
               </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Mobile:</span>
                 <span className="font-bold text-slate-900 col-span-2">{selectedCandidate.phone || selectedCandidate.mobile}</span>
               </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Email:</span>
                 <span className="font-medium text-slate-700 col-span-2 break-all">{selectedCandidate.email}</span>
               </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Education:</span>
                 <span className="font-extrabold text-slate-850 col-span-2">{selectedCandidate.qualification || selectedCandidate.education || 'N/A'}</span>
               </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Specialization:</span>
                 <span className="font-medium text-slate-800 col-span-2">{selectedCandidate.specialization || 'N/A'}</span>
               </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Experience:</span>
                 <span className="font-extrabold text-slate-900 col-span-2">{selectedCandidate.experienceYears || selectedCandidate.experience || 0} Years</span>
               </div>
               {selectedCandidate.skills && selectedCandidate.skills.length > 0 && (
-                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                   <span className="font-bold text-slate-400 col-span-1">Skills:</span>
                   <span className="font-medium text-slate-800 col-span-2 flex flex-wrap gap-1">
                     {selectedCandidate.skills.map((skill, index) => (
@@ -379,12 +407,12 @@ export function AdminRegisteredUsers() {
                   </span>
                 </div>
               )}
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">District/City:</span>
-                <span className="font-medium text-slate-600 col-span-2">{selectedCandidate.city || selectedCandidate.district || 'N/A'}</span>
+                <span className="font-medium text-slate-600 col-span-2">{selectedCandidate.district || selectedCandidate.talukaName || selectedCandidate.city || 'N/A'}</span>
               </div>
               {selectedCandidate.address && (
-                <div className="grid grid-cols-3 pb-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 pb-1">
                   <span className="font-bold text-slate-400 col-span-1">Address:</span>
                   <span className="font-medium text-slate-600 col-span-2 leading-relaxed">{selectedCandidate.address}</span>
                 </div>

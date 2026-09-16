@@ -150,7 +150,13 @@ export default function CandidateProfileView() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => {
+                if (window.history.length > 1) {
+                  navigate(-1);
+                } else {
+                  navigate('/dashboard');
+                }
+              }}
               className="flex items-center gap-1.5 text-xs font-bold text-orange-400 hover:text-orange-300 transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" /> Back to Pipeline
@@ -194,7 +200,13 @@ export default function CandidateProfileView() {
             <AlertCircle className="w-10 h-10 text-red-400" />
             <p className="text-sm font-bold text-red-600">{error}</p>
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => {
+                if (window.history.length > 1) {
+                  navigate(-1);
+                } else {
+                  navigate('/dashboard');
+                }
+              }}
               className="px-5 py-2 bg-orange-600 text-white rounded-xl text-xs font-bold shadow-sm"
             >
               Go Back
@@ -209,14 +221,16 @@ export default function CandidateProfileView() {
             <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-xs flex flex-col sm:flex-row items-center gap-6">
               {/* Avatar */}
               {candidate.profilePicUrl ? (
-                <img
-                  src={candidate.profilePicUrl}
-                  alt={candidate.fullName}
-                  className="w-24 h-24 rounded-full object-cover border-4 border-orange-200 shadow-sm"
-                />
+                <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-theme-lightViolet shadow-sm shrink-0">
+                  <img
+                    src={candidate.profilePicUrl}
+                    alt={candidate.fullName}
+                    className="w-full h-full object-cover object-center"
+                  />
+                </div>
               ) : (
-                <div className="w-24 h-24 rounded-full bg-blue-50 border-4 border-orange-200 shadow-sm flex items-center justify-center">
-                  <UserCircle className="w-14 h-14 text-blue-300" />
+                <div className="w-24 h-24 rounded-full bg-theme-lightViolet border-2 border-dashed border-theme-sage/60 shadow-sm flex items-center justify-center shrink-0">
+                  <UserCircle className="w-14 h-14 text-theme-lavender/50" />
                 </div>
               )}
 
@@ -321,7 +335,7 @@ export default function CandidateProfileView() {
                     <iframe
                       src={candidate.resumeUrl}
                       title="Resume Preview"
-                      className="w-full h-[500px]"
+                      className="w-full h-[400px] sm:h-[500px]"
                     />
                   </div>
                 </div>

@@ -98,7 +98,7 @@ export default function ActivateAccount() {
   }, [code, activateAccount]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex flex-col p-4">
       {/* Background patterns */}
       <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] opacity-60 pointer-events-none" />
 
@@ -106,11 +106,11 @@ export default function ActivateAccount() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-100 p-8 text-center relative z-10"
+        className="w-full max-w-lg m-auto bg-white rounded-2xl shadow-xl border border-slate-100 p-8 text-center relative z-10"
       >
         {/* Header Branding */}
         <div className="flex flex-col items-center mb-6">
-          <img src="/assets/logo.png" alt="Logo" className="h-16 w-auto object-contain mb-3" onError={(e) => {
+          <img src="/home/logo.png" alt="Logo" className="h-16 w-auto object-contain mb-3" onError={(e) => {
             (e.target as HTMLElement).style.display = 'none';
           }} />
           <h2 className="text-xl font-bold text-slate-800 tracking-tight">

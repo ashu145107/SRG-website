@@ -17,7 +17,10 @@ import ForgotPassword from './pages/ForgotPassword';
 import DashboardHub from './pages/DashboardHub';
 import ProfilePage from './pages/ProfilePage';
 import CandidateProfileView from './pages/CandidateProfileView';
+import CompanyProfileView from './pages/CompanyProfileView';
 import ActivateAccount from './pages/ActivateAccount';
+import { JobRequirementDetail } from './pages/JobRequirementDetail';
+import ChangePassword from './pages/ChangePassword';
 import { ProtectedRoute } from './components/ui/UtilityComponents';
 
 // Redirect non-hash URL path `/ActivateAccount` or `/activateaccount` to hash-based `#/ActivateAccount`
@@ -47,6 +50,8 @@ export default function App() {
             <Route path="/forgot-password" element={<GuestOnly><ForgotPassword /></GuestOnly>} />
             <Route path="/ActivateAccount" element={<ActivateAccount />} />
             <Route path="/activateaccount" element={<ActivateAccount />} />
+
+            <Route path="/job/:requirementId" element={<JobRequirementDetail />} />
             
             <Route
               path="/dashboard"
@@ -65,12 +70,30 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
+            <Route
+              path="/change-password"
+              element={
+                <ProtectedRoute>
+                  <ChangePassword />
+                </ProtectedRoute>
+              }
+            />
             
             <Route
               path="/candidate/:candidateId"
               element={
                 <ProtectedRoute>
                   <CandidateProfileView />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/company/:companyId"
+              element={
+                <ProtectedRoute>
+                  <CompanyProfileView />
                 </ProtectedRoute>
               }
             />

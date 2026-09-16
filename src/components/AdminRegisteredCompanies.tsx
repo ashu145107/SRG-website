@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { useGetAdminCompaniesQuery } from '../services/adminApi';
 import { CompanyProfile } from '../types';
-import { Building2, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2, Plus } from 'lucide-react';
+import { Building2, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2, Plus, ExternalLink } from 'lucide-react';
 
 export function AdminRegisteredCompanies() {
   const [pageSize, setPageSize] = useState(15);
@@ -151,6 +151,15 @@ export function AdminRegisteredCompanies() {
             <thead className="bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-wider">
               <tr>
                 <th
+                  onClick={() => handleSort('id')}
+                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    ID
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </div>
+                </th>
+                <th
                   onClick={() => handleSort('companyName')}
                   className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors"
                 >
@@ -170,7 +179,7 @@ export function AdminRegisteredCompanies() {
                 </th>
                 <th
                   onClick={() => handleSort('email')}
-                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors"
+                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors hidden md:table-cell"
                 >
                   <div className="flex items-center gap-1">
                     Email
@@ -188,7 +197,7 @@ export function AdminRegisteredCompanies() {
                 </th>
                 <th
                   onClick={() => handleSort('address')}
-                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors"
+                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors hidden md:table-cell"
                 >
                   <div className="flex items-center gap-1">
                     Address
@@ -203,14 +212,14 @@ export function AdminRegisteredCompanies() {
             <tbody className="divide-y divide-slate-100 bg-white">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-orange-500" />
                     माहिती लोड होत आहे / Loading companies...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center">
+                  <td colSpan={7} className="px-4 py-10 text-center">
                     <div className="inline-flex flex-col items-center gap-2 text-red-600 font-medium">
                       <span className="text-sm">❌ API लोड करण्यात अयशस्वी</span>
                       <span className="text-xs text-slate-500">Failed to load companies from API. Please check your connection and try again.</span>
@@ -219,26 +228,38 @@ export function AdminRegisteredCompanies() {
                 </tr>
               ) : filteredAndSortedList.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-400 font-medium">
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400 font-medium">
                     कोणतेही रेकॉर्ड सापडले नाही / No companies found
                   </td>
                 </tr>
               ) : (
-                filteredAndSortedList.map((company) => (
-                  <tr key={company.id} className="hover:bg-slate-50/50 transition-colors">
+                filteredAndSortedList.map((company, index) => (
+                  <tr key={company.id || index} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3.5 font-black text-blue-900 whitespace-nowrap">
+                      <a
+                        href={`#/company/${company.id || index + 1}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open company profile in new tab"
+                        className="underline decoration-blue-300 underline-offset-2 hover:text-blue-600 hover:decoration-blue-600 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        {company.id || `C${index + 1}`}
+                        <ExternalLink className="w-3 h-3 text-blue-400" />
+                      </a>
+                    </td>
                     <td className="px-4 py-3.5 font-bold text-slate-800 break-words max-w-[180px]">
                       {company.companyName}
                     </td>
                     <td className="px-4 py-3.5 text-slate-700 whitespace-nowrap">
-                      {company.phone}
+                      {company.phone || company.mobile || 'N/A'}
                     </td>
-                    <td className="px-4 py-3.5 text-slate-600 break-all max-w-[150px]">
+                    <td className="px-4 py-3.5 text-slate-600 break-all max-w-[150px] hidden md:table-cell">
                       {company.email}
                     </td>
                     <td className="px-4 py-3.5 text-slate-700 font-medium">
                       {company.contactPerson}
                     </td>
-                    <td className="px-4 py-3.5 text-slate-500 break-words max-w-[200px]">
+                    <td className="px-4 py-3.5 text-slate-500 break-words max-w-[200px] hidden md:table-cell">
                       {company.address}
                     </td>
                     <td className="px-4 py-3.5 text-center whitespace-nowrap">
@@ -335,36 +356,36 @@ export function AdminRegisteredCompanies() {
             </div>
 
             <div className="p-6 space-y-4 text-xs sm:text-sm overflow-y-auto max-h-[70vh]">
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Company Name:</span>
                 <span className="font-extrabold text-slate-900 col-span-2">{selectedCompany.companyName || 'N/A'}</span>
               </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Mobile:</span>
                 <span className="font-bold text-slate-900 col-span-2">{selectedCompany.phone || selectedCompany.mobile || 'N/A'}</span>
               </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Email:</span>
                 <span className="font-medium text-slate-700 col-span-2 break-all">{selectedCompany.email || 'N/A'}</span>
               </div>
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Contact Person:</span>
                 <span className="font-extrabold text-slate-850 col-span-2">{selectedCompany.contactPerson || 'N/A'}</span>
               </div>
               {selectedCompany.website && (
-                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                   <span className="font-bold text-slate-400 col-span-1">Website:</span>
                   <span className="font-medium text-blue-650 col-span-2 break-all">{selectedCompany.website}</span>
                 </div>
               )}
               {selectedCompany.industry && (
-                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                   <span className="font-bold text-slate-400 col-span-1">Industry:</span>
                   <span className="font-medium text-slate-800 col-span-2">{selectedCompany.industry}</span>
                 </div>
               )}
               {selectedCompany.address && (
-                <div className="grid grid-cols-3 pb-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 pb-1">
                   <span className="font-bold text-slate-400 col-span-1">Address:</span>
                   <span className="font-medium text-slate-600 col-span-2 leading-relaxed">{selectedCompany.address}</span>
                 </div>

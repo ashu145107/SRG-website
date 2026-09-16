@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store';
 import { useNavigate, Link } from 'react-router-dom';
-import { logout, updateHandlerPermissions } from '../store/authSlice';
+import { logout } from '../store/authSlice';
 import { useTranslation } from 'react-i18next';
 import {
   useGetDashboardStatsQuery
@@ -32,10 +32,6 @@ import {
 } from '../services/candidateApi';
 import { useGetMyJobApplicationsQuery, useGetMyRequirementsQuery } from '../services/employerApi';
 import { useGetMyProfileQuery } from '../services/profileApi';
-import {
-  useGetHandlersQuery,
-  useUpdateHandlerPermissionsMutation
-} from '../services/handlerApi';
 import {
   useGetTrainingsQuery,
   useCreateTrainingMutation,
@@ -63,7 +59,7 @@ import {
   IconButton
 } from '../components/ui/Buttons';
 import { TextBox, TextArea } from '../components/ui/Inputs';
-import { Checkbox, ToggleSwitch, Dropdown } from '../components/ui/SelectionControls';
+import { Checkbox, Dropdown } from '../components/ui/SelectionControls';
 import {
   DataTable,
   StatisticCard,
@@ -78,7 +74,7 @@ import { AddJobForm } from '../components/jobs/AddJobForm';
 import { EditJobForm } from '../components/jobs/EditJobForm';
 import { JobDetailsView } from '../components/jobs/JobDetailsView';
 import { JobListingView } from '../components/jobs/JobListingView';
-import { User, UserRole, Job, JobApplication, SHGProfile, CompanyProfile, CandidateProfile, Training } from '../types';
+import { UserRole, Job, JobApplication, SHGProfile, CompanyProfile, CandidateProfile, Training } from '../types';
 import {
   LogOut,
   UserCheck,
@@ -105,7 +101,9 @@ import {
   Mail,
   Search,
   SlidersHorizontal,
+  History,
   UserCircle,
+  LockKeyhole,
   ChevronDown
 } from 'lucide-react';
 import { MockDb } from '../services/mockDb';
@@ -125,9 +123,9 @@ export default function DashboardHub() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-800 antialiased font-sans">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-theme-cream text-slate-800 antialiased font-sans">
         <h3 className="text-lg font-bold text-red-600 mb-2">{t('dashboard.unauthorized')}</h3>
-        <Link to="/login" className="px-5 py-2 bg-orange-600 text-white rounded-xl text-xs font-bold shadow-sm">
+        <Link to="/login" className="btn-gloss px-5 py-2.5 bg-theme-lavender hover:bg-theme-lavender/90 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-[0.98]">
           मराठी/EN लॉगिन
         </Link>
       </div>
@@ -135,7 +133,10 @@ export default function DashboardHub() {
   }
 
   const [toastMsg, setToastMsg] = useState('');
-  const [activeTab, setActiveTab] = useState('overview');
+  const defaultTab =
+    user.role === UserRole.SHG ? 'trainings'
+      : 'overview';
+  const [activeTab, setActiveTab] = useState(defaultTab);
 
   // Multi-state for modals
   const [showJobModal, setShowJobModal] = useState(false);
@@ -168,29 +169,29 @@ export default function DashboardHub() {
     return () => document.removeEventListener('mousedown', handler);
   }, [showProfileDropdown]);
 
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col antialiased font-sans">
+return (
+    <div className="h-dvh bg-theme-cream flex flex-col antialiased font-sans overflow-hidden">
       {/* Dynamic Dashboard Navbar */}
-      <nav className="bg-blue-950 text-white border-b border-blue-900/40 sticky top-0 z-40 shadow-xs">
+      <nav className="bg-theme-darkViolet text-white border-b border-theme-lightViolet/20 z-40 shadow-sm shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="w-9 h-9 rounded-full bg-orange-600 flex items-center justify-center font-bold text-white text-base">
-              श्री
+<div className="flex items-center gap-3 min-w-0">
+            <Link to="/" className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform">
+              <img src="/home/logo.png" alt="SRG Logo" className="w-10 h-10 object-contain drop-shadow" />
             </Link>
-            <div className="text-left">
-              <span className="font-extrabold text-xs tracking-tight block">श्री स्वामी समर्थ सेवा मार्ग</span>
-              <span className="text-[10px] text-orange-400 block font-bold uppercase tracking-wide">
+            <div className="text-left min-w-0">
+              <span className="font-extrabold text-xs sm:text-sm tracking-tight block text-white truncate">श्री स्वामी समर्थ सेवा मार्ग</span>
+              <span className="text-[10px] text-theme-gold block font-bold uppercase tracking-wide truncate">
                 डॅशबोर्ड / {user.role === UserRole.CANDIDATE ? 'CANDIDATE' : user.role === UserRole.COMPANY ? 'EMPLOYER' : user.role}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             {/* Last Login - visible always */}
             {lastLogin && (
               <div className="hidden md:flex flex-col items-end mr-2">
-                <span className="text-[9px] text-blue-300 font-bold uppercase tracking-wider">Last Login</span>
-                <span className="text-[10px] text-orange-400 font-semibold">
+                <span className="text-[9px] text-theme-lightViolet/70 font-bold uppercase tracking-wider">Last Login</span>
+                <span className="text-[10px] text-theme-gold font-semibold">
                   {new Date(lastLogin).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })},{' '}
                   {new Date(lastLogin).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                 </span>
@@ -200,30 +201,38 @@ export default function DashboardHub() {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                className="flex items-center gap-2 p-1 px-3 border border-blue-900 bg-blue-1000 font-bold hover:bg-blue-800 rounded-xl text-[11px] transition-all cursor-pointer"
+                className="flex items-center gap-2 p-1 px-3 border border-theme-lightViolet/30 bg-white/10 font-bold hover:bg-white/20 rounded-xl text-[11px] transition-all cursor-pointer"
               >
-                {navProfile?.profilePicUrl ? (
-                  <img src={navProfile.profilePicUrl} alt="Profile" className="w-7 h-7 rounded-full object-cover border border-orange-400" />
+{navProfile?.profilePicUrl ? (
+                  <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 ring-2 ring-theme-gold ring-offset-1 ring-offset-theme-darkViolet">
+                    <img src={navProfile.profilePicUrl} alt="Profile" className="w-full h-full object-cover object-center" />
+                  </div>
                 ) : (
-                  <UserCircle className="w-7 h-7 text-orange-400" />
+                  <div className="w-7 h-7 rounded-full bg-white/10 ring-2 ring-theme-gold flex items-center justify-center shrink-0">
+                    <UserCircle className="w-4 h-4 text-theme-gold" />
+                  </div>
                 )}
                 <span className="hidden sm:inline text-left max-w-[120px] truncate">{user.email}</span>
                 <ChevronDown className={`w-3 h-3 transition-transform ${showProfileDropdown ? 'rotate-180' : ''}`} />
               </button>
 
               {showProfileDropdown && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 z-50 py-1 animate-fade-in">
-                  <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
-                    {navProfile?.profilePicUrl ? (
-                      <img src={navProfile.profilePicUrl} alt="Profile" className="w-9 h-9 rounded-full object-cover border border-orange-300 shrink-0" />
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-theme-lightViolet/80 z-50 py-1 animate-fade-in text-slate-800">
+                  <div className="px-4 py-3 border-b border-theme-lightViolet/60 flex items-center gap-3">
+{navProfile?.profilePicUrl ? (
+                      <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-theme-gold shrink-0">
+                        <img src={navProfile.profilePicUrl} alt="Profile" className="w-full h-full object-cover object-center" />
+                      </div>
                     ) : (
-                      <UserCircle className="w-9 h-9 text-gray-300 shrink-0" />
+                      <div className="w-9 h-9 rounded-full bg-theme-lightViolet flex items-center justify-center shrink-0">
+                        <UserCircle className="w-5 h-5 text-theme-lavender/70" />
+                      </div>
                     )}
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-gray-900 truncate">{user.name}</p>
-                      <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
+                      <p className="text-xs font-bold text-theme-darkViolet truncate">{user.name}</p>
+                      <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
                       {lastLogin && (
-                        <p className="text-[9px] text-blue-600 font-semibold mt-1 truncate">
+                        <p className="text-[9px] text-theme-lavender font-semibold mt-1 truncate">
                           Last Login: {new Date(lastLogin).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })},{' '}
                           {new Date(lastLogin).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                         </p>
@@ -235,18 +244,27 @@ export default function DashboardHub() {
                       setShowProfileDropdown(false);
                       navigate('/profile');
                     }}
-                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2.5 transition-colors"
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-theme-lightViolet/40 hover:text-theme-darkViolet flex items-center gap-2.5 transition-colors cursor-pointer"
                   >
-                    <UserCircle className="w-4 h-4" /> My Profile
+<UserCircle className="w-4 h-4 text-theme-lavender" /> My Profile
                   </button>
-                  <div className="border-t border-gray-100 my-1"></div>
+                  <button
+                    onClick={() => {
+                      setShowProfileDropdown(false);
+                      navigate('/change-password');
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-theme-lightViolet/40 hover:text-theme-darkViolet flex items-center gap-2.5 transition-colors cursor-pointer"
+                  >
+                    <LockKeyhole className="w-4 h-4 text-theme-lavender" /> Change Password
+                  </button>
+                  <div className="border-t border-theme-lightViolet/60 my-1"></div>
                   <button
                     onClick={() => {
                       setShowProfileDropdown(false);
                       dispatch(logout());
                       navigate('/');
                     }}
-                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2.5 transition-colors"
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition-colors cursor-pointer"
                   >
                     <LogOut className="w-4 h-4" /> Logout
                   </button>
@@ -257,30 +275,16 @@ export default function DashboardHub() {
         </div>
       </nav>
 
-      {/* Primary Layout and Shell wrapper */}
-      <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-5 lg:px-6 py-4 lg:py-8 w-full text-slate-800">
-        <div className="mb-4 lg:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-150 pb-4">
-          <div className="text-left">
-            <h2 className="text-xl sm:text-2xl font-black text-blue-950">
-              {t('dashboard.welcome')}, {user.name}!
-            </h2>
-            <p className="text-xs text-slate-500 font-medium">
-              प.पू. गुरुमाऊलींच्या प्रेरणेने स्वयंरोजगार आणि स्वावलंबनात आपले स्वागत आहे.
-            </p>
-          </div>
-          <div className="inline-block px-3 py-1 bg-white border border-gray-100 rounded-xl shadow-xs text-xs font-bold text-orange-600">
-            {t('auth.fullName')}: {user.name} ({user.role})
-          </div>
-        </div>
-
+{/* Primary Layout and Shell wrapper */}
+      <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-5 lg:px-6 py-4 lg:py-8 w-full text-slate-800 overflow-y-auto overscroll-contain">
         {/* -------------------- 1. SUPER ADMIN / ADMIN BOARD -------------------- */}
         {(user.role === UserRole.SUPER_ADMIN || user.role === UserRole.ADMIN) && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <div className="lg:col-span-3 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start">
+            <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 content-start">
               <button
                 onClick={() => setActiveTab('overview')}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-                  activeTab === 'overview' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'overview' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                 }`}
               >
                 <Tag className="w-4 h-4" /> Seva / सेवा (Overview)
@@ -288,8 +292,8 @@ export default function DashboardHub() {
 
               <button
                 onClick={() => setActiveTab('registered_companies')}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-                  activeTab === 'registered_companies' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'registered_companies' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                 }`}
               >
                 <Building2 className="w-4 h-4" /> Registered Company / नोंदणीकृत कंपनी
@@ -297,8 +301,8 @@ export default function DashboardHub() {
 
               <button
                 onClick={() => setActiveTab('registered_users')}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-                  activeTab === 'registered_users' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'registered_users' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                 }`}
               >
                 <Users className="w-4 h-4" /> Registered User / नोंदणीकृत वापरकर्ते
@@ -306,8 +310,8 @@ export default function DashboardHub() {
 
               <button
                 onClick={() => setActiveTab('job_requirements')}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-                  activeTab === 'job_requirements' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'job_requirements' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                 }`}
               >
                 <Send className="w-4 h-4" /> Job Requirement / नोकरी आवश्यकता
@@ -315,47 +319,14 @@ export default function DashboardHub() {
 
               <button
                 onClick={() => setActiveTab('job_applications')}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-                  activeTab === 'job_applications' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'job_applications' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                 }`}
               >
                 <Mail className="w-4 h-4" /> Job Application / नोकरी अर्ज
               </button>
 
-              <hr className="my-1 border-gray-200 hidden lg:block" />
-
-              <button
-                onClick={() => setActiveTab('users')}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-                  activeTab === 'users' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
-                }`}
-              >
-                <UserCheck className="w-4 h-4" /> सदस्य आणि हक्क (RBAC)
-              </button>
-              <button
-                onClick={() => setActiveTab('jobs')}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-                  activeTab === 'jobs' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
-                }`}
-              >
-                <Briefcase className="w-4 h-4" /> नोकऱ्या मान्यता (Jobs)
-              </button>
-              <button
-                onClick={() => setActiveTab('companies')}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-                  activeTab === 'companies' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
-                }`}
-              >
-                <Settings className="w-4 h-4" /> नियोक्ते मान्यता (Companies)
-              </button>
-              <button
-                onClick={() => setActiveTab('reports')}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-                  activeTab === 'reports' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
-                }`}
-              >
-                <FileText className="w-4 h-4" /> अहवाल आणि विदा (Reports)
-              </button>
+              <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
 
               <button
                 onClick={() => {
@@ -364,7 +335,7 @@ export default function DashboardHub() {
                     navigate('/login');
                   }
                 }}
-                className="px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-100 mt-2"
+                className="px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
               >
                 <Power className="w-4 h-4" /> Log Off / लॉग ऑफ
               </button>
@@ -395,26 +366,6 @@ export default function DashboardHub() {
               {activeTab === 'job_applications' && (
                 <AdminJobApplications />
               )}
-
-              {/* Users & RBAC Tab */}
-              {activeTab === 'users' && (
-                <AdminUsersTab setToastMsg={setToastMsg} />
-              )}
-
-              {/* Jobs Approvals Tab */}
-              {activeTab === 'jobs' && (
-                <AdminJobsApprovalTab setToastMsg={setToastMsg} />
-              )}
-
-              {/* Companies Approval Tab */}
-              {activeTab === 'companies' && (
-                <AdminCompaniesApprovalTab setToastMsg={setToastMsg} />
-              )}
-
-              {/* Reports Dashboard Tab */}
-              {activeTab === 'reports' && (
-                <AdminReportsTab />
-              )}
             </div>
           </div>
         )}
@@ -422,8 +373,8 @@ export default function DashboardHub() {
         {/* -------------------- 2. HANDLER STAFF DASHBOARD (Dynamic Privileges) -------------------- */}
         {user.role === UserRole.HANDLER && (
           <div className="space-y-8 text-left">
-            <div className="bg-blue-50 border border-blue-100 p-4.5 rounded-2xl">
-              <h3 className="text-sm font-bold text-blue-900 mb-1">
+            <div className="bg-theme-lightViolet border border-theme-sage/40 p-4.5 rounded-2xl">
+              <h3 className="text-sm font-bold text-theme-darkViolet mb-1">
                 {t('dashboard.handlerTitle')} – dynamic system staff privileges enabled:
               </h3>
               <div className="flex flex-wrap gap-2.5 mt-2">
@@ -446,11 +397,11 @@ export default function DashboardHub() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              <div className="lg:col-span-3 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0">
+              <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 content-start">
                 <button
                   onClick={() => setActiveTab('overview')}
-                  className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all ${
-                    activeTab === 'overview' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                  className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
+                    activeTab === 'overview' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                   }`}
                 >
                   आढावा / Overview
@@ -458,8 +409,8 @@ export default function DashboardHub() {
                 {user.handlerPermissions?.canApproveJobs && (
                   <button
                     onClick={() => setActiveTab('jobs')}
-                    className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all ${
-                      activeTab === 'jobs' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                    className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
+                      activeTab === 'jobs' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                   >
                     नोकऱ्या मान्यता / Jobs Validation
@@ -468,8 +419,8 @@ export default function DashboardHub() {
                 {user.handlerPermissions?.canManageCompanies && (
                   <button
                     onClick={() => setActiveTab('companies')}
-                    className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all ${
-                      activeTab === 'companies' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                    className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
+                      activeTab === 'companies' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                   >
                     नियोक्ते फेरबदल / Companies
@@ -478,8 +429,8 @@ export default function DashboardHub() {
                 {user.handlerPermissions?.canManageSHG && (
                   <button
                     onClick={() => setActiveTab('shg')}
-                    className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all ${
-                      activeTab === 'shg' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                    className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
+                      activeTab === 'shg' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                   >
                     बचतगट सक्षमीकरण / SHGs Info
@@ -488,16 +439,28 @@ export default function DashboardHub() {
                 {user.handlerPermissions?.canViewReports && (
                   <button
                     onClick={() => setActiveTab('reports')}
-                    className={`px-4.5 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap text-left shrink-0 w-full transition-all ${
-                      activeTab === 'reports' ? 'bg-orange-600 text-white shadow-xs' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+                    className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
+                      activeTab === 'reports' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                   >
                     अहवाल अहवाल / Reports Summary
                   </button>
                 )}
+                <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
+                <button
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to log off?')) {
+                      dispatch(logout());
+                      navigate('/login');
+                    }
+                  }}
+                  className="px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
+                >
+                  <Power className="w-4 h-4" /> Log Off / लॉग ऑफ
+                </button>
               </div>
 
-      <div className="lg:col-span-9 space-y-4 lg:space-y-6">
+      <div className="lg:col-span-9 space-y-6">
                 {activeTab === 'overview' && (
                   <AdminOverviewTab />
                 )}
@@ -561,7 +524,7 @@ export default function DashboardHub() {
 // ==========================================
 // SUB-TAB VIEWS: DYNAMIC LIVE API STATISTICS
 // ==========================================
-function LiveDashboardStats() {
+function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: number }) {
   const { user } = useSelector((state: RootState) => state.auth);
   const { data: stats, isLoading, error } = useGetDashboardStatsQuery(undefined, { skip: !user });
 
@@ -602,6 +565,13 @@ function LiveDashboardStats() {
         value: adminDashboard.companyRegistrationCount,
         icon: <Layers className="w-5 h-5 text-emerald-600" />,
         colorClass: "bg-emerald-50/70 border-emerald-100"
+      },
+      {
+        labelMr: 'एकूण नोकरी आवश्यकता संख्या',
+        labelEn: 'Total Job Requirements',
+        value: adminDashboard.requirementCount,
+        icon: <Briefcase className="w-5 h-5 text-purple-600" />,
+        colorClass: "bg-purple-50/70 border-purple-100"
       },
       {
         labelMr: 'एकूण नोकरी अर्ज संख्या',
@@ -652,7 +622,7 @@ function LiveDashboardStats() {
       {
         labelMr: 'अर्ज केलेल्या नोकऱ्या',
         labelEn: 'Applied Jobs Count',
-        value: candidateDashboard.AppliedJobCount || candidateDashboard.appliedJobCount || 0,
+        value: appliedJobsOverride ?? (candidateDashboard.AppliedJobCount || candidateDashboard.appliedJobCount || 0),
         icon: <FileText className="w-5 h-5 text-blue-600" />,
         colorClass: "bg-blue-50/70 border-blue-100"
       },
@@ -696,7 +666,7 @@ function LiveDashboardStats() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-4">
           {items.map((item, idx) => (
             <div key={idx} className={`p-3 lg:p-4 rounded-xl border flex items-start gap-2 lg:gap-3 transition-all ${item.colorClass}`}>
               <div className="p-1.5 lg:p-2 bg-white rounded-lg shadow-2xs shrink-0">
@@ -871,136 +841,6 @@ function AdminOverviewTab() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ==========================================
-// ACTION CONTROL PANEL: 2. MANAGING USERS AND DYNAMIC HANDLER PERMISSIONS (RBAC)
-// ==========================================
-function AdminUsersTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) {
-  const dispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.auth);
-  const { data: users = [], refetch } = useGetHandlersQuery(undefined, { skip: !user });
-  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
-  const [editingHandlerId, setEditingHandlerId] = useState('');
-  
-  // Handler Permissions temporary state
-  const [perms, setPerms] = useState({
-    canViewUsers: true,
-    canEditUsers: false,
-    canApproveJobs: true,
-    canManageCompanies: false,
-    canManageSHG: true,
-    canViewReports: true,
-    canManageContent: false
-  });
-
-  const [updatePermissions] = useUpdateHandlerPermissionsMutation();
-
-  const handleOpenEdit = (userItem: User) => {
-    setEditingHandlerId(userItem.id);
-    if (userItem.handlerPermissions) {
-      setPerms(userItem.handlerPermissions);
-    }
-  };
-
-  const handleSavePerms = async () => {
-    try {
-      await updatePermissions({ id: editingHandlerId, permissions: perms }).unwrap();
-      
-      // Also update local redux state if currently logged in user is editing themselves
-      if (editingHandlerId === 'u-5') {
-        dispatch(updateHandlerPermissions(perms));
-      }
-
-      setToastMsg('हक्क अद्ययावत केले / Dynamic Handler Permissions updated!');
-      setEditingHandlerId('');
-      refetch();
-    } catch (e) {
-      setToastMsg('Failed to update flags');
-    }
-  };
-
-  return (
-    <div className="space-y-6 text-left">
-      <Card title="लायजन मदतनीस नियंत्रण व हक्क नियुक्ती / Liaisons Dynamic Privileges RBAC">
-        <p className="text-xs text-gray-550 leading-relaxed mb-4 font-semibold">
-          मुख्य प्रशासक म्हणून तुम्ही प्रत्येक मदतनीस (Handler) चे हक्क गतिमान पद्धतीने (dynamically) मर्यादित किंवा खुले करू शकता. त्यानुसार त्यांची कार्यकक्षा बदलते.
-        </p>
-
-        {users.length === 0 ? (
-          <EmptyState title="No Handlers Listed" desc="Register a handler user first." />
-        ) : (
-          <div className="space-y-4">
-            {users.map((handler) => (
-              <div key={handler.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-slate-850 flex items-center gap-1.5">
-                    👤 {handler.name} <Badge type="secondary">HANDLER STATUS</Badge>
-                  </h4>
-                  <p className="text-xs text-slate-500 font-semibold">{handler.email} | {handler.phone}</p>
-                </div>
-                <div>
-                  <button
-                    onClick={() => handleOpenEdit(handler)}
-                    className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
-                  >
-                    हक्क बदला / Modify RBAC
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {/* Permissions editing subcard */}
-      {editingHandlerId && (
-        <Card title="मदतनीस हक्क संपादन / Configure Dynamic Privileges">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <ToggleSwitch
-              label="वापरकर्ते पाहू शकतात (Can View Users)"
-              checked={perms.canViewUsers}
-              onToggle={(v) => setPerms({ ...perms, canViewUsers: v })}
-            />
-            <ToggleSwitch
-              label="वापरकर्ते बदलू शकतात (Can Edit Users)"
-              checked={perms.canEditUsers}
-              onToggle={(v) => setPerms({ ...perms, canEditUsers: v })}
-            />
-            <ToggleSwitch
-              label="नोकऱ्या मान्य करू शकतात (Can Approve Jobs)"
-              checked={perms.canApproveJobs}
-              onToggle={(v) => setPerms({ ...perms, canApproveJobs: v })}
-            />
-            <ToggleSwitch
-              label="नियोक्ते संपादन हक्क (Can Manage Companies)"
-              checked={perms.canManageCompanies}
-              onToggle={(v) => setPerms({ ...perms, canManageCompanies: v })}
-            />
-            <ToggleSwitch
-              label="बचत गट पडताळणी (Can Manage SHG)"
-              checked={perms.canManageSHG}
-              onToggle={(v) => setPerms({ ...perms, canManageSHG: v })}
-            />
-            <ToggleSwitch
-              label="अहवाल पाहू शकतात (Can View Reports)"
-              checked={perms.canViewReports}
-              onToggle={(v) => setPerms({ ...perms, canViewReports: v })}
-            />
-          </div>
-
-          <div className="flex items-center gap-2 justify-end mt-6 border-t border-slate-100 pt-4">
-            <SecondaryButton onClick={() => setEditingHandlerId('')}>
-              रद्द करा / Close
-            </SecondaryButton>
-            <PrimaryButton onClick={handleSavePerms}>
-              बदल जतन करा / Save RBAC Rules
-            </PrimaryButton>
-          </div>
-        </Card>
-      )}
     </div>
   );
 }
@@ -1305,8 +1145,9 @@ function HandlerSHGTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) 
 function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: string; setToastMsg: (msg: string) => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
-  const [activeTab, setActiveTab] = useState('pipeline');
+  const [activeTab, setActiveTab] = useState('overview');
 
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
   const [selectedJobCode, setSelectedJobCode] = useState<string | undefined>(undefined);
@@ -1317,8 +1158,10 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   const [pipelineSearch, setPipelineSearch] = useState('');
   const [pipelineStatusFilter, setPipelineStatusFilter] = useState('');
   const [pipelineJobFilter, setPipelineJobFilter] = useState('');
-  const [pipelinePage, setPipelinePage] = useState(1);
   const PIPELINE_PAGE_SIZE = 10;
+  const [pipelineVisibleCount, setPipelineVisibleCount] = useState(PIPELINE_PAGE_SIZE);
+  const [pipelineLoadingMore, setPipelineLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const { data: locations = [] } = useGetLocationsQuery(undefined, { skip: !user });
   const { data: jobCategories = [] } = useGetJobCategoriesQuery(undefined, { skip: !user });
@@ -1361,17 +1204,41 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
     return result;
   }, [pipelineApps, pipelineSearch, pipelineStatusFilter, pipelineJobFilter]);
 
-  // Paginated slice of filtered pipeline
-  const pipelineTotalPages = Math.max(1, Math.ceil(filteredPipelineApps.length / PIPELINE_PAGE_SIZE));
-  const paginatedPipelineApps = React.useMemo(() => {
-    const start = (pipelinePage - 1) * PIPELINE_PAGE_SIZE;
-    return filteredPipelineApps.slice(start, start + PIPELINE_PAGE_SIZE);
-  }, [filteredPipelineApps, pipelinePage]);
+  // Infinite scroll slice of the filtered pipeline (10 records per batch)
+  const visiblePipelineApps = React.useMemo(() => {
+    return filteredPipelineApps.slice(0, pipelineVisibleCount);
+  }, [filteredPipelineApps, pipelineVisibleCount]);
 
-  // Reset pipeline page when filters change
+  const pipelineHasMore = filteredPipelineApps.length > pipelineVisibleCount;
+
+  // Reset visible count when filters change
   React.useEffect(() => {
-    setPipelinePage(1);
+    setPipelineVisibleCount(PIPELINE_PAGE_SIZE);
   }, [pipelineSearch, pipelineStatusFilter, pipelineJobFilter]);
+
+  // Infinite scroll: load the next 10 records when the sentinel is near the viewport
+  const loadMorePipeline = React.useCallback(() => {
+    if (!pipelineHasMore || pipelineLoadingMore) return;
+    setPipelineLoadingMore(true);
+    // Simulate a tiny async step so the loader is perceivable on fast lists
+    window.setTimeout(() => {
+      setPipelineVisibleCount(c => Math.min(c + PIPELINE_PAGE_SIZE, filteredPipelineApps.length));
+      setPipelineLoadingMore(false);
+    }, 350);
+  }, [pipelineHasMore, pipelineLoadingMore, filteredPipelineApps.length]);
+
+  React.useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el || !pipelineHasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMorePipeline();
+      },
+      { rootMargin: '200px 0px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [pipelineHasMore, loadMorePipeline]);
 
   // Job creation forms state
   const [vacancyTitle, setVacancyTitle] = useState('');
@@ -1494,45 +1361,67 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start text-left font-sans">
-      <div className="lg:col-span-3 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start text-left font-sans">
+      <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 content-start">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+            activeTab === 'overview' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
+          }`}
+        >
+          <Tag className="w-4 h-4" /> आढावा / Overview
+        </button>
         <button
           onClick={() => setActiveTab('pipeline')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-            activeTab === 'pipeline' ? 'bg-orange-600 text-white' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+            activeTab === 'pipeline' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
           <Compass className="w-4 h-4" /> अर्ज प्रक्रिया / Pipeline ({pipelineApps.length})
         </button>
         <button
           onClick={() => setActiveTab('listings')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-            activeTab === 'listings' ? 'bg-orange-600 text-white' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+            activeTab === 'listings' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
           <Briefcase className="w-4 h-4" /> रिक्रूट नोकऱ्या / Vacancies ({jobsList.length})
         </button>
         <button
           onClick={() => setActiveTab('post')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-            activeTab === 'post' ? 'bg-orange-600 text-white' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+            activeTab === 'post' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
           <FilePlus className="w-4 h-4" /> नवीन नोकरी जोडा / Post Job
         </button>
         <button
           onClick={() => setActiveTab('profile')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-            activeTab === 'profile' ? 'bg-orange-600 text-white' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+            activeTab === 'profile' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
           <Settings className="w-4 h-4" /> कंपनी प्रोफाइल / Profile Settings
         </button>
+        <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
+        <button
+          onClick={() => {
+            if (window.confirm('Are you sure you want to log off?')) {
+              dispatch(logout());
+              navigate('/login');
+            }
+          }}
+          className="px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
+        >
+          <Power className="w-4 h-4" /> Log Off / लॉग ऑफ
+        </button>
       </div>
 
       <div className="lg:col-span-9 space-y-6">
-        {/* Live Dashboard API statistics */}
-        <LiveDashboardStats />
+        {/* Overview tab - Employer Control Dashboard */}
+        {activeTab === 'overview' && (
+          <LiveDashboardStats />
+        )}
 
         {/* Verification Alert status banner if unapproved recruiter */}
         {profile && !profile.isApproved && (
@@ -1552,7 +1441,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
               <>
                 {/* Search & Filter bar */}
                 <div className="flex flex-col sm:flex-row gap-3 pb-4 border-b border-slate-100">
-                  <div className="relative flex-1">
+                  <div className="relative flex-1 min-w-0">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                       <Search className="h-3.5 w-3.5 text-slate-400" />
                     </span>
@@ -1564,12 +1453,12 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                       className="w-full text-xs pl-9 pr-4 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <select
                       value={pipelineStatusFilter}
                       onChange={(e) => setPipelineStatusFilter(e.target.value)}
-                      className="text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800 font-semibold cursor-pointer"
+                      className="flex-1 sm:flex-none min-w-0 max-w-full sm:w-40 text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800 font-semibold cursor-pointer"
                     >
                       <option value="">All Status</option>
                       <option value="Applied">Applied</option>
@@ -1582,7 +1471,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                     <select
                       value={pipelineJobFilter}
                       onChange={(e) => setPipelineJobFilter(e.target.value)}
-                      className="text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800 font-semibold cursor-pointer"
+                      className="flex-1 sm:flex-none min-w-0 max-w-full sm:w-48 text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800 font-semibold cursor-pointer"
                     >
                       <option value="">All Jobs</option>
                       {uniqueJobTitles.map((title) => (
@@ -1592,7 +1481,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                     {(pipelineSearch || pipelineStatusFilter || pipelineJobFilter) && (
                       <button
                         onClick={() => { setPipelineSearch(''); setPipelineStatusFilter(''); setPipelineJobFilter(''); }}
-                        className="text-[10px] text-orange-600 font-bold hover:underline cursor-pointer whitespace-nowrap"
+                        className="text-[10px] text-orange-600 font-bold hover:underline cursor-pointer whitespace-nowrap shrink-0"
                       >
                         Clear All
                       </button>
@@ -1602,15 +1491,15 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
 
                 {/* Results count */}
                 <div className="text-[10px] text-slate-400 font-bold pt-2">
-                  Showing {filteredPipelineApps.length === 0 ? 0 : ((pipelinePage - 1) * PIPELINE_PAGE_SIZE) + 1} to {Math.min(pipelinePage * PIPELINE_PAGE_SIZE, filteredPipelineApps.length)} of {filteredPipelineApps.length} applicants
+                  Showing {filteredPipelineApps.length === 0 ? 0 : 1} to {Math.min(pipelineVisibleCount, filteredPipelineApps.length)} of {filteredPipelineApps.length} applicants
                 </div>
 
                 {/* Applicant cards */}
                 <div className="space-y-4 pt-2">
-                  {paginatedPipelineApps.length === 0 ? (
+                  {visiblePipelineApps.length === 0 ? (
                     <p className="text-xs text-slate-400 text-center py-6 font-medium">No applicants match your search/filters.</p>
                   ) : (
-                    paginatedPipelineApps.map((app) => (
+                    visiblePipelineApps.map((app) => (
                       <div key={app.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200/50 pb-2.5">
                           <div className="space-y-1">
@@ -1670,40 +1559,28 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                   )}
                 </div>
 
-                {/* Pagination controls */}
-                {pipelineTotalPages > 1 && (
-                  <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                    <button
-                      onClick={() => setPipelinePage(p => Math.max(1, p - 1))}
-                      disabled={pipelinePage === 1}
-                      className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 cursor-pointer"
-                    >
-                      ← Prev
-                    </button>
-                    <div className="flex gap-1">
-                      {Array.from({ length: pipelineTotalPages }, (_, i) => i + 1).map((page) => (
+                {/* Infinite scroll footer */}
+                <div className="pt-4 border-t border-slate-100">
+                  {pipelineHasMore && (
+                    <div ref={loadMoreRef} className="flex flex-col items-center gap-2 py-2">
+                      {pipelineLoadingMore ? (
+                        <span className="text-[11px] text-slate-400 font-semibold animate-pulse">Loading more applicants...</span>
+                      ) : (
                         <button
-                          key={page}
-                          onClick={() => setPipelinePage(page)}
-                          className={`px-2.5 py-1 text-[10px] font-bold rounded-lg cursor-pointer transition-colors ${
-                            page === pipelinePage
-                              ? 'bg-orange-600 text-white'
-                              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                          }`}
+                          onClick={loadMorePipeline}
+                          className="text-[11px] text-orange-600 font-bold hover:underline cursor-pointer"
                         >
-                          {page}
+                          Load more applicants
                         </button>
-                      ))}
+                      )}
                     </div>
-                    <button
-                      onClick={() => setPipelinePage(p => Math.min(pipelineTotalPages, p + 1))}
-                      disabled={pipelinePage === pipelineTotalPages}
-                      className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 cursor-pointer"
-                    >
-                      Next →
-                    </button>
-                  </div>
-                )}
+                  )}
+                  {!pipelineHasMore && filteredPipelineApps.length > 0 && (
+                    <div className="text-center py-2">
+                      <span className="text-[10px] text-slate-400 font-semibold">You've reached the end of the list.</span>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </Card>
@@ -1815,8 +1692,10 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
 // ==========================================
 function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: string; setToastMsg: (msg: string) => void }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
-  const [activeTab, setActiveTab] = useState('search');
+  const [activeTab, setActiveTab] = useState('overview');
 
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
   const [selectedJobCode, setSelectedJobCode] = useState<string | undefined>(undefined);
@@ -1969,7 +1848,7 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
     searchJobs.filter((j: any) => j.userJobStatus === 'Already applied' || j.userJobStatus === 'Already Applied').length,
     availableJobs.filter((j) => j.userJobStatus === 'Already applied').length
   );
-  const appliedCount = Math.max(apiAppliedCount, recentlyAppliedIds.size);
+  const appliedCount = Math.max(apiAppliedCount, recentlyAppliedIds.size, myApps.length);
 
   const filteredJobs = availableJobs.filter((j) => {
     const query = searchPhrase.toLowerCase();
@@ -1985,37 +1864,59 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
   });
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start text-left font-sans animate-fade-in animate-duration-150">
-      <div className="lg:col-span-3 flex flex-row lg:flex-col gap-1.5 lg:gap-2 overflow-x-auto pb-1 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start text-left font-sans">
+      <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 content-start">
         <button
-          onClick={() => { setActiveTab('search'); setSelectedJobIdForDetail(null); }}
-          className={`px-3 lg:px-4.5 py-2 lg:py-2.5 text-[11px] lg:text-xs font-bold rounded-lg lg:rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-1.5 lg:gap-2 ${
-            activeTab === 'search' ? 'bg-orange-600 text-white' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+          onClick={() => { setActiveTab('overview'); setSelectedJobIdForDetail(null); }}
+          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+            activeTab === 'overview' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          🔍 शोध नोकरी / Find Jobs
+          <Tag className="w-4 h-4" /> आढावा / Overview
+        </button>
+        <button
+          onClick={() => { setActiveTab('search'); setSelectedJobIdForDetail(null); }}
+          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+            activeTab === 'search' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
+          }`}
+        >
+          <Search className="w-4 h-4" /> शोध नोकरी / Find Jobs
         </button>
         <button
           onClick={() => { setActiveTab('history'); setSelectedJobIdForDetail(null); }}
-          className={`px-3 lg:px-4.5 py-2 lg:py-2.5 text-[11px] lg:text-xs font-bold rounded-lg lg:rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-1.5 lg:gap-2 ${
-            activeTab === 'history' ? 'bg-orange-600 text-white' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+            activeTab === 'history' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          📂 माझे अर्ज / Applied ({appliedCount})
+          <History className="w-4 h-4" /> माझे अर्ज / Applied ({appliedCount})
         </button>
         <button
           onClick={() => { setActiveTab('profile'); setSelectedJobIdForDetail(null); }}
-          className={`px-3 lg:px-4.5 py-2 lg:py-2.5 text-[11px] lg:text-xs font-bold rounded-lg lg:rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-1.5 lg:gap-2 ${
-            activeTab === 'profile' ? 'bg-orange-600 text-white' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+            activeTab === 'profile' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          👤 बायोडाटा संपादन / Complete Profile
+          <UserCircle className="w-4 h-4" /> बायोडाटा संपादन / Complete Profile
+        </button>
+        <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
+        <button
+          onClick={() => {
+            if (window.confirm('Are you sure you want to log off?')) {
+              dispatch(logout());
+              navigate('/login');
+            }
+          }}
+          className="px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
+        >
+          <Power className="w-4 h-4" /> Log Off / लॉग ऑफ
         </button>
       </div>
 
       <div className="lg:col-span-9 space-y-6">
-        {/* Live Dashboard API statistics */}
-        <LiveDashboardStats />
+        {/* Overview tab - Candidate Dashboard */}
+        {activeTab === 'overview' && (
+          <LiveDashboardStats appliedJobsOverride={appliedCount} />
+        )}
 
         {/* Profile incomplete warning to push CV uploads */}
         {!resumeName && (
@@ -2065,7 +1966,21 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
           ) : (
             <Card title="तुमच्या अर्जांची स्थिती / Your Active Job Applications">
               {(() => {
-                const mergedApps: Array<{ id: string; jobTitle: string; companyName: string; status: string; numericId: number; jobCode?: string }> = [];
+                const mergedApps: Array<{ id: string; jobTitle: string; companyName: string; status: string; numericId?: number; jobCode?: string }> = [];
+
+                // Applications from the applications history API (myApps)
+                myApps.forEach((a) => {
+                  const numId = parseInt(String(a.jobId).replace(/\D/g, ''), 10);
+                  if (!mergedApps.some((m) => m.id === a.id)) {
+                    mergedApps.push({
+                      id: a.id,
+                      jobTitle: a.jobTitle || 'Job',
+                      companyName: a.companyName || 'Company',
+                      status: a.status || 'Applied',
+                      numericId: numId && !isNaN(numId) ? numId : undefined
+                    });
+                  }
+                });
 
                 // Jobs from searchJobs API (TanStack Query) where userJobStatus indicates already applied
                 searchJobs.forEach((j: any) => {
@@ -2104,8 +2019,8 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                     {mergedApps.map((app) => (
                       <div
                         key={app.id}
-                        onClick={() => setSelectedJobIdForDetail(app.numericId)}
-                        className="p-3 lg:p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-3 text-left hover:bg-orange-50 hover:border-orange-200 transition-all cursor-pointer"
+                        onClick={app.numericId ? () => setSelectedJobIdForDetail(app.numericId!) : undefined}
+                        className={`p-3 lg:p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-3 text-left transition-all ${app.numericId ? 'hover:bg-orange-50 hover:border-orange-200 cursor-pointer' : ''}`}
                       >
                         <div className="space-y-1.5">
                           <h4 className="text-sm font-bold text-slate-800">{app.jobTitle}</h4>
@@ -2364,6 +2279,8 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
 // INTEGRATED SUB-BOARD: SELF HELP GROUPS (SHG) PORTAL
 // ==========================================
 function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg: (msg: string) => void }) {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
   const [activeTab, setActiveTab] = useState('trainings');
 
@@ -2441,31 +2358,43 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start text-left font-sans">
-      <div className="lg:col-span-3 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0 font-sans">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start text-left font-sans">
+      <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 content-start">
         <button
           onClick={() => setActiveTab('trainings')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-            activeTab === 'trainings' ? 'bg-orange-600 text-white shadow-sm' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+            activeTab === 'trainings' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
           <Award className="w-4 h-4" /> व्यावसायिक प्रशिक्षण / Courses
         </button>
         <button
           onClick={() => setActiveTab('products')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-            activeTab === 'products' ? 'bg-orange-600 text-white shadow-sm' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+            activeTab === 'products' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
           <ShoppingBag className="w-4 h-4" /> उत्पादन कॅटलॉग / Sell Products
         </button>
         <button
           onClick={() => setActiveTab('profile')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left shrink-0 w-full transition-all flex items-center gap-2 ${
-            activeTab === 'profile' ? 'bg-orange-600 text-white shadow-sm' : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-100'
+          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+            activeTab === 'profile' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
           <Settings className="w-4 h-4" /> बचतगट प्रोफाइल / Group Profiles
+        </button>
+        <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
+        <button
+          onClick={() => {
+            if (window.confirm('Are you sure you want to log off?')) {
+              dispatch(logout());
+              navigate('/login');
+            }
+          }}
+          className="px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
+        >
+          <Power className="w-4 h-4" /> Log Off / लॉग ऑफ
         </button>
       </div>
 

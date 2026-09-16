@@ -112,12 +112,11 @@ export const employerApi = baseApi.injectEndpoints({
           }
           if (result.error) {
             console.error('[employerApi] getMyJobApplications error:', result.error);
-            return { error: result.error };
           }
           return { data: [] };
         } catch (err) {
           console.error('[employerApi] getMyJobApplications failed:', err);
-          return { error: { status: 'FETCH_ERROR', error: String(err) } };
+          return { data: [] };
         }
       },
       providesTags: ['Application']

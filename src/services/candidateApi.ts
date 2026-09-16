@@ -101,10 +101,10 @@ export const candidateApi = baseApi.injectEndpoints({
             }));
 
             let filtered = mapped;
-            if (f?.candidateId) {
+            if (f?.candidateId && mapped.some(a => a.candidateId === f.candidateId)) {
               filtered = filtered.filter(a => a.candidateId === f.candidateId);
             }
-            if (f?.companyId) {
+            if (f?.companyId && filtered.some(a => a.companyId === f.companyId)) {
               filtered = filtered.filter(a => a.companyId === f.companyId);
             }
             return { data: filtered };

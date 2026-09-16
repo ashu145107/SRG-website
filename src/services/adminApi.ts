@@ -28,13 +28,18 @@ const parsePaginatedResponse = <T>(
 
   // Handle different response formats from API
   const value = data.value !== undefined ? data.value : data;
-  
+
   if (Array.isArray(value)) {
     list = value;
     totalCount = value.length;
   } else if (value && typeof value === 'object') {
-    const possibleArrays = [value.data, value.items, value.list];
-    const foundArr = possibleArrays.find(arr => Array.isArray(arr));
+    const possibleArrays = [value.data, value.items, value.list, value.records, value.results, value.rows];
+    let foundArr = possibleArrays.find(arr => Array.isArray(arr));
+
+    if (!foundArr) {
+      // Last resort: scan the value object for any array property
+      foundArr = Object.values(value).find(v => Array.isArray(v)) as T[] | undefined;
+    }
     if (foundArr) {
       list = foundArr;
     }
@@ -49,6 +54,126 @@ const parsePaginatedResponse = <T>(
   return { items: list || [], totalCount: totalCount || 0 };
 };
 
+/**
+ * Normalize raw job application API items into the JobApplication shape
+ * the UI tables use, handling multiple backend field names.
+ */
+const normalizeApplication = (item: any, index: number): JobApplication => {
+  const rawId = item.id || item.jobApplicationId || item.appliedJobId || `app-${Date.now()}-${index}`;
+  return {
+    id: String(rawId),
+    jobId: String(item.jobId || item.jobRequirementId || item.jobCode || item.jobPostingId || ''),
+    jobTitle: item.jobTitle || item.jobDesignation || item.profileHeader || item.title || 'Untitled Job',
+    companyName: item.companyName || item.company || '',
+    companyId: String(item.companyId || ''),
+    candidateId: String(item.candidateId || item.userId || ''),
+    candidateName: item.candidateName || item.fullName || item.name || 'Candidate',
+    candidatePhone: item.candidatePhone || item.phone || item.mobile || '',
+    status: (item.status || 'Applied') as JobApplication['status'],
+    appliedAt: item.appliedAt || item.createdDate || item.applicationDate || new Date().toISOString().split('T')[0],
+    interviewDate: item.interviewDate || undefined
+  };
+};
+
+/**
+ * Normalize raw user-registration API items into the CandidateProfile shape
+ * the admin tables use, handling multiple backend field names.
+ */
+const normalizeUser = (item: any): CandidateProfile => {
+  if (!item || typeof item !== 'object') return {};
+
+  const personal = item.personalInfo || item.candidate || item;
+  const education = item.educationInfo || item.candidate || item;
+
+  const toStr = (v: any): string => (v === undefined || v === null ? '' : String(v).trim());
+  const toNum = (v: any): number => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const experienceVal = education.experience ?? education.experienceYears ?? item.experience ?? item.experienceYears ?? 0;
+  const specializationVal = education.specialization
+    ?? education.specializationName
+    ?? education.subEducationName
+    ?? item.specialization
+    ?? item.specializationName
+    ?? item.subEducationName
+    ?? item.subEducation
+    ?? '';
+
+  const skillsRaw = education.skill ?? education.skills ?? item.skills;
+  const skills = Array.isArray(skillsRaw)
+    ? skillsRaw.map((s: any) => toStr(s)).filter(Boolean)
+    : typeof skillsRaw === 'string'
+      ? skillsRaw.split(',').map((s: string) => s.trim()).filter(Boolean)
+      : [];
+
+  return {
+    id: String(personal.userId || item.userId || item.id || item.candidateId || ''),
+    userId: toStr(item.userId || item.id || personal.userId),
+    fullName: toStr(personal.fullName || item.fullName || item.candidateName || item.name),
+    email: toStr(personal.email || item.email),
+    phone: toStr(personal.mobile || personal.mobileNo || personal.mobileNumber || personal.phoneNumber || personal.contactNumber || item.phone || item.mobile),
+    mobile: toStr(personal.mobile || personal.mobileNo || personal.mobileNumber || personal.phoneNumber || personal.contactNumber || item.phone || item.mobile),
+    city: toStr(personal.city || item.city || education.talukaName || item.talukaName || personal.districtName || item.districtName || personal.district || item.district),
+    district: toStr(personal.districtName || personal.district || item.districtName || item.district),
+    talukaName: toStr(personal.talukaName || item.talukaName),
+    stateName: toStr(personal.stateName || item.stateName),
+    address: toStr(personal.address || item.address),
+    qualification: toStr(education.education || education.qualification || item.qualification || item.education),
+    education: toStr(education.education || item.education || item.qualification),
+    experienceYears: toNum(experienceVal),
+    experience: toNum(experienceVal),
+    specialization: toStr(specializationVal),
+    skills,
+    resumeUrl: toStr(item.resumeUrl || item.resume_File_Path || item.resumeFileName),
+    resumeName: toStr(item.resumeName || item.resumeFileName),
+  };
+};
+
+/**
+ * Normalize raw job-requirement API items so `id` (the requirement id used
+ * by detail/application endpoints) is always resolved, regardless of which
+ * field name the backend returns.
+ */
+const normalizeJobRequirement = (item: any, index: number): any => {
+  if (!item || typeof item !== 'object') return item;
+  const rawId = item.id || item.jobRequirementId || item.jobId;
+  const numId = typeof rawId === 'number'
+    ? rawId
+    : typeof rawId === 'string'
+      ? (parseInt(String(rawId).replace(/\D/g, ''), 10) || index + 1)
+      : index + 1;
+  return {
+    ...item,
+    id: numId,
+    jobRequirementId: numId,
+  };
+};
+
+/**
+ * Normalize raw company-registration API items into the CompanyProfile shape,
+ * handling multiple backend field names (especially phone/mobile which differ
+ * across the API and previously rendered blank in the admin table).
+ */
+const normalizeCompany = (item: any): CompanyProfile => {
+  if (!item || typeof item !== 'object') return {};
+  const toStr = (v: any): string => (v === undefined || v === null ? '' : String(v).trim());
+  const phoneVal = item.mobile ?? item.phone ?? item.phoneNumber ?? item.mobileNo ?? item.mobile_number ?? item.contactNumber ?? item.cellPhone;
+  return {
+    id: toStr(item.companyId || item.userId || item.id || item.companyRegistrationId),
+    companyName: toStr(item.companyName || item.companyname || item.name || item.company_Name),
+    contactPerson: toStr(item.contactPerson || item.contactperson || item.personName || item.ownerName || item.contactName),
+    email: toStr(item.email || item.companyEmail || item.company_Email),
+    phone: toStr(phoneVal),
+    mobile: toStr(phoneVal),
+    website: toStr(item.website || item.webSiteUrl || item.websiteUrl),
+    industry: toStr(item.industry || item.industryType || item.sector || item.industryName),
+    address: toStr(item.address || item.companyAddress || item.company_Address),
+    isApproved: !!item.isApproved,
+  };
+};
+
 export const adminApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAdminCompanies: builder.query<PaginatedResponse<CompanyProfile>, { pageSize: number; pageNumber: number }>({
@@ -56,7 +181,13 @@ export const adminApi = baseApi.injectEndpoints({
         try {
           const result = await baseQuery(`/api/v1/companyregistration/${pageSize}/${pageNumber}`);
           if (result.data) {
-            return { data: parsePaginatedResponse(result.data) };
+            const parsed = parsePaginatedResponse<any>(result.data);
+            return {
+              data: {
+                items: parsed.items.map(normalizeCompany),
+                totalCount: parsed.totalCount,
+              },
+            };
           }
           if (result.error) {
             console.error('getAdminCompanies API error:', result.error);
@@ -75,7 +206,13 @@ export const adminApi = baseApi.injectEndpoints({
         try {
           const result = await baseQuery(`/api/v1/userregistration/${pageSize}/${pageNumber}`);
           if (result.data) {
-            return { data: parsePaginatedResponse(result.data) };
+            const parsed = parsePaginatedResponse<any>(result.data);
+            return {
+              data: {
+                items: parsed.items.map(normalizeUser),
+                totalCount: parsed.totalCount,
+              },
+            };
           }
           if (result.error) {
             console.error('getAdminUsers API error:', result.error);
@@ -94,7 +231,13 @@ export const adminApi = baseApi.injectEndpoints({
         try {
           const result = await baseQuery(`/api/v1/jobrequirements/${pageSize}/${pageNumber}`);
           if (result.data) {
-            return { data: parsePaginatedResponse(result.data) };
+            const parsed = parsePaginatedResponse<any>(result.data);
+            return {
+              data: {
+                items: parsed.items.map(normalizeJobRequirement),
+                totalCount: parsed.totalCount,
+              },
+            };
           }
           if (result.error) {
             console.error('getAdminJobRequirements API error:', result.error);
@@ -113,18 +256,87 @@ export const adminApi = baseApi.injectEndpoints({
         try {
           const result = await baseQuery(`/api/v1/jobapplications/${pageSize}/${pageNumber}`);
           if (result.data) {
-            return { data: parsePaginatedResponse(result.data) };
+            const parsed = parsePaginatedResponse<any>(result.data);
+            return {
+              data: {
+                items: parsed.items.map(normalizeApplication),
+                totalCount: parsed.totalCount,
+              },
+            };
           }
           if (result.error) {
             console.error('getAdminJobApplications API error:', result.error);
-            return { error: result.error };
           }
+          return { data: { items: [], totalCount: 0 } };
         } catch (err) {
           console.error('getAdminJobApplications API failed:', err);
-          return { error: { status: 'FETCH_ERROR', error: String(err) } };
+          return { data: { items: [], totalCount: 0 } };
         }
       },
       providesTags: ['Application']
+    }),
+
+    getRequirementDetail: builder.query<{ items: any[]; job: any; totalCount: number }, number | string>({
+      queryFn: async (requirementId, api, extraOptions, baseQuery) => {
+        try {
+          const result = await baseQuery(`/api/v1/jobapplicationsforrequirment/${requirementId}`);
+          if (result.data) {
+            const value = (result.data as any).value !== undefined ? (result.data as any).value : result.data;
+            let items: any[] = [];
+            let job: any = null;
+            if (Array.isArray(value)) {
+              items = value;
+            } else if (value && typeof value === 'object') {
+              job = value.jobRequirement || value.requirement || value.job || null;
+              const possibleArrays = [value.data, value.items, value.list, value.applications, value.records, value.results, value.rows];
+              const foundArr = possibleArrays.find((arr) => Array.isArray(arr))
+                || (Object.values(value).find((v) => Array.isArray(v)) as any[] | undefined);
+              if (foundArr) items = foundArr;
+            }
+            return { data: { items, job, totalCount: Array.isArray(items) ? items.length : 0 } };
+          }
+          if (result.error) {
+            console.error('getRequirementDetail API error:', result.error);
+            return { error: result.error };
+          }
+        } catch (err) {
+          console.error('getRequirementDetail API failed:', err);
+          return { error: { status: 'FETCH_ERROR', error: String(err) } };
+        }
+        return { data: { items: [], job: null, totalCount: 0 } };
+      },
+      providesTags: (result, error, arg) => [{ type: 'Job', id: String(arg) }]
+    }),
+
+    getAdminCompanyDetail: builder.query<CompanyProfile | null, string>({
+      queryFn: async (companyId, api, extraOptions, baseQuery) => {
+        try {
+          // 1) Try the dedicated single-company endpoint first.
+          const single = await baseQuery(`/api/v1/viewcompanyprofile/${companyId}`);
+          if (single.data) {
+            const raw = (single.data as any).value ?? (single.data as any).data ?? single.data;
+            return { data: normalizeCompany(raw) || null };
+          }
+        } catch (err) {
+          console.error('[adminApi] getAdminCompanyDetail single fetch failed:', err);
+        }
+        try {
+          // 2) Fallback: scan the company list page for a matching id.
+          const listResult = await baseQuery(`/api/v1/companyregistration/100/1`);
+          if (listResult.data) {
+            const parsed = parsePaginatedResponse<any>(listResult.data);
+            const found = parsed.items
+              .map(normalizeCompany)
+              .find((c: any) => String(c.id || '') === String(companyId));
+            if (found) return { data: found };
+            return { data: null };
+          }
+        } catch (err) {
+          console.error('[adminApi] getAdminCompanyDetail list fallback failed:', err);
+        }
+        return { data: null };
+      },
+      providesTags: (result, error, arg) => [{ type: 'Company', id: String(arg) }]
     })
   })
 });
@@ -133,5 +345,7 @@ export const {
   useGetAdminCompaniesQuery,
   useGetAdminUsersQuery,
   useGetAdminJobRequirementsQuery,
-  useGetAdminJobApplicationsQuery
+  useGetAdminJobApplicationsQuery,
+  useGetRequirementDetailQuery,
+  useGetAdminCompanyDetailQuery
 } = adminApi;

@@ -31,6 +31,133 @@ import {
 import { useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
 
+/**
+ * Reads the EXIF orientation (1-8) from a JPEG buffer. Returns 1 (normal) for
+ * non-JPEG files or when no orientation tag exists.
+ */
+const getJpegOrientation = (buffer: ArrayBuffer): number => {
+  const view = new DataView(buffer);
+  if (view.byteLength < 2 || view.getUint16(0, false) !== 0xffd8) return 1;
+
+  let offset = 2;
+  while (offset + 9 < view.byteLength) {
+    if (view.getUint8(offset) !== 0xff) {
+      offset++;
+      continue;
+    }
+    const marker = view.getUint8(offset + 1);
+    if (marker === 0xd8 || marker === 0xd9 || (marker >= 0x01 && marker <= 0x0f && marker !== 0x00)) {
+      offset += 2;
+      continue;
+    }
+    const len = view.getUint16(offset + 2, false);
+
+    if (marker === 0xe1 && offset + 4 + 6 <= view.byteLength) {
+      const start = offset + 4;
+      const isExif =
+        view.getUint8(start) === 0x45 && view.getUint8(start + 1) === 0x78 &&
+        view.getUint8(start + 2) === 0x69 && view.getUint8(start + 3) === 0x66 &&
+        view.getUint8(start + 4) === 0x00 && view.getUint8(start + 5) === 0x00;
+
+      if (isExif) {
+        const tiff = start + 6;
+        const little = view.getUint16(tiff, false) === 0x4949;
+        const ifd0 = tiff + view.getUint32(tiff + 4, little);
+        const entries = view.getUint16(ifd0, little);
+
+        for (let i = 0; i < entries; i++) {
+          const entry = ifd0 + 2 + i * 12;
+          if (entry + 12 > view.byteLength) break;
+          if (view.getUint16(entry, little) === 0x0112) {
+            if (view.getUint16(entry + 2, little) === 3 && view.getUint32(entry + 4, little) === 1) {
+              return view.getUint16(entry + 8, little);
+            }
+          }
+        }
+      }
+    }
+
+    offset += 2 + len;
+  }
+  return 1;
+};
+
+/**
+ * Instagram/Facebook-style avatar processing: applies the photo's EXIF
+ * rotation, then center-crops it into a square PNG so it always fills the
+ * circular profile picture cleanly (never big, tilted or off-center).
+ */
+const processProfileImage = (file: File): Promise<File> =>
+  new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error('Could not read image file.'));
+
+    fr.onload = () => {
+      const orientation = getJpegOrientation(fr.result as ArrayBuffer);
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Unsupported image format.'));
+      };
+
+      img.onload = () => {
+        try {
+          const rotated = orientation >= 5 && orientation <= 8;
+          const orientedW = rotated ? img.height : img.width;
+          const orientedH = rotated ? img.width : img.height;
+
+          const SIDE = Math.min(orientedW, orientedH, 640);
+          const scale = Math.max(SIDE / img.width, SIDE / img.height);
+          const dw = img.width * scale;
+          const dh = img.height * scale;
+
+          const canvas = document.createElement('canvas');
+          canvas.width = SIDE;
+          canvas.height = SIDE;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            URL.revokeObjectURL(url);
+            reject(new Error('Canvas not supported.'));
+            return;
+          }
+
+          ctx.translate(SIDE / 2, SIDE / 2);
+          switch (orientation) {
+            case 2: ctx.transform(-1, 0, 0, 1, 0, 0); break;   // flip horizontal
+            case 3: ctx.transform(-1, 0, 0, -1, 0, 0); break;  // 180°
+            case 4: ctx.transform(1, 0, 0, -1, 0, 0); break;   // flip vertical
+            case 5: ctx.transform(0, 1, 1, 0, 0, 0); break;    // 90° CW + flip
+            case 6: ctx.transform(0, 1, -1, 0, 0, 0); break;   // 90° CW
+            case 7: ctx.transform(0, -1, -1, 0, 0, 0); break;  // 90° CCW + flip
+            case 8: ctx.transform(0, -1, 1, 0, 0, 0); break;   // 90° CCW
+          }
+          ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+          URL.revokeObjectURL(url);
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Could not process image.'));
+                return;
+              }
+              resolve(new File([blob], 'profile-pic.png', { type: 'image/png' }));
+            },
+            'image/png'
+          );
+        } catch (err) {
+          URL.revokeObjectURL(url);
+          reject(err as Error);
+        }
+      };
+
+      img.src = url;
+    };
+
+    fr.readAsArrayBuffer(file);
+  });
+
 export default function ProfilePage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -150,12 +277,12 @@ export default function ProfilePage() {
         </div>
 
         {/* Tab bar */}
-        <div className="flex border-b border-gray-200 mb-6">
+        <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 px-5 py-3 text-xs font-semibold border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 px-4 sm:px-5 py-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'border-orange-600 text-orange-700'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -218,20 +345,24 @@ export default function ProfilePage() {
               {/* Current / preview image */}
               <div className="relative">
                 {profilePicPreview ? (
-                  <img
-                    src={profilePicPreview}
-                    alt="Selected preview"
-                    className="w-36 h-36 rounded-full object-cover border-4 border-orange-300 shadow-lg"
-                  />
+                  <div className="w-36 h-36 rounded-full overflow-hidden ring-4 ring-theme-lightViolet shadow-lg">
+                    <img
+                      src={profilePicPreview}
+                      alt="Selected preview"
+                      className="w-full h-full object-cover object-center"
+                    />
+                  </div>
                 ) : profile?.profilePicUrl ? (
-                  <img
-                    src={profile.profilePicUrl}
-                    alt="Current profile"
-                    className="w-36 h-36 rounded-full object-cover border-4 border-blue-300 shadow-lg"
-                  />
+                  <div className="w-36 h-36 rounded-full overflow-hidden ring-4 ring-theme-lightViolet shadow-lg">
+                    <img
+                      src={profile.profilePicUrl}
+                      alt="Current profile"
+                      className="w-full h-full object-cover object-center"
+                    />
+                  </div>
                 ) : (
-                  <div className="w-36 h-36 rounded-full bg-slate-100 border-4 border-dashed border-gray-300 flex items-center justify-center">
-                    <UserCircle className="w-20 h-20 text-gray-300" />
+                  <div className="w-36 h-36 rounded-full bg-theme-lightViolet border-4 border-dashed border-theme-sage/60 flex items-center justify-center">
+                    <UserCircle className="w-20 h-20 text-theme-lavender/50" />
                   </div>
                 )}
               </div>
@@ -244,14 +375,20 @@ export default function ProfilePage() {
               <input
                 ref={profilePicInputRef}
                 type="file"
-                accept=".png,image/png"
+                accept="image/*"
                 className="hidden"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
-                  if (file) {
+                  if (!file) return;
+                  try {
+                    const processed = await processProfileImage(file);
+                    setProfilePicFile(processed);
+                    setProfilePicPreview(URL.createObjectURL(processed));
+                  } catch (_) {
                     setProfilePicFile(file);
                     setProfilePicPreview(URL.createObjectURL(file));
                   }
+                  if (e.target.value) e.target.value = '';
                 }}
               />
 
@@ -280,7 +417,9 @@ export default function ProfilePage() {
               </div>
 
               {profilePicFile && (
-                <p className="text-[10px] text-gray-500">Selected: {profilePicFile.name}</p>
+                <p className="text-[10px] text-gray-500">
+                  Selected: {profilePicFile.name} · auto-fixed orientation & square-cropped like a profile picture
+                </p>
               )}
             </div>
           )}
@@ -332,7 +471,7 @@ export default function ProfilePage() {
                     <iframe
                       src={profile.resumeUrl}
                       title="Resume Preview"
-                      className="w-full h-[500px]"
+                      className="w-full h-[400px] sm:h-[500px]"
                     />
                   </div>
                 </div>

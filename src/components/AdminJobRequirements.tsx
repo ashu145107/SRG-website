@@ -169,7 +169,7 @@ export function AdminJobRequirements() {
                 </th>
                 <th
                   onClick={() => handleSort('workPlace')}
-                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors"
+                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors hidden md:table-cell"
                 >
                   <div className="flex items-center gap-1">
                     Work Place
@@ -178,7 +178,7 @@ export function AdminJobRequirements() {
                 </th>
                 <th
                   onClick={() => handleSort('skill')}
-                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors"
+                  className="px-4 py-3.5 font-bold cursor-pointer hover:bg-slate-100 transition-colors hidden md:table-cell"
                 >
                   <div className="flex items-center gap-1">
                     Skill
@@ -217,7 +217,15 @@ export function AdminJobRequirements() {
                 filteredAndSortedList.map((job, index) => (
                   <tr key={job.id || index} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3.5 font-black text-blue-900 whitespace-nowrap">
-                      {job.jobCode || `RG${String((job.id || index) + 5700).padStart(5, '0')}`}
+                      <a
+                        href={`#/job/${job.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open job details in new tab"
+                        className="underline decoration-blue-300 underline-offset-2 hover:text-blue-600 hover:decoration-blue-600 transition-colors cursor-pointer"
+                      >
+                        {job.jobCode || `RG${String((job.id || index) + 5700).padStart(5, '0')}`}
+                      </a>
                     </td>
                     <td className="px-4 py-3.5 font-extrabold text-slate-800 break-words max-w-[200px]">
                       {job.profileHeader || job.jobDesignation}
@@ -225,10 +233,10 @@ export function AdminJobRequirements() {
                     <td className="px-4 py-3.5 text-slate-700 font-semibold max-w-[150px] break-words">
                       {job.companyName || 'N/A'}
                     </td>
-                    <td className="px-4 py-3.5 text-slate-700 font-medium whitespace-nowrap">
+                    <td className="px-4 py-3.5 text-slate-700 font-medium whitespace-nowrap hidden md:table-cell">
                       {job.workPlace || job.jobLocation}
                     </td>
-                    <td className="px-4 py-3.5 text-slate-500 break-words max-w-[250px]">
+                    <td className="px-4 py-3.5 text-slate-500 break-words max-w-[250px] hidden md:table-cell">
                       {job.skill}
                     </td>
                     <td className="px-4 py-3.5 text-center whitespace-nowrap">
@@ -326,45 +334,45 @@ export function AdminJobRequirements() {
 
             <div className="p-6 space-y-4 text-xs sm:text-sm overflow-y-auto max-h-[70vh]">
               {selectedJob.jobCode && (
-                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                   <span className="font-bold text-slate-400 col-span-1">Job Code:</span>
                   <span className="font-extrabold text-blue-900 col-span-2">{selectedJob.jobCode}</span>
                 </div>
               )}
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Profile Header:</span>
                 <span className="font-extrabold text-slate-900 col-span-2">{selectedJob.profileHeader || selectedJob.jobDesignation || 'N/A'}</span>
               </div>
               {selectedJob.companyName && (
-                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                   <span className="font-bold text-slate-400 col-span-1">Company:</span>
                   <span className="font-extrabold text-slate-900 col-span-2">{selectedJob.companyName}</span>
                 </div>
               )}
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Work Place:</span>
                 <span className="font-bold text-slate-900 col-span-2">{selectedJob.workPlace || selectedJob.jobLocation || 'N/A'}</span>
               </div>
               {selectedJob.skill && (
-                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                   <span className="font-bold text-slate-400 col-span-1">Required Skills:</span>
                   <span className="font-medium text-slate-700 col-span-2 break-words leading-relaxed">{selectedJob.skill}</span>
                 </div>
               )}
               {selectedJob.noOfVacancy && (
-                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                   <span className="font-bold text-slate-400 col-span-1">Vacancy Count:</span>
                   <span className="font-extrabold text-slate-800 col-span-2">{selectedJob.noOfVacancy} Positions</span>
                 </div>
               )}
               {(selectedJob.experiance !== undefined || selectedJob.experianceTo !== undefined) && (
-                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                   <span className="font-bold text-slate-400 col-span-1">Experience Needed:</span>
                   <span className="font-medium text-slate-800 col-span-2">{selectedJob.experiance || 0} to {selectedJob.experianceTo || 'N/A'} Years</span>
                 </div>
               )}
               {(selectedJob.salary !== undefined || selectedJob.salaryTo !== undefined) && (
-                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                   <span className="font-bold text-slate-400 col-span-1">Salary Range:</span>
                   <span className="font-extrabold text-emerald-700 col-span-2">
                     ₹{selectedJob.salary?.toLocaleString() || '0'} - ₹{selectedJob.salaryTo?.toLocaleString() || '0'} Monthly
@@ -372,7 +380,7 @@ export function AdminJobRequirements() {
                 </div>
               )}
               {selectedJob.jobDiscription && (
-                <div className="grid grid-cols-3 pb-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 pb-1">
                   <span className="font-bold text-slate-400 col-span-1">Description:</span>
                   <span className="font-medium text-slate-600 col-span-2 leading-relaxed break-words">{selectedJob.jobDiscription}</span>
                 </div>

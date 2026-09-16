@@ -47,6 +47,8 @@ export interface CandidateProfile {
   mobile?: string;
   city?: string;
   district?: string;
+  talukaName?: string;
+  stateName?: string;
   address?: string;
   qualification?: string;
   education?: string;

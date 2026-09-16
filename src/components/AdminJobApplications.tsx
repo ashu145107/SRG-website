@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { useGetAdminJobApplicationsQuery } from '../services/adminApi';
 import { JobApplication } from '../types';
-import { Mail, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
+import { Mail, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2, ExternalLink } from 'lucide-react';
 
 export function AdminJobApplications() {
   const [pageSize, setPageSize] = useState(15);
@@ -157,7 +157,7 @@ export function AdminJobApplications() {
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
-                <th className="px-4 py-3.5 font-bold">
+                <th className="px-4 py-3.5 font-bold hidden md:table-cell">
                   Email
                 </th>
                 <th
@@ -169,10 +169,10 @@ export function AdminJobApplications() {
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
-                <th className="px-4 py-3.5 font-bold">
+                <th className="px-4 py-3.5 font-bold hidden md:table-cell">
                   Job Code
                 </th>
-                <th className="px-4 py-3.5 font-bold">
+                <th className="px-4 py-3.5 font-bold hidden md:table-cell">
                   Work Place
                 </th>
                 <th
@@ -216,21 +216,34 @@ export function AdminJobApplications() {
                 filteredAndSortedList.map((app, idx) => (
                   <tr key={app.id || idx} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3.5 font-bold text-slate-800 whitespace-nowrap">
-                      {app.candidateName || 'Nishant Sunil Tupe'}
+                      {app.candidateId ? (
+                        <a
+                          href={`#/candidate/${app.candidateId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Open candidate profile in new tab"
+                          className="underline decoration-blue-300 underline-offset-2 hover:text-blue-600 hover:decoration-blue-600 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          {app.candidateName || 'Candidate'}
+                          <ExternalLink className="w-3 h-3 text-blue-400" />
+                        </a>
+                      ) : (
+                        <>{app.candidateName || 'Candidate'}</>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 text-slate-700 whitespace-nowrap">
-                      {app.candidatePhone || '9890539225'}
+                      {app.candidatePhone || 'N/A'}
                     </td>
-                    <td className="px-4 py-3.5 text-slate-600 break-all max-w-[120px]">
+                    <td className="px-4 py-3.5 text-slate-600 break-all max-w-[120px] hidden md:table-cell">
                       {app.candidateName ? `${app.candidateName.toLowerCase().replace(/\s+/g, '')}@gmail.com` : 'nishanttupe05@gmail.com'}
                     </td>
                     <td className="px-4 py-3.5 text-slate-800 font-extrabold max-w-[180px] break-words">
                       {app.jobTitle}
                     </td>
-                    <td className="px-4 py-3.5 font-mono font-black text-blue-900 whitespace-nowrap">
+                    <td className="px-4 py-3.5 font-mono font-black text-blue-900 whitespace-nowrap hidden md:table-cell">
                       {app.jobId ? `RG${String(parseInt(app.jobId.replace('job-', '')) + 66880 || 66885).slice(0, 5)}` : 'RG66885'}
                     </td>
-                    <td className="px-4 py-3.5 text-slate-700 font-semibold">
+                    <td className="px-4 py-3.5 text-slate-700 font-semibold hidden md:table-cell">
                       Pune
                     </td>
                     <td className="px-4 py-3.5 text-slate-500 whitespace-nowrap text-center font-bold">
@@ -334,28 +347,28 @@ export function AdminJobApplications() {
             </div>
 
             <div className="p-6 space-y-4 text-xs sm:text-sm overflow-y-auto max-h-[70vh]">
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Candidate Name:</span>
                 <span className="font-extrabold text-slate-900 col-span-2">{selectedApplication.candidateName || 'N/A'}</span>
               </div>
               {selectedApplication.candidatePhone && (
-                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                   <span className="font-bold text-slate-400 col-span-1">Mobile:</span>
                   <span className="font-bold text-slate-900 col-span-2">{selectedApplication.candidatePhone}</span>
                 </div>
               )}
-              <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                 <span className="font-bold text-slate-400 col-span-1">Applied Job:</span>
                 <span className="font-extrabold text-slate-900 col-span-2">{selectedApplication.jobTitle || 'N/A'}</span>
               </div>
               {selectedApplication.companyName && (
-                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                   <span className="font-bold text-slate-400 col-span-1">Company:</span>
                   <span className="font-bold text-orange-700 col-span-2">{selectedApplication.companyName}</span>
                 </div>
               )}
               {selectedApplication.status && (
-                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                   <span className="font-bold text-slate-400 col-span-1">Current Status:</span>
                   <span className="font-extrabold text-blue-900 col-span-2">
                     <span className="px-2.5 py-1 bg-blue-50 text-blue-800 rounded-full border border-blue-100 text-xs">
@@ -365,7 +378,7 @@ export function AdminJobApplications() {
                 </div>
               )}
               {selectedApplication.appliedAt && (
-                <div className="grid grid-cols-3 border-b border-gray-100 pb-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
                   <span className="font-bold text-slate-400 col-span-1">Application Date:</span>
                   <span className="font-medium text-slate-800 col-span-2">
                     {new Date(selectedApplication.appliedAt).toLocaleDateString()}
@@ -373,7 +386,7 @@ export function AdminJobApplications() {
                 </div>
               )}
               {selectedApplication.interviewDate && (
-                <div className="grid grid-cols-3 pb-1 text-orange-850 bg-orange-50/50 p-2.5 rounded-xl border border-orange-100">
+                <div className="grid grid-cols-1 sm:grid-cols-3 pb-1 text-orange-850 bg-orange-50/50 p-2.5 rounded-xl border border-orange-100">
                   <span className="font-bold col-span-1">Interview Date:</span>
                   <span className="font-extrabold col-span-2">{new Date(selectedApplication.interviewDate).toLocaleString()}</span>
                 </div>
