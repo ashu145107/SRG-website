@@ -507,11 +507,26 @@ export const authApi = baseApi.injectEndpoints({
     >({
       queryFn: async ({ userId, oldPassword, newPassword }) => {
         try {
+          // Authenticated endpoint: attach the logged-in session token
+          const token = (() => {
+            try {
+              const raw = localStorage.getItem('srg_auth_state');
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                return parsed.token || '';
+              }
+            } catch { /* ignore */ }
+            return '';
+          })();
+          const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
+
           const res = await fetch(`${getApiBaseUrl()}/api/v1/changepassword`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Accept': 'application/json'
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${cleanToken}`,
+              'token': cleanToken
             },
             body: JSON.stringify({
               userId: Number(userId) || 0,

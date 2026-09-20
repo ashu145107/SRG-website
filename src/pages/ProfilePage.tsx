@@ -8,15 +8,15 @@
  *   3. Resume — upload via POST /api/v1/resume (multipart/form-data)
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { RootState } from '../store';
 import { useGetMyProfileQuery, uploadProfilePic, uploadResume } from '../services/profileApi';
 import { Toast } from '../components/ui/FeedbackComponents';
 import { Loader } from '../components/ui/FeedbackComponents';
+import { DashboardMenu, DashboardMenuContext } from './DashboardHub';
 import {
-  ArrowLeft,
   UserCircle,
   Camera,
   FileUp,
@@ -24,10 +24,16 @@ import {
   CheckCircle,
   LogOut,
   ChevronDown,
-  Eye
+  Eye,
+  Menu,
+  X,
+  Settings,
+  BarChart3,
+  LockKeyhole
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
+import { UserRole } from '../types';
 
 /**
  * Reads the EXIF orientation (1-8) from a JPEG buffer. Returns 1 (normal) for
@@ -165,6 +171,26 @@ export default function ProfilePage() {
   const [toastMsg, setToastMsg] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
+  // Header hamburger (mobile/tablet drawer)
+  const [navMenuOpen, setNavMenuOpen] = useState(false);
+  const toggleNavMenu = useCallback(() => setNavMenuOpen((v) => !v), []);
+  const closeNavMenu = useCallback(() => setNavMenuOpen(false), []);
+
+  // Profile dropdown state
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowProfileDropdown(false);
+      }
+    };
+    if (showProfileDropdown) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showProfileDropdown]);
+
   // Profile picture state
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState('');
@@ -239,40 +265,165 @@ export default function ProfilePage() {
     { key: 'details' as const, label: 'Basic Details', icon: <UserCircle className="w-4 h-4" /> },
     { key: 'pic' as const, label: 'Profile Picture', icon: <Camera className="w-4 h-4" /> },
     { key: 'resume' as const, label: 'Resume', icon: <FileUp className="w-4 h-4" /> },
-  ];
+  ].filter(tab => !(user?.role === UserRole.COMPANY && tab.key === 'resume'));
+
+  const menuItems = (() => {
+    const items: { label: string; to: string; icon: React.ReactNode }[] = [
+      { label: 'डॅशबोर्ड / Dashboard', to: '/dashboard', icon: <BarChart3 className="w-4 h-4" /> },
+    ];
+    if (user?.role === UserRole.COMPANY) {
+      items.push({ label: 'कंपनी प्रोफाइल / Profile Settings', to: '/dashboard?tab=profile', icon: <Settings className="w-4 h-4" /> });
+    }
+    items.push({ label: 'पासवर्ड बदला / Change Password', to: '/change-password', icon: <LockKeyhole className="w-4 h-4" /> });
+    return items;
+  })();
 
   return (
+    <DashboardMenuContext.Provider value={{ open: navMenuOpen, toggle: toggleNavMenu, close: closeNavMenu }}>
     <div className="min-h-screen bg-slate-50 flex flex-col antialiased font-sans">
-      {/* Navbar */}
-      <nav className="bg-blue-950 text-white border-b border-blue-900/40 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link to="/dashboard" className="flex items-center gap-1.5 text-xs font-bold text-orange-400 hover:text-orange-300 transition-colors">
-              <ArrowLeft className="w-4 h-4" /> Dashboard
-            </Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <p className="text-xs font-black">{user.name}</p>
-            </div>
+      {/* Dynamic Header (mirrors dashboard) */}
+      <nav className="bg-theme-darkViolet text-white border-b border-theme-lightViolet/20 z-40 shadow-sm shrink-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Mobile & tablet hamburger */}
             <button
-              onClick={() => { dispatch(logout()); navigate('/'); }}
-              className="p-1 px-3 border border-blue-900 bg-blue-1000 font-bold hover:bg-orange-600 rounded-xl text-[11px] transition-all flex items-center gap-1.5 cursor-pointer"
+              onClick={toggleNavMenu}
+              aria-label="Toggle profile menu"
+              aria-expanded={navMenuOpen}
+              data-menu-toggle="true"
+              className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center bg-white/10 hover:bg-white/20 text-white border border-theme-lightViolet/30 transition-colors cursor-pointer shrink-0"
             >
-              <LogOut className="w-3.5 h-3.5" /> Logout
+              {navMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
+            <Link to="/" className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform">
+              <img src="/home/logo.png" alt="SRG Logo" className="w-10 h-10 object-contain drop-shadow" />
+            </Link>
+            <div className="text-left min-w-0">
+              <span className="font-extrabold text-xs sm:text-sm tracking-tight block text-white truncate">श्री स्वामी समर्थ सेवा मार्ग</span>
+              <span className="text-[10px] text-theme-gold block font-bold uppercase tracking-wide truncate">
+                प्रोफाइल / {user.role === UserRole.COMPANY ? 'EMPLOYER' : user.role}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Desktop: right-side menu items */}
+            <div className="hidden lg:flex items-center gap-1.5">
+              {menuItems.map((item) => (
+                <button
+                  key={item.to}
+                  onClick={() => navigate(item.to)}
+                  className="px-3 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer bg-white/10 hover:bg-white/20 text-white border border-theme-lightViolet/30 flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  {item.icon} <span className="hidden xl:inline">{item.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Profile dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                className="flex items-center gap-2 p-1 px-3 border border-theme-lightViolet/30 bg-white/10 font-bold hover:bg-white/20 rounded-xl text-[11px] transition-all cursor-pointer"
+              >
+                {profile?.profilePicUrl ? (
+                  <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 ring-2 ring-theme-gold ring-offset-1 ring-offset-theme-darkViolet">
+                    <img src={profile.profilePicUrl} alt="Profile" className="w-full h-full object-cover object-center" />
+                  </div>
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-white/10 ring-2 ring-theme-gold flex items-center justify-center shrink-0">
+                    <UserCircle className="w-4 h-4 text-theme-gold" />
+                  </div>
+                )}
+                <span className="hidden sm:inline text-left max-w-[120px] truncate">{user.email}</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${showProfileDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showProfileDropdown && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-theme-lightViolet/80 z-50 py-1 text-slate-800">
+                  <div className="px-4 py-3 border-b border-theme-lightViolet/60 flex items-center gap-3">
+                    {profile?.profilePicUrl ? (
+                      <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-theme-gold shrink-0">
+                        <img src={profile.profilePicUrl} alt="Profile" className="w-full h-full object-cover object-center" />
+                      </div>
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-theme-lightViolet flex items-center justify-center shrink-0">
+                        <UserCircle className="w-5 h-5 text-theme-lavender/70" />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-theme-darkViolet truncate">{user.name}</p>
+                      <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
+                      {user.role && (
+                        <p className="text-[9px] text-theme-lavender font-semibold mt-1 truncate">{user.role}</p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setShowProfileDropdown(false); navigate('/profile'); }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-theme-lightViolet/40 hover:text-theme-darkViolet flex items-center gap-2.5 transition-colors cursor-pointer"
+                  >
+                    <UserCircle className="w-4 h-4 text-theme-lavender" /> My Profile
+                  </button>
+                  <button
+                    onClick={() => { setShowProfileDropdown(false); navigate('/change-password'); }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-theme-lightViolet/40 hover:text-theme-darkViolet flex items-center gap-2.5 transition-colors cursor-pointer"
+                  >
+                    <LockKeyhole className="w-4 h-4 text-theme-lavender" /> Change Password
+                  </button>
+                  <div className="border-t border-theme-lightViolet/60 my-1"></div>
+                  <button
+                    onClick={() => { setShowProfileDropdown(false); dispatch(logout()); navigate('/'); }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" /> Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </nav>
 
+      {/* Mobile & tablet drawer (reuses the dashboard hamburger drawer) */}
+      <DashboardMenu variant="drawer">
+        {menuItems.map((item) => (
+          <button
+            key={item.to}
+            onClick={() => navigate(item.to)}
+            className="px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80"
+          >
+            {item.icon}<span className="truncate min-w-0">{item.label}</span>
+          </button>
+        ))}
+        <button
+          onClick={() => { dispatch(logout()); navigate('/'); }}
+          className="px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
+        >
+          <LogOut className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
+        </button>
+      </DashboardMenu>
+
       {/* Main content */}
-      <main className="flex-1 max-w-6xl mx-auto px-3 sm:px-6 py-6 lg:py-10 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-6 py-6 lg:py-10 w-full">
         {/* Page header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-black text-blue-950">My Profile</h1>
-          <p className="text-xs text-slate-500 font-medium mt-1">
-            View and update your personal details, profile picture, and resume.
-          </p>
+        <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-black text-blue-950">My Profile</h1>
+            <p className="text-xs text-slate-500 font-medium mt-1">
+              {user.role === UserRole.COMPANY
+                ? 'View and update your company details and profile picture.'
+                : 'View and update your personal details, profile picture, and resume.'}
+            </p>
+          </div>
+          {user.role === UserRole.COMPANY && (
+            <button
+              onClick={() => navigate('/dashboard?tab=profile')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold bg-theme-lavender hover:bg-theme-lavender/90 text-white rounded-xl shadow-sm transition-all cursor-pointer"
+            >
+              <Settings className="w-4 h-4" /> कंपनी प्रोफाइल संपादित करा / Edit Profile
+            </button>
+          )}
         </div>
 
         {/* Tab bar */}
@@ -496,5 +647,6 @@ export default function ProfilePage() {
         />
       )}
     </div>
+    </DashboardMenuContext.Provider>
   );
 }

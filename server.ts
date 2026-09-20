@@ -7,6 +7,34 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 
+const DEFAULT_PROXY_TARGET = 'https://srgapp.dindoripranit.org';
+const PROXY_TARGET = (process.env.PROXY_TARGET || DEFAULT_PROXY_TARGET).replace(/\/+$/, '');
+
+const TRANSIENT_CODES = ['ENOTFOUND', 'ETIMEDOUT', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ECONNABORTED'];
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchWithRetry(url: string, fetchOptions: RequestInit): Promise<Response> {
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fetch(url, fetchOptions);
+    } catch (err: any) {
+      const isIdempotent =
+        !fetchOptions.method || fetchOptions.method === 'GET' || fetchOptions.method === 'HEAD';
+      const code = err?.code || err?.cause?.code;
+      if (isIdempotent && TRANSIENT_CODES.includes(code) && attempt < maxAttempts) {
+        const delay = 250 * 2 ** (attempt - 1);
+        console.warn(`[Proxy] Upstream ${PROXY_TARGET} unreachable (${code || err.message}); retrying in ${delay}ms (attempt ${attempt}/${maxAttempts})`);
+        await sleep(delay);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Unreachable.');
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -23,7 +51,7 @@ async function startServer() {
 
   // Proxy all /api/v1/* requests to srgapp backend server to bypass browser CORS checks
   app.all('/api/v1/*', async (req, res) => {
-    const targetUrl = `https://srgapp.dindoripranit.org${req.originalUrl}`;
+    const targetUrl = `${PROXY_TARGET}${req.originalUrl}`;
     
     try {
       console.log(`[Proxy] ${req.method} ${targetUrl} | Content-Type: ${req.headers['content-type'] || 'none'}`);
@@ -62,7 +90,7 @@ async function startServer() {
         }
       }
 
-      const response = await fetch(targetUrl, fetchOptions);
+      const response = await fetchWithRetry(targetUrl, fetchOptions);
       
       const contentType = response.headers.get('content-type') || '';
       const text = await response.text();

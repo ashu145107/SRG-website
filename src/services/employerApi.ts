@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { baseApi } from './baseApi';
+import { baseApi, getApiBaseUrl } from './baseApi';
 import { JobApplication, Job } from '../types';
 
 /**
@@ -38,6 +38,79 @@ export const fetchCandidateProfile = async (candidateId: string) => {
   const json = await res.json();
   console.log('[fetchCandidateProfile] raw response:', json);
   return json;
+};
+
+/**
+ * Edit the logged-in employer's company profile.
+ * POST /api/v1/editcompanyprofile (authenticated — Bearer + token headers).
+ */
+export interface EditCompanyProfilePayload {
+  address: string;
+  stateId: number;
+  state: string;
+  districtId: number;
+  district: string;
+  talukaId: number;
+  taluka: string;
+  mobile: string;
+  email: string;
+  contactPerson: string;
+  alternateContactPerson: string;
+  alternateContactNumber: string;
+  companyTypeId: number;
+  companyTypeName: string;
+  industryTypeId: number;
+  industryTypeName: string;
+  discription: string;
+  website: string;
+  alternateEmail: string;
+}
+
+export const updateCompanyProfile = async (payload: EditCompanyProfilePayload): Promise<{ success: boolean; message: string }> => {
+  const token = (() => {
+    try {
+      const raw = localStorage.getItem('srg_auth_state');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return parsed.token || '';
+      }
+    } catch { /* ignore */ }
+    return '';
+  })();
+  const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
+
+  try {
+    const res = await fetch(`${getApiBaseUrl()}/api/v1/editcompanyprofile`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${cleanToken}`,
+        'token': cleanToken
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    console.log('[updateCompanyProfile] response:', res.status, data);
+
+    if (!res.ok) {
+      return { success: false, message: data?.message || data?.error?.message || `Server returned ${res.status}` };
+    }
+    if (data?.isSuccess === false || data?.isFailure === true) {
+      return {
+        success: false,
+        message: data?.value || data?.message || data?.error?.message || 'Company profile update failed.',
+      };
+    }
+    return {
+      success: true,
+      message: typeof data?.value === 'string' ? data.value : (data?.message || 'Company profile updated successfully.'),
+    };
+  } catch (err: any) {
+    console.error('[updateCompanyProfile] failed:', err);
+    return { success: false, message: err.message || 'Failed to update company profile.' };
+  }
 };
 
 /**

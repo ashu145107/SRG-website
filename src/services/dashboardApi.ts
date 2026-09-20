@@ -148,18 +148,25 @@ export const dashboardApi = baseApi.injectEndpoints({
             appliedJobCount: 6036,
             activityLogs: [
               {
-                activityDate: "Jun 21 2026 To Jun 27 2026",
-                newRequirements: "3",
-                userlogin: "15",
-                newRegistration: "4",
-                jobApplications: "12"
+                activityDate: "Aug 30 2026 To Sep 5 2026",
+                newRegistration: 1,
+                jobApplications: 0,
+                newRequirements: 0,
+                userlogin: 2
               },
               {
-                activityDate: "Jun 14 2026 To Jun 20 2026",
-                newRequirements: "1",
-                userlogin: "8",
-                newRegistration: "3",
-                jobApplications: "5"
+                activityDate: "Sep 6 2026 To Sep 12 2026",
+                newRegistration: 0,
+                jobApplications: 0,
+                newRequirements: 0,
+                userlogin: 3
+              },
+              {
+                activityDate: "Sep 13 2026 To Sep 19 2026",
+                newRegistration: 1,
+                jobApplications: 0,
+                newRequirements: 0,
+                userlogin: 0
               }
             ]
           };

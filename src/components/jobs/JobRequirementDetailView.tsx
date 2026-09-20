@@ -175,9 +175,9 @@ export function JobRequirementDetailView({ requirementId }: JobRequirementDetail
                 {L('No applications found for this requirement yet.', 'या आवश्यकतेसाठी अजून कोणतेही अर्ज मिळाले नाहीत.')}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-theme-lightViolet text-left text-sm">
-                  <thead className="bg-theme-lightViolet/50 text-[10px] font-black text-theme-darkViolet/60 uppercase tracking-wider">
+              <div className="srg-scroll overflow-x-auto overflow-y-auto max-h-[70vh]">
+                <table className="w-full min-w-[720px] divide-y divide-theme-lightViolet text-left text-sm">
+                  <thead className="sticky top-0 z-10 bg-theme-lightViolet/50 text-[10px] font-black text-theme-darkViolet/60 uppercase tracking-wider">
                     <tr>
                       <th className="px-6 py-3.5 font-bold">#</th>
                       <th className="px-6 py-3.5 font-bold">{L('Candidate', 'उमेदवार')}</th>

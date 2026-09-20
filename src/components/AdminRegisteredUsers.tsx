@@ -137,9 +137,9 @@ export function AdminRegisteredUsers() {
         </div>
 
         {/* Table representation */}
-        <div className="overflow-x-auto rounded-xl border border-slate-150">
-          <table className="min-w-full divide-y divide-slate-150 text-left text-xs">
-            <thead className="bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-wider">
+        <div className="srg-scroll overflow-x-auto overflow-y-auto max-h-[70vh] rounded-xl border border-slate-150">
+          <table className="w-full min-w-[960px] divide-y divide-slate-150 text-left text-xs">
+            <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-wider">
               <tr>
                 <th
                   onClick={() => handleSort('id')}

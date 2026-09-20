@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
@@ -30,8 +30,8 @@ import {
   useApplyToJobMutation,
   useUpdateApplicationStatusMutation
 } from '../services/candidateApi';
-import { useGetMyJobApplicationsQuery, useGetMyRequirementsQuery } from '../services/employerApi';
-import { useGetMyProfileQuery } from '../services/profileApi';
+import { useGetMyJobApplicationsQuery, useGetMyRequirementsQuery, updateCompanyProfile } from '../services/employerApi';
+import { useGetMyProfileQuery, uploadProfilePic } from '../services/profileApi';
 import {
   useGetTrainingsQuery,
   useCreateTrainingMutation,
@@ -65,7 +65,6 @@ import {
   StatisticCard,
   Card,
   Badge,
-  Timeline,
   EmptyState
 } from '../components/ui/DataComponents';
 import { Loader, Alert, Toast, Modal } from '../components/ui/FeedbackComponents';
@@ -89,7 +88,6 @@ import {
   Compass,
   Settings,
   X,
-  Calendar,
   Sparkles,
   ShoppingBag,
   Award,
@@ -107,7 +105,12 @@ import {
   UserCircle,
   LockKeyhole,
   ChevronDown,
-  ArrowLeft
+  ArrowLeft,
+  BarChart3,
+  ChartPie,
+  Table2,
+  Menu,
+  Camera
 } from 'lucide-react';
 import { MockDb } from '../services/mockDb';
 
@@ -223,9 +226,14 @@ export default function DashboardHub() {
   // API hooks for triggers
   const { refetch: refetchStats } = useGetDashboardStatsQuery(undefined, { skip: !user });
 
-  // Profile dropdown state
+// Profile dropdown state
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Mobile/tablet collapsible menu (header hamburger) state
+  const [navMenuOpen, setNavMenuOpen] = useState(false);
+  const toggleNavMenu = useCallback(() => setNavMenuOpen((v) => !v), []);
+  const closeNavMenu = useCallback(() => setNavMenuOpen(false), []);
 
   // Fetch profile for pic display in navbar
   const { data: navProfile } = useGetMyProfileQuery(undefined, { skip: !user });
@@ -242,11 +250,22 @@ export default function DashboardHub() {
   }, [showProfileDropdown]);
 
 return (
+    <DashboardMenuContext.Provider value={{ open: navMenuOpen, toggle: toggleNavMenu, close: closeNavMenu }}>
     <div className="h-dvh bg-theme-cream flex flex-col antialiased font-sans overflow-hidden">
       {/* Dynamic Dashboard Navbar */}
       <nav className="bg-theme-darkViolet text-white border-b border-theme-lightViolet/20 z-40 shadow-sm shrink-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-app h-16 flex items-center justify-between">
 <div className="flex items-center gap-3 min-w-0">
+            {/* Mobile & tablet hamburger */}
+            <button
+              onClick={toggleNavMenu}
+              aria-label="Toggle dashboard menu"
+              aria-expanded={navMenuOpen}
+              data-menu-toggle="true"
+              className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center bg-white/10 hover:bg-white/20 text-white border border-theme-lightViolet/30 transition-colors cursor-pointer shrink-0"
+            >
+              {navMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
             <Link to="/" className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform">
               <img src="/home/logo.png" alt="SRG Logo" className="w-10 h-10 object-contain drop-shadow" />
             </Link>
@@ -350,54 +369,54 @@ return (
       </nav>
 
 {/* Primary Layout and Shell wrapper */}
-      <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-5 lg:px-6 py-4 lg:py-8 w-full text-slate-800 overflow-y-auto overscroll-contain">
+      <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-5 lg:px-6 py-4 lg:py-8 2xl:max-w-app w-full text-slate-800 overflow-y-auto overscroll-contain">
         {/* -------------------- 1. SUPER ADMIN / ADMIN BOARD -------------------- */}
         {(user.role === UserRole.SUPER_ADMIN || user.role === UserRole.ADMIN) && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start">
-            <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 content-start">
+            <DashboardMenu>
               <button
                 onClick={() => setActiveTab('overview')}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'overview' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                 }`}
               >
-                <Tag className="w-4 h-4" /> Seva / सेवा (Overview)
+                <Tag className="w-4 h-4" /><span className="truncate min-w-0">Seva / सेवा (Overview)</span>
               </button>
 
 <button
                 onClick={() => { setActiveTab('registered_companies'); setDetailCompanyId(''); }}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'registered_companies' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                 }`}
               >
-                <Building2 className="w-4 h-4" /> Registered Company / नोंदणीकृत कंपनी
+                <Building2 className="w-4 h-4" /><span className="truncate min-w-0">Registered Company / नोंदणीकृत कंपनी</span>
               </button>
 
 <button
                 onClick={() => { setActiveTab('registered_users'); setDetailCandidateId(''); }}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'registered_users' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                 }`}
               >
-                <Users className="w-4 h-4" /> Registered User / नोंदणीकृत वापरकर्ते
+                <Users className="w-4 h-4" /><span className="truncate min-w-0">Registered User / नोंदणीकृत वापरकर्ते</span>
               </button>
 
 <button
                 onClick={() => { setActiveTab('job_requirements'); setDetailReqId(0); }}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'job_requirements' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                 }`}
               >
-                <Send className="w-4 h-4" /> Job Requirement / नोकरी आवश्यकता
+                <Send className="w-4 h-4" /><span className="truncate min-w-0">Job Requirement / नोकरी आवश्यकता</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('job_applications')}
-                className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'job_applications' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                 }`}
               >
-                <Mail className="w-4 h-4" /> Job Application / नोकरी अर्ज
+                <Mail className="w-4 h-4" /><span className="truncate min-w-0">Job Application / नोकरी अर्ज</span>
               </button>
 
               <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
@@ -409,11 +428,11 @@ return (
                     navigate('/login');
                   }
                 }}
-                className="px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
+                className="px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
               >
-                <Power className="w-4 h-4" /> Log Off / लॉग ऑफ
+                <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
               </button>
-            </div>
+            </DashboardMenu>
 
 <div className="lg:col-span-9 space-y-6">
               {activeTab === 'job_requirements' && detailReqId > 0 ? (
@@ -517,53 +536,53 @@ return (
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 content-start">
+              <DashboardMenu>
                 <button
                   onClick={() => setActiveTab('overview')}
-                  className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
+                  className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
                     activeTab === 'overview' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                   }`}
                 >
-                  आढावा / Overview
+                  <span className="truncate min-w-0">आढावा / Overview</span>
                 </button>
                 {user.handlerPermissions?.canApproveJobs && (
                   <button
                     onClick={() => setActiveTab('jobs')}
-                    className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
                       activeTab === 'jobs' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                   >
-                    नोकऱ्या मान्यता / Jobs Validation
+                    <span className="truncate min-w-0">नोकऱ्या मान्यता / Jobs Validation</span>
                   </button>
                 )}
                 {user.handlerPermissions?.canManageCompanies && (
                   <button
                     onClick={() => setActiveTab('companies')}
-                    className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
                       activeTab === 'companies' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                   >
-                    नियोक्ते फेरबदल / Companies
+                    <span className="truncate min-w-0">नियोक्ते फेरबदल / Companies</span>
                   </button>
                 )}
                 {user.handlerPermissions?.canManageSHG && (
                   <button
                     onClick={() => setActiveTab('shg')}
-                    className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
                       activeTab === 'shg' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                   >
-                    बचतगट सक्षमीकरण / SHGs Info
+                    <span className="truncate min-w-0">बचतगट सक्षमीकरण / SHGs Info</span>
                   </button>
                 )}
                 {user.handlerPermissions?.canViewReports && (
                   <button
                     onClick={() => setActiveTab('reports')}
-                    className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all ${
                       activeTab === 'reports' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                   >
-                    अहवाल अहवाल / Reports Summary
+                    <span className="truncate min-w-0">अहवाल अहवाल / Reports Summary</span>
                   </button>
                 )}
                 <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
@@ -574,11 +593,11 @@ return (
                       navigate('/login');
                     }
                   }}
-                  className="px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
+                  className="px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
                 >
-                  <Power className="w-4 h-4" /> Log Off / लॉग ऑफ
+                  <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
                 </button>
-              </div>
+              </DashboardMenu>
 
       <div className="lg:col-span-9 space-y-6">
                 {activeTab === 'overview' && (
@@ -638,6 +657,142 @@ return (
         />
       )}
     </div>
+    </DashboardMenuContext.Provider>
+  );
+}
+
+// ==========================================
+// COLLAPSIBLE DASHBOARD NAV: hamburger in header, dropdown on mobile/tablet
+// ==========================================
+export const DashboardMenuContext = React.createContext<{ open: boolean; toggle: () => void; close: () => void }>({
+  open: false,
+  toggle: () => {},
+  close: () => {},
+});
+
+export function DashboardMenu({ children, variant = 'sidebar' }: { children: React.ReactNode; variant?: 'sidebar' | 'drawer' }) {
+  const { open, close } = useContext(DashboardMenuContext);
+  const { user } = useSelector((state: RootState) => state.auth);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const roleLabel =
+    {
+      [UserRole.SUPER_ADMIN]: 'Super Admin',
+      [UserRole.ADMIN]: 'Admin',
+      [UserRole.HANDLER]: 'Handler',
+      [UserRole.COMPANY]: 'Employer',
+      [UserRole.CANDIDATE]: 'Candidate',
+      [UserRole.SHG]: 'SHG Group',
+    }[user?.role || ''] || user?.role || '';
+  const nameInitials = (user?.name || 'U')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join('');
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Element | null;
+      if (menuRef.current && menuRef.current.contains(target as Node)) return;
+      if (target && typeof target.closest === 'function' && target.closest('[data-menu-toggle]')) return;
+      close();
+    };
+    const escHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('keydown', escHandler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('keydown', escHandler);
+    };
+  }, [open, close]);
+
+  return (
+    <div className="lg:col-span-3">
+      {/* Mobile & tablet: slide-in drawer (trigger is the header hamburger) */}
+      {open && (
+        <div className="lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-theme-darkViolet/45 backdrop-blur-sm z-50 animate-drawer-backdrop"
+            onClick={close}
+            aria-hidden="true"
+          />
+          {/* Drawer */}
+          <aside
+            ref={menuRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Dashboard menu"
+            className="fixed top-0 left-0 bottom-0 w-[84%] max-w-sm z-[60] flex flex-col bg-white rounded-e-3xl border-r border-theme-lightViolet/70 shadow-2xl overflow-hidden animate-drawer-in"
+          >
+            {/* Drawer header */}
+            <div className="relative shrink-0 px-5 pt-5 pb-4 bg-linear-to-br from-theme-darkViolet via-[#2a1a68] to-theme-lavender text-white overflow-hidden">
+              {/* decorative blobs */}
+              <div className="absolute -top-10 -right-8 w-32 h-32 rounded-full bg-theme-gold/25 blur-2xl pointer-events-none"></div>
+              <div className="absolute -bottom-16 -left-8 w-36 h-36 rounded-full bg-theme-deepTeal/25 blur-2xl pointer-events-none"></div>
+              <div className="absolute top-14 right-14 w-12 h-12 rounded-full bg-white/10 blur-md pointer-events-none"></div>
+
+              <div className="relative flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <img src="/home/logo.png" alt="SRG Logo" className="w-9 h-9 object-contain drop-shadow-lg shrink-0" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-extrabold leading-tight">माहिती फलक</span>
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-white/70 leading-tight">Swayamrojgar Dashboard</span>
+                  </span>
+                </div>
+                <button
+                  onClick={close}
+                  aria-label="Close dashboard menu"
+                  className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/10 hover:bg-white/25 text-white border border-white/20 transition-colors cursor-pointer shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Current user card */}
+              <div className="relative mt-4 flex items-center gap-2.5 rounded-2xl bg-white/10 border border-white/15 px-3 py-2.5 backdrop-blur-sm">
+                <div className="w-9 h-9 rounded-full bg-linear-to-br from-theme-gold to-theme-terracotta flex items-center justify-center text-white text-xs font-black shrink-0 shadow-md ring-2 ring-white/25">
+                  {nameInitials || 'U'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[12px] font-extrabold leading-tight">{user?.name || 'User'}</p>
+                  <p className="truncate text-[10px] text-white/70 leading-tight">{user?.email || ''}</p>
+                </div>
+                <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-lg bg-theme-gold/25 text-theme-gold border border-theme-gold/40">
+                  {roleLabel}
+                </span>
+              </div>
+            </div>
+
+            {/* Drawer body */}
+            <div
+              className="drawer-menu-body flex-1 overflow-y-auto overscroll-contain p-3 grid grid-cols-1 gap-1.5 content-start bg-linear-to-b from-theme-lightViolet/40 to-white border-t border-theme-lightViolet/40"
+              onClick={close}
+            >
+              {children}
+            </div>
+
+            {/* Drawer footer */}
+            <div className="shrink-0 px-5 py-2.5 bg-white text-center">
+              <p className="text-[9px] font-bold text-theme-darkViolet/40 uppercase tracking-wider">
+                SRG • Swayamrojgar • {new Date().getFullYear()}
+              </p>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* Desktop: static compact column */}
+      {variant === 'sidebar' && (
+        <div className="hidden lg:grid grid-cols-1 gap-1.5 content-start">
+          {children}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -667,7 +822,17 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
 
   let title = "माहिती फलक आकडेवारी / Dashboard Statistics";
   let items: { labelMr: string; labelEn: string; value: any; icon: React.ReactNode; colorClass: string }[] = [];
-  let activityLogs: any[] = [];
+
+  // Per-card accent gradients (top strip + icon ring) keyed by the card's colorClass.
+  const CARD_ACCENTS: Record<string, { strip: string; ring: string }> = {
+    'bg-indigo-50/70 border-indigo-100':   { strip: 'from-indigo-400 via-indigo-500 to-indigo-700',   ring: 'from-indigo-400 to-indigo-700' },
+    'bg-emerald-50/70 border-emerald-100': { strip: 'from-emerald-400 via-emerald-500 to-emerald-600', ring: 'from-emerald-400 to-emerald-600' },
+    'bg-rose-50/70 border-rose-100':       { strip: 'from-rose-400 via-rose-500 to-rose-600',         ring: 'from-rose-400 to-rose-600' },
+    'bg-amber-50/70 border-amber-100':     { strip: 'from-amber-300 via-amber-400 to-orange-500',     ring: 'from-amber-300 to-orange-500' },
+    'bg-sky-50/70 border-sky-100':         { strip: 'from-sky-400 via-sky-500 to-blue-600',           ring: 'from-sky-400 to-blue-600' },
+    'bg-violet-50/70 border-violet-100':   { strip: 'from-violet-400 via-violet-500 to-violet-700',   ring: 'from-violet-400 to-violet-700' },
+  };
+  const noAccent = { strip: 'from-theme-lavender via-purple-500 to-theme-darkViolet', ring: 'from-theme-lavender to-theme-darkViolet' };
 
   if (adminDashboard) {
     title = "प्रशासक नियंत्रण फलक / Admin Control Dashboard";
@@ -676,8 +841,8 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
         labelMr: 'एकूण वापरकर्ता नोंदणी संख्या',
         labelEn: 'Total User Registrations',
         value: adminDashboard.userRegistrationCount,
-        icon: <UserCheck className="w-5 h-5 text-blue-600" />,
-        colorClass: "bg-blue-50/70 border-blue-100"
+        icon: <UserCheck className="w-5 h-5 text-indigo-600" />,
+        colorClass: "bg-indigo-50/70 border-indigo-100"
       },
       {
         labelMr: 'एकूण कंपनी नोंदणी संख्या',
@@ -687,23 +852,13 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
         colorClass: "bg-emerald-50/70 border-emerald-100"
       },
       {
-        labelMr: 'एकूण नोकरी आवश्यकता संख्या',
-        labelEn: 'Total Job Requirements',
-        value: adminDashboard.requirementCount,
-        icon: <Briefcase className="w-5 h-5 text-purple-600" />,
-        colorClass: "bg-purple-50/70 border-purple-100"
-      },
-      {
         labelMr: 'एकूण नोकरी अर्ज संख्या',
         labelEn: 'Total Job Applications',
         value: adminDashboard.appliedJobCount,
-        icon: <FileText className="w-5 h-5 text-orange-600" />,
-        colorClass: "bg-orange-50/70 border-orange-100"
+        icon: <FileText className="w-5 h-5 text-rose-600" />,
+        colorClass: "bg-rose-50/70 border-rose-100"
       }
     ];
-    if (adminDashboard.activityLogs && Array.isArray(adminDashboard.activityLogs)) {
-      activityLogs = adminDashboard.activityLogs;
-    }
   } else if (employerDashboard) {
     title = "नियोक्ता नियंत्रण फलक / Employer Control Dashboard";
     items = [
@@ -711,22 +866,22 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
         labelMr: 'एकूण नोकरी अर्ज संख्या',
         labelEn: 'Applied Candidates',
         value: employerDashboard.appliedJobCount,
-        icon: <UserCheck className="w-5 h-5 text-blue-600" />,
-        colorClass: "bg-blue-50/70 border-blue-100"
+        icon: <UserCheck className="w-5 h-5 text-indigo-600" />,
+        colorClass: "bg-indigo-50/70 border-indigo-100"
       },
       {
         labelMr: 'सक्रिय नोकऱ्या संख्या',
         labelEn: 'Active Requirements',
         value: employerDashboard.requirementCount,
-        icon: <Briefcase className="w-5 h-5 text-orange-600" />,
-        colorClass: "bg-orange-50/70 border-orange-100"
+        icon: <Briefcase className="w-5 h-5 text-amber-600" />,
+        colorClass: "bg-amber-50/70 border-amber-100"
       },
       {
         labelMr: 'उमेदवार प्रोफाइल व्ह्यूज',
         labelEn: 'Resume Profile Views',
         value: employerDashboard.profileViewCount,
-        icon: <Eye className="w-5 h-5 text-purple-600" />,
-        colorClass: "bg-purple-50/70 border-purple-100"
+        icon: <Eye className="w-5 h-5 text-violet-600" />,
+        colorClass: "bg-violet-50/70 border-violet-100"
       }
     ];
   } else if (candidateDashboard) {
@@ -743,8 +898,8 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
         labelMr: 'अर्ज केलेल्या नोकऱ्या',
         labelEn: 'Applied Jobs Count',
         value: appliedJobsOverride ?? (candidateDashboard.AppliedJobCount || candidateDashboard.appliedJobCount || 0),
-        icon: <FileText className="w-5 h-5 text-blue-600" />,
-        colorClass: "bg-blue-50/70 border-blue-100"
+        icon: <FileText className="w-5 h-5 text-sky-600" />,
+        colorClass: "bg-sky-50/70 border-sky-100"
       },
       {
         labelMr: 'बायोडाटा डाउनलोड संख्या',
@@ -757,8 +912,8 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
         labelMr: 'प्रोफाइल पाहिली संख्या',
         labelEn: 'Profile Views',
         value: candidateDashboard.ProfileViewCount || candidateDashboard.profileViewCount || 0,
-        icon: <Eye className="w-5 h-5 text-purple-600" />,
-        colorClass: "bg-purple-50/70 border-purple-100"
+        icon: <Eye className="w-5 h-5 text-violet-600" />,
+        colorClass: "bg-violet-50/70 border-violet-100"
       }
     ];
   } else {
@@ -786,137 +941,52 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
           )}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-4">
-          {items.map((item, idx) => (
-            <div key={idx} className={`p-3 lg:p-4 rounded-xl border flex items-start gap-2 lg:gap-3 transition-all ${item.colorClass}`}>
-              <div className="p-1.5 lg:p-2 bg-white rounded-lg shadow-2xs shrink-0">
-                {item.icon}
-              </div>
-              <div className="min-w-0">
-                <p className="text-[9px] lg:text-[10px] font-semibold text-slate-500 leading-tight mb-0.5">
-                  {item.labelMr}
-                </p>
-                <p className="text-[9px] lg:text-[10px] font-medium text-slate-400 leading-tight mb-1.5 lg:mb-2.5">
+        <div className={`grid grid-cols-1 min-[420px]:grid-cols-2 ${items.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2 2xl:grid-cols-4'} gap-2.5 lg:gap-4`}>
+          {items.map((item, idx) => {
+            const accent = CARD_ACCENTS[item.colorClass] || noAccent;
+            const stretchOdd = items.length === 3 && idx === 2 ? 'min-[420px]:col-span-2 lg:col-span-1' : '';
+            return (
+              <div
+                key={idx}
+                className={`group relative overflow-hidden rounded-2xl border p-3 lg:p-3.5 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${stretchOdd} ${item.colorClass}`}
+              >
+                {/* Top gradient accent strip */}
+                <div className={`absolute inset-x-0 top-0 h-1 bg-linear-to-r ${accent.strip}`}></div>
+
+                {/* Decorative pattern + glows */}
+                <div className="pointer-events-none absolute inset-0 dot-grid opacity-60"></div>
+                <div className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full bg-white/60 blur-2xl opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="pointer-events-none absolute -bottom-12 -left-8 h-24 w-24 rounded-full bg-white/40 blur-2xl"></div>
+
+                {/* Faint icon watermark in the corner */}
+                <div className="pointer-events-none absolute top-3 right-3 opacity-15 group-hover:opacity-40 group-hover:-rotate-6 transition-all duration-300">
+                  {item.icon}
+                </div>
+
+                {/* Label on top, count below (compact KPI card) */}
+                <div className="relative flex items-start gap-2 min-w-0">
+                  <div className={`relative shrink-0 rounded-lg p-[2px] bg-linear-to-br ${accent.ring} shadow-md`}>
+                    <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-[6px] bg-white flex items-center justify-center">
+                      {item.icon}
+                    </div>
+                  </div>
+                  <p className="break-words text-[11px] lg:text-xs font-bold text-slate-700 leading-snug min-w-0 pt-0.5">
+                    {item.labelMr}
+                  </p>
+                </div>
+                <p className="relative mt-0.5 text-[9px] lg:text-[10px] font-semibold text-slate-400 uppercase tracking-wide break-words leading-tight">
                   {item.labelEn}
                 </p>
-                <p className="text-sm lg:text-base sm:text-lg font-black text-slate-950 leading-none">
-                  {item.value}
-                </p>
+                <div className="relative mt-auto pt-2 flex justify-end">
+                  <p className="gloss whitespace-nowrap text-[clamp(1.25rem,1.9vw,1.875rem)] font-black leading-none tracking-tight drop-shadow-sm">
+                    {item.value}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
-
-      {activityLogs.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-150 shadow-xs p-6 space-y-4 text-left">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-100 pb-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-blue-950" />
-              <h3 className="font-extrabold text-blue-950 text-xs sm:text-sm tracking-wide uppercase">
-                साप्ताहिक प्रगती अहवाल / Weekly Activity & Progress Logs
-              </h3>
-            </div>
-            <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full border border-blue-100 shrink-0 self-start sm:self-auto">
-              मागील आठवड्याशी तुलना / Compared with previous week
-            </span>
-          </div>
-          <div className="overflow-x-auto rounded-xl border border-slate-100">
-            <table className="min-w-full divide-y divide-slate-100 text-left text-xs">
-              <thead className="bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                <tr>
-                  <th scope="col" className="px-4 py-3.5 font-bold">
-                    आठवडा / Activity Date
-                  </th>
-                  <th scope="col" className="px-4 py-3.5 font-bold text-center">
-                    नवीन नोंदणी / New Registrations
-                  </th>
-                  <th scope="col" className="px-4 py-3.5 font-bold text-center">
-                    वापरकर्ता लॉगिन / User Logins
-                  </th>
-                  <th scope="col" className="px-4 py-3.5 font-bold text-center">
-                    नवीन आवश्यकता / New Requirements
-                  </th>
-                  <th scope="col" className="px-4 py-3.5 font-bold text-center">
-                    नोकरी अर्ज / Job Applications
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {activityLogs.map((log, index) => {
-                  const prevLog = activityLogs[index + 1];
-
-                  const getVal = (item: any, keys: string[]) => {
-                    for (const key of keys) {
-                      if (item && item[key] !== undefined) return parseInt(item[key]) || 0;
-                    }
-                    return 0;
-                  };
-
-                  const currReg = getVal(log, ['newRegistration', 'newregistration']);
-                  const prevReg = prevLog ? getVal(prevLog, ['newRegistration', 'newregistration']) : null;
-
-                  const currLogin = getVal(log, ['userLogin', 'userlogin']);
-                  const prevLogin = prevLog ? getVal(prevLog, ['userLogin', 'userlogin']) : null;
-
-                  const currReq = getVal(log, ['newRequirements', 'newrequirements']);
-                  const prevReq = prevLog ? getVal(prevLog, ['newRequirements', 'newrequirements']) : null;
-
-                  const currApp = getVal(log, ['jobApplications', 'jobapplications']);
-                  const prevApp = prevLog ? getVal(prevLog, ['jobApplications', 'jobapplications']) : null;
-
-                  const renderTrend = (curr: number, prev: number | null) => {
-                    if (prev === null) return null;
-                    const diff = curr - prev;
-                    if (diff > 0) {
-                      return (
-                        <span className="inline-flex items-center text-[10px] text-emerald-600 font-bold ml-1.5 bg-emerald-50 px-1 py-0.5 rounded">
-                          ↑+{diff}
-                        </span>
-                      );
-                    } else if (diff < 0) {
-                      return (
-                        <span className="inline-flex items-center text-[10px] text-rose-600 font-bold ml-1.5 bg-rose-50 px-1 py-0.5 rounded">
-                          ↓{diff}
-                        </span>
-                      );
-                    }
-                    return (
-                      <span className="inline-flex items-center text-[10px] text-slate-400 font-medium ml-1.5 bg-slate-50 px-1 py-0.5 rounded">
-                        • 0
-                      </span>
-                    );
-                  };
-
-                  return (
-                    <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="whitespace-nowrap px-4 py-3.5 font-bold text-slate-800">
-                        📅 {log.activityDate}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3.5 text-center">
-                        <span className="font-extrabold text-slate-900">{currReg}</span>
-                        {renderTrend(currReg, prevReg)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3.5 text-center">
-                        <span className="font-extrabold text-slate-900">{currLogin}</span>
-                        {renderTrend(currLogin, prevLogin)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3.5 text-center">
-                        <span className="font-extrabold text-slate-900">{currReq}</span>
-                        {renderTrend(currReq, prevReq)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3.5 text-center">
-                        <span className="font-extrabold text-slate-900">{currApp}</span>
-                        {renderTrend(currApp, prevApp)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -936,30 +1006,344 @@ function AdminOverviewTab() {
     <div className="space-y-6 font-sans">
       <LiveDashboardStats />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        {/* Recent timeline audit stream */}
-        <Card title="अद्ययावत हालचाली / Recent System Activity">
-          <Timeline items={(stats.recentActivities || []).map((act: any) => ({
-            title: act.user,
-            desc: act.action,
-            time: act.time,
-            isLatest: true
-          }))} />
-        </Card>
+      <ActivityLogPanel logs={stats.adminDashboard?.activityLogs || []} />
 
-        {/* Informative system logs */}
-        <div className="bg-linear-to-tr from-orange-400 to-amber-500 rounded-2xl p-6 text-white text-left space-y-4 shadow-sm border border-orange-200">
-          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-lg">🙏</div>
-          <h3 className="font-extrabold text-base">दिंडोरी प्रणित स्वयंरोजगार यंत्रणा</h3>
-          <p className="text-xs leading-relaxed opacity-95">
-            प्रशासक आणि लायसन (लायजन) कर्मचारी म्हणून, आपले लक्ष महिला बचत गट बाजारांना जोडून देण्यावर आणि ग्रामीण उमेदवारांना योग्य काम मिळवून देण्यावर केंद्रित असले पाहिजे. प्रत्येक उमेदवाराच्या बायोडाटाची अचूक पडताळणी करा.
-          </p>
-          <div className="pt-2">
-            <span className="text-[10px] font-black uppercase tracking-wider bg-black/10 px-3 py-1.5 rounded-lg border border-white/20">
-              Swami Seva Department v1.0
-            </span>
+      {/* Informative system logs */}
+      <div className="bg-linear-to-tr from-orange-400 to-amber-500 rounded-2xl p-6 text-white text-left space-y-4 shadow-sm border border-orange-200 max-w-2xl">
+        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-lg">🙏</div>
+        <h3 className="font-extrabold text-base">दिंडोरी प्रणित स्वयंरोजगार यंत्रणा</h3>
+        <p className="text-xs leading-relaxed opacity-95">
+          प्रशासक आणि लायसन (लायजन) कर्मचारी म्हणून, आपले लक्ष महिला बचत गट बाजारांना जोडून देण्यावर आणि ग्रामीण उमेदवारांना योग्य काम मिळवून देण्यावर केंद्रित असले पाहिजे. प्रत्येक उमेदवाराच्या बायोडाटाची अचूक पडताळणी करा.
+        </p>
+        <div className="pt-2">
+          <span className="text-[10px] font-black uppercase tracking-wider bg-black/10 px-3 py-1.5 rounded-lg border border-white/20">
+            Swami Seva Department v1.0
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// ACTIVITY LOG PANEL: TABLE / BAR GRAPH / PIE CHART
+// ==========================================
+
+type ActivityMetricKey = 'newReg' | 'jobApps' | 'newReq' | 'logins';
+
+const ACTIVITY_METRICS: { key: ActivityMetricKey; labelMr: string; labelEn: string; color: string }[] = [
+  { key: 'newReg',  labelMr: 'नवीन नोंदणी',   labelEn: 'New Registration',  color: '#10B981' },
+  { key: 'jobApps', labelMr: 'नोकरी अर्ज',     labelEn: 'Job Applications', color: '#0EA5E9' },
+  { key: 'newReq',  labelMr: 'नवीन आवश्यकता', labelEn: 'New Requirements', color: '#F59E0B' },
+  { key: 'logins',  labelMr: 'यूजर लॉगिन',     labelEn: 'User Login',       color: '#8B5CF6' },
+];
+
+interface ActivityRow {
+  date: string;
+  newReg: number;
+  jobApps: number;
+  newReq: number;
+  logins: number;
+}
+
+const parseActivityNum = (v: unknown): number => {
+  if (typeof v === 'number') return v;
+  const n = parseInt(String(v ?? '').replace(/[^0-9]/g, ''), 10);
+  return isNaN(n) ? 0 : n;
+};
+
+const normalizeActivityLogs = (logs: any[]): ActivityRow[] =>
+  (Array.isArray(logs) ? logs : []).map((l: any) => ({
+    date: String(l?.activityDate ?? l?.date ?? ''),
+    newReg: parseActivityNum(l?.newRegistration ?? l?.newregistration),
+    jobApps: parseActivityNum(l?.jobApplications ?? l?.jobapplications),
+    newReq: parseActivityNum(l?.newRequirements ?? l?.newrequirements),
+    logins: parseActivityNum(l?.userLogin ?? l?.userlogin),
+  }));
+
+const weekShortLabel = (row: ActivityRow): string => {
+  const m = /^([A-Za-z]{3})\s+\d{1,2}/.exec(row.date);
+  return m ? m[0] : row.date;
+};
+
+type ActivityViewMode = 'table' | 'bar' | 'pie';
+
+function ActivityLegend() {
+  return (
+    <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+      {ACTIVITY_METRICS.map((m) => (
+        <span key={m.key} className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
+          <span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: m.color }}></span>
+          {m.labelMr} / {m.labelEn}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ActivityLogTable({ rows }: { rows: ActivityRow[] }) {
+  const totals = ACTIVITY_METRICS.reduce((acc, m) => {
+    acc[m.key] = rows.reduce((s, r) => s + r[m.key], 0);
+    return acc;
+  }, {} as Record<ActivityMetricKey, number>);
+
+  return (
+    <div className="srg-scroll overflow-x-auto overflow-y-auto max-h-[70vh] rounded-xl border border-slate-100">
+      <table className="w-full min-w-[560px] divide-y divide-slate-100 text-left text-xs">
+        <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-wider">
+          <tr>
+            <th scope="col" className="px-4 py-3.5 font-bold">तारीख / Date</th>
+            {ACTIVITY_METRICS.map((m) => (
+              <th key={m.key} scope="col" className="px-4 py-3.5 font-bold text-center whitespace-nowrap">
+                {m.labelEn}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100 bg-white">
+          {rows.map((r, i) => (
+            <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+              <td className="whitespace-nowrap px-4 py-3.5 font-bold text-slate-800 text-[11px]">
+                {r.date}
+              </td>
+              {ACTIVITY_METRICS.map((m) => (
+                <td key={m.key} className="whitespace-nowrap px-4 py-3.5 text-center">
+                  <span
+                    className="inline-flex items-center justify-center min-w-9 px-2 py-1 rounded-lg text-[11px] font-extrabold tabular-nums"
+                    style={{ color: m.color, backgroundColor: `${m.color}1A` }}
+                  >
+                    {r[m.key]}
+                  </span>
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="bg-slate-50/70">
+            <td className="whitespace-nowrap px-4 py-3.5 font-black text-slate-700 text-[11px]">
+              एकूण / Total
+            </td>
+            {ACTIVITY_METRICS.map((m) => (
+              <td key={m.key} className="whitespace-nowrap px-4 py-3.5 text-center">
+                <span
+                  className="inline-flex items-center justify-center min-w-9 px-2 py-1 rounded-lg text-[11px] font-black tabular-nums"
+                  style={{ color: m.color, backgroundColor: `${m.color}14` }}
+                >
+                  {totals[m.key]}
+                </span>
+              </td>
+            ))}
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
+
+function ActivityBarChart({ rows }: { rows: ActivityRow[] }) {
+  const allValues = rows.flatMap((r) => ACTIVITY_METRICS.map((m) => r[m.key]));
+  const maxVal = Math.max(...allValues, 1);
+  const niceMax = Math.max(4, Math.ceil(maxVal / 2) * 2);
+  const W = rows.length;
+  const svgW = 640;
+  const svgH = 250;
+  const padL = 40;
+  const padR = 18;
+  const padT = 18;
+  const padB = 60;
+  const plotW = svgW - padL - padR;
+  const plotH = svgH - padT - padB;
+  const groupW = plotW / W;
+  const nBars = ACTIVITY_METRICS.length;
+  const barGap = 4;
+  const barW = Math.min(24, Math.max(8, (groupW - (nBars - 1) * barGap) / nBars - 2));
+  const totalBW = nBars * barW + (nBars - 1) * barGap;
+  const gridVals = [0, niceMax / 2, niceMax];
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto" role="img" aria-label="Activity bar graph">
+        {gridVals.map((gv) => {
+          const y = padT + plotH - (gv / niceMax) * plotH;
+          return (
+            <g key={gv}>
+              <line x1={padL} y1={y} x2={svgW - padR} y2={y} stroke="#EEF1F7" strokeWidth="1" />
+              <text x={padL - 8} y={y + 3} textAnchor="end" fontSize="9" fill="#8FA0B5">{gv}</text>
+            </g>
+          );
+        })}
+        {rows.map((r, wi) => {
+          const gx = padL + wi * groupW + (groupW - totalBW) / 2;
+          return (
+            <g key={wi}>
+              {ACTIVITY_METRICS.map((m, bi) => {
+                const v = r[m.key];
+                const barH = (v / niceMax) * plotH;
+                const x = gx + bi * (barW + barGap);
+                const y = padT + plotH - barH;
+                return (
+                  <g key={m.key}>
+                    <rect
+                      x={x}
+                      y={y}
+                      width={barW}
+                      height={Math.max(barH, v > 0 ? 2 : 0)}
+                      rx="3"
+                      fill={m.color}
+                      opacity="0.92"
+                    />
+                    {v > 0 && (
+                      <text x={x + barW / 2} y={y - 4} textAnchor="middle" fontSize="9" fontWeight="700" fill={m.color}>
+                        {v}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+              <text
+                x={padL + wi * groupW + groupW / 2}
+                y={svgH - padB + 18}
+                textAnchor="middle"
+                fontSize="10"
+                fontWeight="600"
+                fill="#64748B"
+              >
+                {weekShortLabel(r)}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <ActivityLegend />
+    </div>
+  );
+}
+
+function ActivityDonutChart({ rows }: { rows: ActivityRow[] }) {
+  const totals = ACTIVITY_METRICS.map((m) => ({
+    ...m,
+    total: rows.reduce((s, r) => s + r[m.key], 0)
+  }));
+  const grand = totals.reduce((s, t) => s + t.total, 0);
+  const R = 78;
+  const T = 34;
+  const C = 2 * Math.PI * R;
+  let acc = 0;
+  const segs = totals.map((t) => {
+    const frac = grand > 0 ? t.total / grand : 0;
+    const len = frac * C;
+    const seg = { ...t, frac, len, start: acc };
+    acc += len;
+    return seg;
+  });
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center gap-6">
+      <div className="relative shrink-0">
+        <svg viewBox="0 0 200 200" className="w-44 h-44 sm:w-52 sm:h-52" role="img" aria-label="Activity pie chart">
+          <circle cx="100" cy="100" r={R} fill="none" stroke="#EEF1F7" strokeWidth={T} />
+          {segs.filter((s) => s.len > 0.4).map((s) => (
+            <circle
+              key={s.key}
+              cx="100"
+              cy="100"
+              r={R}
+              fill="none"
+              stroke={s.color}
+              strokeWidth={T}
+              strokeDasharray={`${s.len} ${C - s.len}`}
+              strokeDashoffset={-s.start}
+              transform="rotate(-90 100 100)"
+              strokeLinecap="butt"
+            />
+          ))}
+          <circle cx="100" cy="100" r={R - T / 2} fill="#fff" />
+          <text x="100" y="95" textAnchor="middle" fontSize="24" fontWeight="800" fill="#1E293B">{grand}</text>
+          <text x="100" y="112" textAnchor="middle" fontSize="8" fontWeight="600" fill="#94A3B8">TOTAL</text>
+        </svg>
+      </div>
+      <div className="flex-1 w-full min-w-0">
+        <ul className="space-y-2.5">
+          {totals.map((t) => (
+            <li
+              key={t.key}
+              className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-white hover:shadow-sm transition-colors"
+            >
+              <span className="w-3 h-3 rounded-[4px] shrink-0" style={{ backgroundColor: t.color }}></span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold text-slate-700 leading-tight truncate">
+                  {t.labelMr} / {t.labelEn}
+                </p>
+              </div>
+              <span className="text-sm font-black tabular-nums" style={{ color: t.color }}>{t.total}</span>
+              <span className="w-12 text-right text-[10px] font-bold text-slate-400 tabular-nums">
+                {grand > 0 ? Math.round((t.total / grand) * 100) : 0}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function ActivityLogPanel({ logs }: { logs: any[] }) {
+  const [view, setView] = useState<ActivityViewMode>('table');
+  const rows = normalizeActivityLogs(logs);
+
+  const headerBtns: { mode: ActivityViewMode; icon: React.ReactNode; label: string }[] = [
+    { mode: 'table', icon: <Table2 className="w-3.5 h-3.5" />, label: 'Table' },
+    { mode: 'bar', icon: <BarChart3 className="w-3.5 h-3.5" />, label: 'Bar Graph' },
+    { mode: 'pie', icon: <ChartPie className="w-3.5 h-3.5" />, label: 'Pie Chart' },
+  ];
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-150 shadow-xs text-left overflow-hidden">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 border-b border-gray-100 p-5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-linear-to-br from-theme-lavender via-purple-500 to-theme-darkViolet flex items-center justify-center text-white shadow-sm shrink-0">
+            <History className="w-4.5 h-4.5" />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-blue-950 text-sm tracking-wide">
+              स्वयंरोजगार अनुप्रयोग क्रियाकलाप लॉग / Swayamrojgar App Activity Log
+            </h3>
+            <p className="text-[10px] text-slate-400 font-medium">
+              आठवड्यानुसार क्रियाकलाप सारांश / Week-wise activity summary
+            </p>
           </div>
         </div>
+        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl self-start lg:self-auto">
+          {headerBtns.map((b) => (
+            <button
+              key={b.mode}
+              onClick={() => setView(b.mode)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                view === b.mode
+                  ? 'bg-white text-theme-darkViolet shadow-sm ring-1 ring-purple-200'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {b.icon}
+              {b.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-5">
+        {rows.length === 0 ? (
+          <div className="py-8 text-center text-xs text-slate-400 font-medium">
+            अद्याप क्रियाकलाप डेटा उपलब्ध नाही / No activity log data available yet
+          </div>
+        ) : view === 'table' ? (
+          <ActivityLogTable rows={rows} />
+        ) : view === 'bar' ? (
+          <ActivityBarChart rows={rows} />
+        ) : (
+          <ActivityDonutChart rows={rows} />
+        )}
       </div>
     </div>
   );
@@ -1273,7 +1657,11 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const tab = searchParams.get('tab') || 'overview';
+    return ['overview', 'pipeline', 'listings', 'post', 'profile'].includes(tab) ? tab : 'overview';
+  });
 
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
   const [selectedJobCode, setSelectedJobCode] = useState<string | undefined>(undefined);
@@ -1294,7 +1682,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
 
   // Load recruiter profile from unified endpoint
   const { data: profile, refetch: refetchProfile } = useGetMyProfileQuery(undefined, { skip: !user });
-  const [updateProfile] = useUpdateCompanyMutation();
 
   // Load applicants pipelines & jobs (employer-specific endpoints with Bearer token)
   const { data: pipelineApps = [], refetch: refetchApps } = useGetMyJobApplicationsQuery(undefined, { skip: !user });
@@ -1383,6 +1770,21 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   const [compContact, setCompContact] = useState('');
   const [compIndustry, setCompIndustry] = useState('');
   const [compAddress, setCompAddress] = useState('');
+  const [compMobile, setCompMobile] = useState('');
+  const [compEmail, setCompEmail] = useState('');
+  const [compAltContact, setCompAltContact] = useState('');
+  const [compAltNumber, setCompAltNumber] = useState('');
+  const [compState, setCompState] = useState('');
+  const [compDistrict, setCompDistrict] = useState('');
+  const [compTaluka, setCompTaluka] = useState('');
+  const [compCompanyType, setCompCompanyType] = useState('');
+  const [compWebsite, setCompWebsite] = useState('');
+  const [compAltEmail, setCompAltEmail] = useState('');
+  const [compDescription, setCompDescription] = useState('');
+  const [compPicFile, setCompPicFile] = useState<File | null>(null);
+  const [compPicPreview, setCompPicPreview] = useState('');
+  const [compPicUploading, setCompPicUploading] = useState(false);
+  const compPicInputRef = useRef<HTMLInputElement | null>(null);
 
   // OTP Interview scheduling state
   const [targetAppId, setTargetAppId] = useState('');
@@ -1396,6 +1798,9 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       setCompContact(profile.contactPerson);
       setCompIndustry(profile.industry);
       setCompAddress(profile.address);
+      setCompMobile(profile.phone || '');
+      setCompEmail(profile.email || '');
+      setCompDistrict(profile.district || '');
     }
   }, [profile]);
 
@@ -1472,62 +1877,96 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   const handleSaveCorporateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await updateProfile({
-        id: companyId,
-        companyName: compName,
+      // Upload the new profile pic (same /api/v1/profilepic endpoint for all roles) if chosen
+      if (compPicFile) {
+        setCompPicUploading(true);
+        const up = await uploadProfilePic(compPicFile);
+        if (!up.success) {
+          setToastMsg(`Logo अपलोड अयशस्वी / Logo upload failed: ${up.message}`);
+          setCompPicUploading(false);
+          return;
+        }
+      }
+
+      const res = await updateCompanyProfile({
+        address: compAddress,
+        stateId: 0,
+        state: compState,
+        districtId: 0,
+        district: compDistrict,
+        talukaId: 0,
+        taluka: compTaluka,
+        mobile: compMobile,
+        email: compEmail,
         contactPerson: compContact,
-        industry: compIndustry,
-        address: compAddress
-      }).unwrap();
-      setToastMsg('प्रोफाइल जतन केले / Profile updated successfully!');
-      refetchProfile();
-    } catch (e) {
-      setToastMsg('Failed profile save.');
+        alternateContactPerson: compAltContact,
+        alternateContactNumber: compAltNumber,
+        companyTypeId: 0,
+        companyTypeName: compCompanyType,
+        industryTypeId: 0,
+        industryTypeName: compIndustry,
+        discription: compDescription,
+        website: compWebsite,
+        alternateEmail: compAltEmail,
+      });
+
+      if (res.success) {
+        setToastMsg('प्रोफाइल जतन केले / Profile updated successfully!');
+        setCompPicFile(null);
+        setCompPicPreview('');
+        refetchProfile();
+      } else {
+        setToastMsg(res.message);
+      }
+    } catch (err: any) {
+      setToastMsg(err.message || 'Failed profile save.');
+    } finally {
+      setCompPicUploading(false);
     }
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start text-left font-sans">
-      <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 content-start">
+      <DashboardMenu>
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${
             activeTab === 'overview' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          <Tag className="w-4 h-4" /> आढावा / Overview
+          <Tag className="w-4 h-4" /><span className="truncate min-w-0">आढावा / Overview</span>
         </button>
         <button
           onClick={() => setActiveTab('pipeline')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${
             activeTab === 'pipeline' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          <Compass className="w-4 h-4" /> अर्ज प्रक्रिया / Pipeline ({pipelineApps.length})
+          <Compass className="w-4 h-4" /><span className="truncate min-w-0">अर्ज प्रक्रिया / Pipeline ({pipelineApps.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('listings')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${
             activeTab === 'listings' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          <Briefcase className="w-4 h-4" /> रिक्रूट नोकऱ्या / Vacancies ({jobsList.length})
+          <Briefcase className="w-4 h-4" /><span className="truncate min-w-0">रिक्रूट नोकऱ्या / Vacancies ({jobsList.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('post')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${
             activeTab === 'post' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          <FilePlus className="w-4 h-4" /> नवीन नोकरी जोडा / Post Job
+          <FilePlus className="w-4 h-4" /><span className="truncate min-w-0">नवीन नोकरी जोडा / Post Job</span>
         </button>
         <button
           onClick={() => setActiveTab('profile')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${
             activeTab === 'profile' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          <Settings className="w-4 h-4" /> कंपनी प्रोफाइल / Profile Settings
+          <Settings className="w-4 h-4" /><span className="truncate min-w-0">कंपनी प्रोफाइल / Profile Settings</span>
         </button>
         <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
         <button
@@ -1537,11 +1976,11 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
               navigate('/login');
             }
           }}
-          className="px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
+          className="px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
         >
-          <Power className="w-4 h-4" /> Log Off / लॉग ऑफ
+          <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
         </button>
-      </div>
+      </DashboardMenu>
 
       <div className="lg:col-span-9 space-y-6">
         {/* Overview tab - Employer Control Dashboard */}
@@ -1756,12 +2195,44 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         {activeTab === 'profile' && (
           <Card title="नियोक्ता माहिती संपादन / Employer Profile Settings">
             <form onSubmit={handleSaveCorporateProfile} className="space-y-5">
-              <TextBox
-                label="कंपनीचे नाव / Standard Enterprise Name"
-                value={compName}
-                onChange={(e) => setCompName(e.target.value)}
-                required
-              />
+              {/* Company logo / profile pic */}
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="relative shrink-0">
+                  {compPicPreview ? (
+                    <img src={compPicPreview} alt="Logo preview" className="w-20 h-20 rounded-full object-cover ring-4 ring-theme-lightViolet shadow-sm" />
+                  ) : profile?.profilePicUrl ? (
+                    <img src={profile.profilePicUrl} alt="Company logo" className="w-20 h-20 rounded-full object-cover ring-4 ring-theme-lightViolet shadow-sm" />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-theme-lightViolet border-2 border-dashed border-theme-sage/60 flex items-center justify-center">
+                      <Camera className="w-8 h-8 text-theme-lavender/60" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-center sm:items-start gap-1.5">
+                  <p className="text-xs font-bold text-slate-800">{compName || '—'}</p>
+                  <button
+                    type="button"
+                    onClick={() => compPicInputRef.current?.click()}
+                    className="px-4 py-2 text-xs font-bold bg-theme-lightViolet hover:bg-theme-lightViolet/60 text-theme-darkViolet rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <Camera className="w-3.5 h-3.5" /> {compPicFile ? 'Change Logo' : 'Upload Logo / Profile Pic'}
+                  </button>
+                  <p className="text-[10px] text-slate-500 font-semibold">Images are uploaded along with the Save action.</p>
+                  <input
+                    ref={compPicInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        setCompPicFile(f);
+                        setCompPicPreview(URL.createObjectURL(f));
+                      }
+                    }}
+                  />
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <TextBox
@@ -1771,10 +2242,61 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                   required
                 />
                 <TextBox
-                  label="उद्योग उद्योग प्रकार / Business Industry Core Sector"
+                  label="मोबाईल / Mobile Number"
+                  value={compMobile}
+                  onChange={(e) => setCompMobile(e.target.value)}
+                />
+                <TextBox
+                  label="ई-मेल / Email"
+                  type="email"
+                  value={compEmail}
+                  onChange={(e) => setCompEmail(e.target.value)}
+                />
+                <TextBox
+                  label="उद्योग प्रकार / Industry Type"
                   value={compIndustry}
                   onChange={(e) => setCompIndustry(e.target.value)}
-                  required
+                />
+                <TextBox
+                  label="कंपनी प्रकार / Company Type"
+                  value={compCompanyType}
+                  onChange={(e) => setCompCompanyType(e.target.value)}
+                />
+                <TextBox
+                  label="पर्यायी संपर्क व्यक्ती / Alternate Contact Person"
+                  value={compAltContact}
+                  onChange={(e) => setCompAltContact(e.target.value)}
+                />
+                <TextBox
+                  label="पर्यायी मोबाईल / Alternate Contact Number"
+                  value={compAltNumber}
+                  onChange={(e) => setCompAltNumber(e.target.value)}
+                />
+                <TextBox
+                  label="पर्यायी ई-मेल / Alternate Email"
+                  type="email"
+                  value={compAltEmail}
+                  onChange={(e) => setCompAltEmail(e.target.value)}
+                />
+                <TextBox
+                  label="वेबसाइट / Website"
+                  value={compWebsite}
+                  onChange={(e) => setCompWebsite(e.target.value)}
+                />
+                <TextBox
+                  label="राज्य / State"
+                  value={compState}
+                  onChange={(e) => setCompState(e.target.value)}
+                />
+                <TextBox
+                  label="जिल्हा / District"
+                  value={compDistrict}
+                  onChange={(e) => setCompDistrict(e.target.value)}
+                />
+                <TextBox
+                  label="तालुका / Taluka"
+                  value={compTaluka}
+                  onChange={(e) => setCompTaluka(e.target.value)}
                 />
               </div>
 
@@ -1782,12 +2304,17 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                 label="पत्ता / Corporate Head Office Address"
                 value={compAddress}
                 onChange={(e) => setCompAddress(e.target.value)}
-                required
+              />
+
+              <TextArea
+                label="कंपनी वर्णन / Company Description"
+                value={compDescription}
+                onChange={(e) => setCompDescription(e.target.value)}
               />
 
               <div className="flex justify-end">
-                <PrimaryButton type="submit">
-                  {t('dashboard.save')}
+                <PrimaryButton type="submit" disabled={compPicUploading}>
+                  {compPicUploading ? 'अपलोड होत आहे / Uploading...' : t('dashboard.save')}
                 </PrimaryButton>
               </div>
             </form>
@@ -2017,38 +2544,38 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start text-left font-sans">
-      <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 content-start">
+      <DashboardMenu>
         <button
           onClick={() => { setActiveTab('overview'); setSelectedJobIdForDetail(null); }}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${
             activeTab === 'overview' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          <Tag className="w-4 h-4" /> आढावा / Overview
+          <Tag className="w-4 h-4" /><span className="truncate min-w-0">आढावा / Overview</span>
         </button>
         <button
           onClick={() => { setActiveTab('search'); setSelectedJobIdForDetail(null); }}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${
             activeTab === 'search' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          <Search className="w-4 h-4" /> शोध नोकरी / Find Jobs
+          <Search className="w-4 h-4" /><span className="truncate min-w-0">शोध नोकरी / Find Jobs</span>
         </button>
         <button
           onClick={() => { setActiveTab('history'); setSelectedJobIdForDetail(null); }}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${
             activeTab === 'history' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          <History className="w-4 h-4" /> माझे अर्ज / Applied ({appliedCount})
+          <History className="w-4 h-4" /><span className="truncate min-w-0">माझे अर्ज / Applied ({appliedCount})</span>
         </button>
         <button
           onClick={() => { setActiveTab('profile'); setSelectedJobIdForDetail(null); }}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${
             activeTab === 'profile' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          <UserCircle className="w-4 h-4" /> बायोडाटा संपादन / Complete Profile
+          <UserCircle className="w-4 h-4" /><span className="truncate min-w-0">बायोडाटा संपादन / Complete Profile</span>
         </button>
         <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
         <button
@@ -2058,16 +2585,34 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
               navigate('/login');
             }
           }}
-          className="px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
+          className="px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
         >
-          <Power className="w-4 h-4" /> Log Off / लॉग ऑफ
+          <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
         </button>
-      </div>
+      </DashboardMenu>
 
       <div className="lg:col-span-9 space-y-6">
         {/* Overview tab - Candidate Dashboard */}
         {activeTab === 'overview' && (
-          <LiveDashboardStats appliedJobsOverride={appliedCount} />
+          <>
+            {/* Mobile-only: jump straight to Find Jobs */}
+            <div className="lg:hidden">
+              <button
+                onClick={() => { setActiveTab('search'); setSelectedJobIdForDetail(null); }}
+                className="w-full flex items-center gap-3 p-4 rounded-2xl bg-linear-to-r from-theme-darkViolet via-[#3a1f8f] to-theme-lavender text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer text-left"
+              >
+                <span className="w-11 h-11 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center shrink-0">
+                  <Search className="w-5 h-5" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-extrabold leading-tight">नवीन नोकऱ्या शोधा / Find New Jobs</span>
+                  <span className="block text-[10px] font-semibold text-white/70 leading-tight mt-0.5">Explore fresh openings & apply in one tap</span>
+                </span>
+                <Briefcase className="w-4 h-4 text-white/80 shrink-0" />
+              </button>
+            </div>
+            <LiveDashboardStats appliedJobsOverride={appliedCount} />
+          </>
         )}
 
         {/* Profile incomplete warning to push CV uploads */}
@@ -2527,30 +3072,30 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start text-left font-sans">
-      <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 content-start">
+      <DashboardMenu>
         <button
           onClick={() => setActiveTab('trainings')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${
             activeTab === 'trainings' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          <Award className="w-4 h-4" /> व्यावसायिक प्रशिक्षण / Courses
+          <Award className="w-4 h-4" /><span className="truncate min-w-0">व्यावसायिक प्रशिक्षण / Courses</span>
         </button>
         <button
           onClick={() => setActiveTab('products')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${
             activeTab === 'products' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          <ShoppingBag className="w-4 h-4" /> उत्पादन कॅटलॉग / Sell Products
+          <ShoppingBag className="w-4 h-4" /><span className="truncate min-w-0">उत्पादन कॅटलॉग / Sell Products</span>
         </button>
         <button
           onClick={() => setActiveTab('profile')}
-          className={`px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${
             activeTab === 'profile' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
           }`}
         >
-          <Settings className="w-4 h-4" /> बचतगट प्रोफाइल / Group Profiles
+          <Settings className="w-4 h-4" /><span className="truncate min-w-0">बचतगट प्रोफाइल / Group Profiles</span>
         </button>
         <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
         <button
@@ -2560,11 +3105,11 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
               navigate('/login');
             }
           }}
-          className="px-4.5 py-2.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
+          className="px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
         >
-          <Power className="w-4 h-4" /> Log Off / लॉग ऑफ
+          <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
         </button>
-      </div>
+      </DashboardMenu>
 
       <div className="lg:col-span-9 space-y-6">
         {/* Live Dashboard API statistics */}

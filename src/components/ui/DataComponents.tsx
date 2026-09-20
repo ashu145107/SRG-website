@@ -60,9 +60,9 @@ export function DataTable<T extends { id: string | number }>({
       </div>
 
       {/* Desktop Responsive Table Layout (Visible on MD and larger) */}
-      <div className="hidden md:block overflow-x-auto border border-gray-100 rounded-xl bg-white shadow-sm">
+      <div className="hidden md:block srg-scroll overflow-x-auto overflow-y-auto max-h-[70vh] border border-gray-100 rounded-xl bg-white shadow-sm">
         <table className="w-full text-left border-collapse">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr className="bg-gray-50 border-b border-gray-100">
               {columns.map((col, i) => (
                 <th key={i} className="px-6 py-4 text-xs font-semibold uppercase text-gray-500 tracking-wider">

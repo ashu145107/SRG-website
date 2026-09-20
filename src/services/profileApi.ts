@@ -5,7 +5,7 @@
 
 import { baseApi } from './baseApi';
 import { store } from '../store';
-import { MyProfile } from '../types';
+import { MyProfile, UserRole } from '../types';
 
 /**
  * Normalize raw API response into MyProfile.
@@ -23,7 +23,15 @@ const normalizeProfile = (data: any): MyProfile => {
   const fullName = personal.fullName || raw.fullName || raw.candidateName || raw.name || '';
   const email = personal.email || raw.email || '';
   const phone = personal.mobile || raw.phone || raw.mobile || '';
-  const profilePicUrl = personal.profilePic || raw.profilePicUrl || raw.profileImage || raw.photoUrl || raw.avatarUrl || '';
+  const picRaw =
+    personal.profilePic || personal.profilePicUrl || personal.photoUrl || personal.photo || personal.image ||
+    personal.picPath || personal.pic_File_Path || personal.profilePic_File_Path || personal.photo_File_Path ||
+    raw.profilePicUrl || raw.profileImage || raw.photoUrl || raw.avatarUrl || raw.profilePic || raw.photo || raw.image ||
+    raw.picPath || raw.pic_File_Path || raw.profilePic_File_Path || raw.photo_File_Path ||
+    raw.logo || raw.logoUrl || raw.companyLogo || raw.companyLogoUrl || raw.logoPath || raw.logo_File_Path || '';
+  const profilePicUrl = picRaw && !picRaw.toString().startsWith('http')
+    ? `https://srgapp.dindoripranit.org${picRaw.toString().startsWith('/') ? '' : '/'}${picRaw}`
+    : picRaw;
   const address = personal.address || raw.address || '';
   const district = typeof personal.district === 'string' ? personal.district : raw.district || '';
   const city = personal.city || raw.city || '';
@@ -61,30 +69,47 @@ const normalizeProfile = (data: any): MyProfile => {
   };
 };
 
+/**
+ * Read the auth token + role from Redux store, falling back to persisted login.
+ */
+const readAuth = (): { cleanToken: string | undefined; role: UserRole | undefined } => {
+  let token = store.getState().auth?.token;
+  let role = store.getState().auth?.user?.role;
+  if (!token || !role) {
+    try {
+      const saved = localStorage.getItem('srg_auth_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!token) token = parsed?.token || parsed?.user?.token;
+        if (!role) role = parsed?.user?.role;
+      }
+    } catch (e) {}
+  }
+  return {
+    cleanToken: token?.startsWith('Bearer ') ? token.slice(7) : token,
+    role,
+  };
+};
+
 export const profileApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     /**
-     * GET /api/v1/myprofile
-     * Returns the logged-in user's profile (candidate, employer, SHG, etc.)
+     * GET /api/v1/myprofile        -> candidate / SHG / staff profile
+     * GET /api/v1/company/myprofile -> employer (company) profile
+     * Returns the logged-in user's profile.
      * Uses direct fetch to SRG URL to bypass proxy CORS issues (same as uploadProfilePic).
      */
     getMyProfile: builder.query<MyProfile, void>({
       queryFn: async () => {
         try {
-          let token = store.getState().auth?.token;
-          if (!token) {
-            try {
-              const saved = localStorage.getItem('srg_auth_state');
-              if (saved) {
-                const parsed = JSON.parse(saved);
-                token = parsed?.token || parsed?.user?.token;
-              }
-            } catch (e) {}
-          }
-          const cleanToken = token?.startsWith('Bearer ') ? token.slice(7) : token;
+          const { cleanToken, role } = readAuth();
+          const isCompany = role === UserRole.COMPANY;
+          const profileUrl = isCompany
+            ? 'https://srgapp.dindoripranit.org/api/v1/company/myprofile'
+            : 'https://srgapp.dindoripranit.org/api/v1/myprofile';
 
-          console.log('[profileApi] getMyProfile → fetching from SRG directly');
-          const res = await fetch('https://srgapp.dindoripranit.org/api/v1/myprofile', {
+          console.log(`[profileApi] getMyProfile → fetching from SRG directly (${isCompany ? 'company' : 'default'} endpoint)`);
+          const res = await fetch(profileUrl, {
             method: 'GET',
             headers: {
               'Accept': 'application/json',
@@ -115,6 +140,7 @@ export const { useGetMyProfileQuery } = profileApi;
 
 /**
  * Upload profile picture via POST https://srgapp.dindoripranit.org/api/v1/profilepic
+ * Same endpoint for job seekers and employers — auth tokens come from the logged-in user.
  * Direct call (bypasses proxy) — sends file as PNG with proper image MIME type.
  */
 export const uploadProfilePic = async (file: File): Promise<{ success: boolean; message: string; url?: string }> => {
@@ -124,18 +150,7 @@ export const uploadProfilePic = async (file: File): Promise<{ success: boolean; 
   const formData = new FormData();
   formData.append('file', pngFile, pngFile.name);
 
-  // Get token from Redux store or localStorage
-  let token = store.getState().auth?.token;
-  if (!token) {
-    try {
-      const saved = localStorage.getItem('srg_auth_state');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        token = parsed?.token || parsed?.user?.token;
-      }
-    } catch (e) {}
-  }
-  const cleanToken = token?.startsWith('Bearer ') ? token.slice(7) : token;
+  const { cleanToken } = readAuth();
 
   console.log('[uploadProfilePic] File:', pngFile.name, 'size:', pngFile.size, 'type:', pngFile.type);
   console.log('[uploadProfilePic] Token present:', !!cleanToken);
