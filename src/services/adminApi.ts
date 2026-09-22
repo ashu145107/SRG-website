@@ -108,6 +108,32 @@ const normalizeUser = (item: any): CandidateProfile => {
       ? skillsRaw.split(',').map((s: string) => s.trim()).filter(Boolean)
       : [];
 
+  const picRaw = personal.profilePic || personal.profilePicUrl || personal.photoUrl || personal.photo || personal.image ||
+    personal.picPath || personal.pic_File_Path || personal.profilePic_File_Path || personal.photo_File_Path ||
+    item.profilePicUrl || item.profileImage || item.photoUrl || item.avatarUrl || item.profilePic || item.photo || item.image ||
+    item.picPath || item.pic_File_Path || item.profilePic_File_Path || item.photo_File_Path || '';
+  const profilePicUrl = picRaw && !String(picRaw).startsWith('http')
+    ? `https://srgapp.dindoripranit.org${String(picRaw).startsWith('/') ? '' : '/'}${picRaw}`
+    : String(picRaw);
+
+  // Employment history array included in the viewcandidateprofile payload.
+  const employmentHistory = (Array.isArray(item.employmentHistory) ? item.employmentHistory : [])
+    .map((h: any) => ({
+      employmentHistoryId: h.employmentHistoryId ?? h.id ?? 0,
+      userId: h.userId ?? 0,
+      companyName: toStr(h.companyName || h.company),
+      companyIndustryId: h.companyIndustryId ?? null,
+      industryTypeName: toStr(h.industryTypeName || h.industryType || h.companyIndustryName),
+      designation: toStr(h.designation || h.jobDesignation),
+      department: toStr(h.department),
+      jobTypeId: h.jobTypeId ?? null,
+      jobTypeName: toStr(h.jobTypeName || h.jobType),
+      jobLocation: toStr(h.jobLocation || h.jobPlace || h.workPlace),
+      startDate: toStr(h.startDate),
+      endDate: toStr(h.endDate),
+      isCurrentJob: !!h.isCurrentJob,
+    }));
+
   return {
     id: String(personal.userId || item.userId || item.id || item.candidateId || ''),
     userId: toStr(item.userId || item.id || personal.userId),
@@ -128,6 +154,8 @@ const normalizeUser = (item: any): CandidateProfile => {
     skills,
     resumeUrl: toStr(education.resume_File_Path || item.resumeUrl || item.resume_File_Path || item.resumeFilePath || item.resumeFileName || item.resume),
     resumeName: toStr(education.resumeName || item.resumeName || item.resumeFileName),
+    employmentHistory,
+    profilePicUrl,
   };
 };
 

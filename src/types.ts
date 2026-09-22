@@ -58,6 +58,8 @@ export interface CandidateProfile {
   skills?: string[];
   resumeUrl?: string;
   resumeName?: string;
+  profilePicUrl?: string;
+  employmentHistory?: EmploymentHistory[];
 }
 
 export interface EmploymentHistory {

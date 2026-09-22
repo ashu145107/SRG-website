@@ -265,9 +265,9 @@ export default function ProfilePage() {
 
   const tabs = [
     { key: 'details' as const, label: 'Basic Details', icon: <UserCircle className="w-4 h-4" /> },
+    { key: 'employment' as const, label: 'Employment History', icon: <Briefcase className="w-4 h-4" /> },
     { key: 'pic' as const, label: 'Profile Picture', icon: <Camera className="w-4 h-4" /> },
     { key: 'resume' as const, label: 'Resume', icon: <FileUp className="w-4 h-4" /> },
-    { key: 'employment' as const, label: 'Employment History', icon: <Briefcase className="w-4 h-4" /> },
   ].filter(tab => !(user?.role === UserRole.COMPANY && (tab.key === 'resume' || tab.key === 'employment')));
 
   const menuItems = (() => {
