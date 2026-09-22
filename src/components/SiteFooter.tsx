@@ -55,11 +55,19 @@ export function SiteFooter({ scrollTo, openModal, enterGateway }: SiteFooterHand
             <p className="text-sm text-theme-darkViolet/60 mb-6 leading-relaxed">
               {L('Work, income and self-reliance for every family we reach.', 'आम्ही पोहोचलेल्या प्रत्येक कुटुंबासाठी काम, उत्पन्न आणि स्वावलंबन.')}
             </p>
-            <p className="text-sm text-theme-darkViolet/80 font-semibold">
-              <Phone className="inline w-4 h-4 text-theme-lavender mr-2 -mt-0.5" /> {L('+91 [phone number]', '+९१ [दूरध्वनी क्रमांक]')}
+            <p className="flex items-start gap-2 text-sm text-theme-darkViolet/80 font-semibold">
+              <Phone className="w-4 h-4 text-theme-lavender shrink-0 mt-0.5" />
+              <span className="flex flex-col">
+                <a href="tel:+917755941753" className="hover:text-theme-lavender transition">+91 7755941753</a>
+                <a href="tel:+918956741109" className="hover:text-theme-lavender transition">+91 8956741109</a>
+              </span>
             </p>
-            <p className="text-sm text-theme-darkViolet/80 font-semibold mt-2">
-              <Mail className="inline w-4 h-4 text-theme-lavender mr-2 -mt-0.5" /> {L('[email address]', '[ईमेल पत्ता]')}
+            <p className="flex items-start gap-2 text-sm text-theme-darkViolet/80 font-semibold mt-2">
+              <Mail className="w-4 h-4 text-theme-lavender shrink-0 mt-0.5" />
+              <span className="flex flex-col break-all">
+                <a href="mailto:admin@dindoripranit.org" className="hover:text-theme-lavender transition">admin@dindoripranit.org</a>
+                <a href="mailto:srj.dindori@gmail.com" className="hover:text-theme-lavender transition">srj.dindori@gmail.com</a>
+              </span>
             </p>
             <a href="https://in.linkedin.com/showcase/dpsm-swayamrojgar/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-4 text-sm font-bold text-theme-lavender hover:underline">
               <Linkedin className="w-4 h-4" /> {L('Follow us on LinkedIn', 'आम्हाला LinkedIn वर फॉलो करा')}

@@ -60,6 +60,22 @@ export interface CandidateProfile {
   resumeName?: string;
 }
 
+export interface EmploymentHistory {
+  employmentHistoryId?: number;
+  userId?: number;
+  companyName?: string;
+  companyIndustryId?: number | null;
+  industryTypeName?: string;
+  designation?: string;
+  department?: string;
+  jobTypeId?: number | null;
+  jobTypeName?: string;
+  jobLocation?: string;
+  startDate?: string;
+  endDate?: string;
+  isCurrentJob?: boolean;
+}
+
 export interface MyProfile {
   id?: string;
   userId?: string;
@@ -79,6 +95,7 @@ export interface MyProfile {
   contactPerson?: string;
   industry?: string;
   isApproved?: boolean;
+  employmentHistory?: EmploymentHistory[];
 }
 
 export interface CompanyProfile {

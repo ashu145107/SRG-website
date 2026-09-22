@@ -29,11 +29,13 @@ import {
   X,
   Settings,
   BarChart3,
-  LockKeyhole
+  LockKeyhole,
+  Briefcase
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
 import { UserRole } from '../types';
+import { EmploymentHistoryTab } from '../components/profile/EmploymentHistoryTab';
 
 /**
  * Reads the EXIF orientation (1-8) from a JPEG buffer. Returns 1 (normal) for
@@ -167,7 +169,7 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
 
-  const [activeTab, setActiveTab] = useState<'details' | 'pic' | 'resume'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'pic' | 'resume' | 'employment'>('details');
   const [toastMsg, setToastMsg] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
@@ -265,7 +267,8 @@ export default function ProfilePage() {
     { key: 'details' as const, label: 'Basic Details', icon: <UserCircle className="w-4 h-4" /> },
     { key: 'pic' as const, label: 'Profile Picture', icon: <Camera className="w-4 h-4" /> },
     { key: 'resume' as const, label: 'Resume', icon: <FileUp className="w-4 h-4" /> },
-  ].filter(tab => !(user?.role === UserRole.COMPANY && tab.key === 'resume'));
+    { key: 'employment' as const, label: 'Employment History', icon: <Briefcase className="w-4 h-4" /> },
+  ].filter(tab => !(user?.role === UserRole.COMPANY && (tab.key === 'resume' || tab.key === 'employment')));
 
   const menuItems = (() => {
     const items: { label: string; to: string; icon: React.ReactNode }[] = [
@@ -413,7 +416,7 @@ export default function ProfilePage() {
             <p className="text-xs text-slate-500 font-medium mt-1">
               {user.role === UserRole.COMPANY
                 ? 'View and update your company details and profile picture.'
-                : 'View and update your personal details, profile picture, and resume.'}
+                : 'View and update your personal details, profile picture, resume, and employment history.'}
             </p>
           </div>
           {user.role === UserRole.COMPANY && (
@@ -427,12 +430,12 @@ export default function ProfilePage() {
         </div>
 
         {/* Tab bar */}
-        <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
+        <div className="flex flex-wrap border-b border-gray-200 mb-6">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 px-4 sm:px-5 py-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-3 sm:px-5 py-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'border-orange-600 text-orange-700'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -633,6 +636,15 @@ export default function ProfilePage() {
                 <p className="text-[10px] text-gray-500">Selected: {resumeFile.name}</p>
               )}
             </div>
+          )}
+
+          {/* ---- TAB 4: Employment History ---- */}
+          {activeTab === 'employment' && (
+            <EmploymentHistoryTab
+              profile={profile}
+              loading={profileLoading}
+              onRefresh={refetchProfile}
+            />
           )}
 
         </div>

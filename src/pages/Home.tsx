@@ -10,6 +10,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { useGetDashboardStatsQuery } from '../services/dashboardApi';
 import { useGetInitiativesQuery } from '../services/initiativeApi';
+import { useSearchJobsQuery } from '../hooks/useJobQueries';
 import { MockDb } from '../services/mockDb';
 import { Navbar } from '../components/Navbar';
 import { SiteFooter } from '../components/SiteFooter';
@@ -39,12 +40,6 @@ import {
   Quote,
   Leaf,
   Package,
-  Utensils,
-  Factory,
-  ChartLine,
-  FlaskConical,
-  Scissors,
-  Truck,
   Droplets,
   Handshake,
   MessageCircle,
@@ -56,68 +51,41 @@ import {
 
 const KEYWORDS = ['Career', 'Job', 'Service', 'SHG', 'Business', 'Team'];
 
-const SAMPLE_JOBS = [
-  {
-    id: 'sample-1',
-    title: 'Production Executive',
-    companyName: '[Company name]',
-    location: 'Dindori',
-    type: 'Full Time',
-    salary: '[salary]',
-    icon: Factory,
-    tint: 'bg-theme-lavender/10 text-theme-lavender'
-  },
-  {
-    id: 'sample-2',
-    title: 'Hotel Manager',
-    companyName: '[Company name]',
-    location: 'Dindori',
-    type: 'Full Time',
-    salary: '[salary]',
-    icon: Utensils,
-    tint: 'bg-theme-terracotta/10 text-theme-terracotta'
-  },
-  {
-    id: 'sample-3',
-    title: 'Business Development Manager',
-    companyName: '[Company name]',
-    location: '[location]',
-    type: 'Full Time',
-    salary: '[salary]',
-    icon: ChartLine,
-    tint: 'bg-theme-deepTeal/10 text-theme-deepTeal'
-  },
-  {
-    id: 'sample-4',
-    title: 'ITI Trainee / Technician',
-    companyName: 'Reliance Life Sciences',
-    location: 'Akarale',
-    type: 'ITI Freshers',
-    salary: '[salary]',
-    icon: FlaskConical,
-    tint: 'bg-theme-gold/10 text-theme-gold'
-  },
-  {
-    id: 'sample-5',
-    title: 'Driver',
-    companyName: '[Company name]',
-    location: 'Ozar',
-    type: '3 Openings',
-    salary: '[salary]',
-    icon: Truck,
-    tint: 'bg-theme-lavender/10 text-theme-lavender'
-  },
-  {
-    id: 'sample-6',
-    title: 'Tailoring Artisan',
-    companyName: '[Organisation]',
-    location: 'Khedgaon',
-    type: 'Part Time',
-    salary: '[salary]',
-    icon: Scissors,
-    tint: 'bg-theme-deepTeal/10 text-theme-deepTeal'
+interface JobCard {
+  id: string;
+  jobId: number;
+  title: string;
+  companyName: string;
+  location: string;
+  type: string;
+  salary: string;
+  jobCode?: string;
+}
+
+/** Normalizes either a live API JobRequirement or a MockDb Job into a rail card. */
+const toJobCard = (j: any): JobCard => {
+  const numId = Number(j.id ?? j.jobRequirementId);
+  const salaryRaw = j.salary;
+  let salary = 'Negotiable';
+  if (typeof salaryRaw === 'string' && salaryRaw.trim() && salaryRaw.replace(/[0-9]/g, '').includes('₹')) {
+    salary = salaryRaw;
+  } else {
+    const from = Number(salaryRaw) || 0;
+    const to = Number(j.salaryTo) || 0;
+    if (from && to && to > from) salary = `${from} - ${to}`;
+    else if (from) salary = `${from}`;
   }
-];
+  return {
+    id: String(j.id ?? j.jobRequirementId ?? ''),
+    jobId: numId && !Number.isNaN(numId) ? numId : 0,
+    title: j.profileHeader || j.jobDesignation || j.title || 'Job Vacancy',
+    companyName: j.companyName || 'Local Employer',
+    location: j.workPlace || j.jobLocation || j.location || 'Dindori',
+    type: j.jobTypeName || j.type || 'Full Time',
+    salary,
+    jobCode: j.jobCode,
+  };
+};
 
 const PRODUCTS = [
   { name: 'Eco-Friendly Cloth Bags', nameMr: 'इको-फ्रेंडली कापडी पिशव्या', desc: 'Block-printed cotton, made to last' },
@@ -189,6 +157,13 @@ export default function Home() {
 
   // Hero search
   const [searchType, setSearchType] = useState('job');
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchLocation, setSearchLocation] = useState('All Locations');
+
+  // Saved jobs (persisted locally when the visitor is signed in)
+  const [savedJobs, setSavedJobs] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('srg_saved_jobs') || '[]'); } catch { return []; }
+  });
 
   // Auto rail
   const jobRailRef = useRef<HTMLDivElement>(null);
@@ -307,11 +282,49 @@ export default function Home() {
     setFeedbackSent(true);
   };
 
-  const realJobs = MockDb.getJobs().filter((j) => j.isApproved);
-  const padTo = 4;
-  const railJobs = realJobs.length
-    ? [...realJobs, ...SAMPLE_JOBS.slice(0, Math.max(0, padTo - realJobs.length))]
-    : SAMPLE_JOBS.slice(0, padTo);
+  const { data: searchJobsData, isFetching: jobsFetching } = useSearchJobsQuery({
+    searchPhrase: searchKeyword.trim() || undefined,
+    page: 1,
+    limit: 8,
+  });
+
+  const liveCount = searchJobsData?.totalCount || 0;
+
+  const railJobs = React.useMemo(() => {
+    const fromApi = (searchJobsData?.jobs || []).map(toJobCard);
+    const list = fromApi.length > 0
+      ? fromApi
+      : MockDb.getJobs().filter((j) => j.isApproved).map(toJobCard);
+    if (searchLocation !== 'All Locations') {
+      const q = searchLocation.toLowerCase();
+      return list
+        .filter((j) => j.location.toLowerCase().includes(q) || q.includes(j.location.toLowerCase()))
+        .slice(0, 4);
+    }
+    return list.slice(0, 4);
+  }, [searchJobsData, searchLocation]);
+
+  const toggleSave = (id: string) => {
+    if (!isAuthenticated) {
+      handleEnterGateway('CANDIDATE');
+      return;
+    }
+    setSavedJobs((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      try { localStorage.setItem('srg_saved_jobs', JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
+  const isSaved = (id: string) => savedJobs.includes(id);
+
+  const openJob = (job: JobCard) => {
+    if (job.jobId && isAuthenticated) {
+      navigate(`/job/${job.jobId}`);
+    } else {
+      handleEnterGateway('CANDIDATE');
+    }
+  };
 
   const hiredCount = stats?.totalCandidates ? `${stats.totalCandidates}+` : '1,500+';
   const trainingsCount = stats?.activeJobs ? `${stats.activeJobs}+` : '250+';
@@ -371,12 +384,22 @@ export default function Home() {
 
                   <div className="px-4 py-2 md:border-r border-theme-lightViolet text-left flex-1">
                     <label className="block text-[10px] text-theme-darkViolet/50 font-bold uppercase tracking-widest mb-1">{L('Keyword', 'कीवर्ड')}</label>
-                    <input type="text" placeholder="Marketing Manager, ITI, Papad..." className="w-full text-sm outline-none text-theme-darkViolet font-bold bg-transparent placeholder-theme-darkViolet/30" />
+                    <input
+                      type="text"
+                      value={searchKeyword}
+                      onChange={(e) => setSearchKeyword(e.target.value)}
+                      placeholder="Marketing Manager, ITI, Papad..."
+                      className="w-full text-sm outline-none text-theme-darkViolet font-bold bg-transparent placeholder-theme-darkViolet/30"
+                    />
                   </div>
 
                   <div className="px-4 py-2 text-left md:w-40 shrink-0">
                     <label className="block text-[10px] text-theme-darkViolet/50 font-bold uppercase tracking-widest mb-1">{L('Location', 'ठिकाण')}</label>
-                    <select className="w-full text-sm outline-none text-theme-darkViolet font-bold bg-transparent appearance-none cursor-pointer">
+                    <select
+                      value={searchLocation}
+                      onChange={(e) => setSearchLocation(e.target.value)}
+                      className="w-full text-sm outline-none text-theme-darkViolet font-bold bg-transparent appearance-none cursor-pointer"
+                    >
                       <option>{L('All Locations', 'सर्व ठिकाणे')}</option>
                       <option>Dindori, Nashik</option>
                       <option>Akarale</option>
@@ -625,6 +648,12 @@ export default function Home() {
               <div className="mb-7">
                 <span className="inline-flex items-center gap-2 bg-white text-theme-wine px-3.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-widest shadow-sm mb-3">
                   <span className="w-1.5 h-1.5 rounded-full bg-theme-wine animate-pulse"></span> {L('Live openings', 'थेट संधी')}
+                  {(liveCount > 0 || jobsFetching) && (
+                    <span className="inline-flex items-center gap-1 bg-theme-wine/10 text-theme-wine px-2 py-0.5 rounded-full normal-case">
+                      {jobsFetching && <span className="w-2 h-2 rounded-full border-2 border-theme-wine/30 border-t-theme-wine animate-spin"></span>}
+                      {liveCount > 0 ? liveCount : L('Updating', 'अद्ययावत')}
+                    </span>
+                  )}
                 </span>
                 <h2 className="text-3xl lg:text-4xl font-extrabold text-theme-darkViolet leading-tight">
                   {L('Featured', 'ठळक')} <span className="gloss">{L('Jobs', 'नोकऱ्या')}</span>
@@ -642,11 +671,17 @@ export default function Home() {
                 onMouseLeave={() => { railPaused.current = false; }}
               >
                 {railJobs.map((job) => (
-                  <div key={job.id} className="job-card group relative bg-white rounded-2xl border border-theme-lightViolet p-5 hover:shadow-xl hover:-translate-y-1.5 hover:border-theme-lavender/40 transition-all duration-300">
-                    <button className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-theme-lightViolet/70 text-theme-lavender/70 hover:bg-theme-lavender hover:text-white flex items-center justify-center transition cursor-pointer" aria-label="Save job"><Bookmark className="text-xs w-4 h-4" /></button>
+                  <div key={`${job.id}-${job.title}`} onClick={() => openJob(job)} className="job-card group relative bg-white rounded-2xl border border-theme-lightViolet p-5 hover:shadow-xl hover:-translate-y-1.5 hover:border-theme-lavender/40 transition-all duration-300 cursor-pointer">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleSave(job.id); }}
+                      className={`absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center transition cursor-pointer ${isSaved(job.id) ? 'bg-theme-lavender text-white shadow-md shadow-theme-lavender/30' : 'bg-theme-lightViolet/70 text-theme-lavender/70 hover:bg-theme-lavender hover:text-white'}`}
+                      aria-label={L('Save job', 'नोकरी जतन करा')}
+                    >
+                      <Bookmark className={`text-xs w-4 h-4 ${isSaved(job.id) ? 'fill-current' : ''}`} />
+                    </button>
                     <div className="flex items-start gap-3.5 mb-3.5 pr-9">
                       <span className="w-12 h-12 rounded-xl bg-theme-lavender/10 text-theme-lavender flex items-center justify-center shrink-0 ico-hop">
-                        {'tint' in job ? null : <Briefcase className="w-5 h-5" />}
+                        <Briefcase className="w-5 h-5" />
                       </span>
                       <div className="min-w-0">
                         <h4 className="font-extrabold text-theme-darkViolet leading-tight truncate">{job.title}</h4>
@@ -661,7 +696,9 @@ export default function Home() {
                     </div>
                     <div className="flex items-center justify-between pt-3 border-t border-theme-lightViolet">
                       <span className="text-sm font-extrabold text-theme-darkViolet">
-                        {'salary' in job && typeof job.salary === 'string' && job.salary.replace(/[0-9]/g, '').includes('₹') ? (
+                        {job.salary === 'Negotiable' ? (
+                          <span className="text-[11px] font-bold text-theme-darkViolet/45">{L('Salary Negotiable', 'वेतन ठरवता येईल')}</span>
+                        ) : job.salary.replace(/[0-9]/g, '').includes('₹') ? (
                           job.salary
                         ) : (
                           <>
@@ -671,7 +708,7 @@ export default function Home() {
                         )}
                       </span>
                       <button
-                        onClick={() => { if (isAuthenticated) scrollToId('jobs'); else handleEnterGateway('CANDIDATE'); }}
+                        onClick={(e) => { e.stopPropagation(); openJob(job); }}
                         className="text-xs font-extrabold text-theme-lavender opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all cursor-pointer"
                       >
                         {L('Apply', 'अर्ज करा')} <ArrowRight className="inline w-3 h-3 -mt-0.5" />
@@ -757,7 +794,7 @@ export default function Home() {
                         <span className="num text-lg font-extrabold text-theme-darkViolet/25 w-8 shrink-0">0{i + 1}</span>
                         <div className="min-w-0 flex-1">
                           <div className="font-extrabold text-theme-darkViolet leading-tight">{isMr ? p.nameMr : p.name}</div>
-                          <div className="text-xs text-theme-darkViolet/55 mt-1">{isMr ? L(p.desc, p.desc) : L(p.desc, p.desc)} &middot; <span className="text-theme-deepTeal font-bold">[Group name]</span></div>
+                          <div className="text-xs text-theme-darkViolet/55 mt-1">{isMr ? L(p.desc, p.desc) : L(p.desc, p.desc)} &middot; <span className="text-theme-deepTeal font-bold">{L('Our Bachat Gats', 'आमचे बचत गट')}</span></div>
                         </div>
                         <span className="go text-theme-lavender shrink-0"><ArrowRight className="w-4 h-4" /></span>
                       </div>
@@ -966,7 +1003,7 @@ export default function Home() {
                   <div>
                     <h4 className="font-extrabold text-theme-darkViolet mb-1">{L('Head Office Address', 'मुख्य कार्यालयाचा पत्ता')}</h4>
                     <p className="text-sm text-theme-darkViolet/65 leading-relaxed">
-                      {L('Swayamrojgar Vibhag, Shri Swami Seva Marg, [building / street], Dindori, Dist. Nashik, Maharashtra [PIN code]', 'स्वयंरोजगार विभाग, श्री स्वामी सेवा मार्ग, [इमारत / रस्ता], दिंडोरी, जि. नाशिक, महाराष्ट्र [पिन कोड]')}
+                      {L('Swayamrojgar Vibhag, Shri Swami Seva Marg, Dindori, Dist. Nashik, Maharashtra', 'स्वयंरोजगार विभाग, श्री स्वामी सेवा मार्ग, दिंडोरी, जि. नाशिक, महाराष्ट्र')}
                     </p>
                   </div>
                 </div>
@@ -978,8 +1015,11 @@ export default function Home() {
                   <div>
                     <h4 className="font-extrabold text-theme-darkViolet mb-1">{L('Phone', 'दूरध्वनी')}</h4>
                     <p className="text-sm text-theme-darkViolet/65 leading-relaxed">
-                      {L('+91 [phone number]', '+९१ [दूरध्वनी क्रमांक]')}
-                      <br />{L('Mon to Sat, 10 am to 6 pm', 'सोम ते शनि, सकाळी १० ते संध्याकाळी ६')}
+                      <a href="tel:+917755941753" className="font-bold text-theme-darkViolet hover:text-theme-deepTeal transition">+91 7755941753</a>
+                      <br />
+                      <a href="tel:+918956741109" className="font-bold text-theme-darkViolet hover:text-theme-deepTeal transition">+91 8956741109</a>
+                      <br />
+                      <span className="text-xs text-theme-darkViolet/50">{L('Mon to Sat, 10 am to 6 pm', 'सोम ते शनि, सकाळी १० ते संध्याकाळी ६')}</span>
                     </p>
                   </div>
                 </div>
@@ -990,7 +1030,11 @@ export default function Home() {
                   <span className="w-12 h-12 rounded-2xl bg-theme-terracotta/10 text-theme-terracotta flex items-center justify-center shrink-0 ico-hop"><Mail className="text-lg w-5 h-5" /></span>
                   <div>
                     <h4 className="font-extrabold text-theme-darkViolet mb-1">{L('Email', 'ईमेल')}</h4>
-                    <p className="text-sm text-theme-darkViolet/65 leading-relaxed">{L('[email address]', '[ईमेल पत्ता]')}</p>
+                    <p className="text-sm text-theme-darkViolet/65 leading-relaxed break-all">
+                      <a href="mailto:admin@dindoripranit.org" className="font-bold text-theme-darkViolet hover:text-theme-terracotta transition">admin@dindoripranit.org</a>
+                      <br />
+                      <a href="mailto:srj.dindori@gmail.com" className="font-bold text-theme-darkViolet hover:text-theme-terracotta transition">srj.dindori@gmail.com</a>
+                    </p>
                   </div>
                 </div>
               </Reveal>

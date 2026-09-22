@@ -5,7 +5,7 @@
 
 import { baseApi } from './baseApi';
 import { store } from '../store';
-import { MyProfile, UserRole } from '../types';
+import { EmploymentHistory, MyProfile, UserRole } from '../types';
 
 /**
  * Normalize raw API response into MyProfile.
@@ -47,6 +47,24 @@ const normalizeProfile = (data: any): MyProfile => {
     : resumeRaw;
   const resumeName = education.resumeName || raw.resumeName || raw.resumeFileName || (resumeUrl ? resumeUrl.split('/').pop() || 'Resume' : '');
 
+  // Employment history array returned alongside personalInfo / educationInfo
+  const rawEmployment = Array.isArray(raw.employmentHistory) ? raw.employmentHistory : [];
+  const employmentHistory: EmploymentHistory[] = rawEmployment.map((h: any) => ({
+    employmentHistoryId: h.employmentHistoryId ?? h.id ?? 0,
+    userId: h.userId ?? 0,
+    companyName: h.companyName || h.company || '',
+    companyIndustryId: h.companyIndustryId ?? null,
+    industryTypeName: h.industryTypeName || h.industryType || h.companyIndustryName || '',
+    designation: h.designation || h.jobDesignation || '',
+    department: h.department || '',
+    jobTypeId: h.jobTypeId ?? null,
+    jobTypeName: h.jobTypeName || h.jobType || '',
+    jobLocation: h.jobLocation || h.jobPlace || h.workPlace || '',
+    startDate: h.startDate || '',
+    endDate: h.endDate || '',
+    isCurrentJob: !!h.isCurrentJob,
+  }));
+
   return {
     id: personal.userId || raw.id || '',
     userId: String(personal.userId || raw.userId || raw.id || ''),
@@ -66,6 +84,7 @@ const normalizeProfile = (data: any): MyProfile => {
     contactPerson: raw.contactPerson || '',
     industry: raw.industry || '',
     isApproved: raw.isApproved,
+    employmentHistory,
   };
 };
 
@@ -243,3 +262,79 @@ export const uploadResume = async (file: File): Promise<{ success: boolean; mess
     return { success: false, message: err.message || 'Failed to upload resume.' };
   }
 };
+
+/**
+ * Generic POST helper for employment history endpoints.
+ * Always attaches the auth token (Authorization + token headers) before calling.
+ */
+const postEmploymentHistory = async (path: string, body: unknown): Promise<{ success: boolean; message: string; data?: any }> => {
+  const { cleanToken } = readAuth();
+
+  try {
+    const res = await fetch(`https://srgapp.dindoripranit.org/api/v1/${path}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${cleanToken}`,
+        'token': cleanToken || '',
+      },
+      body: JSON.stringify(body),
+    });
+
+    let data: any = null;
+    try {
+      data = await res.json();
+    } catch (e) {
+      data = null;
+    }
+    console.log(`[profileApi] ${path} response:`, res.status, data);
+
+    if (!res.ok) {
+      const msg = data?.message || data?.error?.message || (typeof data === 'string' ? data : null) || `Server returned ${res.status}`;
+      return { success: false, message: msg, data };
+    }
+
+    // Only treat as failure when the backend explicitly marks it as one.
+    // Some success responses still carry an `error` field (e.g. { code: "message" }),
+    // so the mere presence of `error` must NOT be interpreted as a failure.
+    const isExplicitFailure = data?.isSuccess === false || data?.isFailure === true;
+    if (isExplicitFailure) {
+      const raw = data?.message || data?.error?.message || data?.value || data?.error || JSON.stringify(data || {});
+      const msg = typeof raw === 'string' && raw.trim() ? raw : JSON.stringify(raw);
+      return { success: false, message: msg, data };
+    }
+
+    const val = data?.value ?? data?.data ?? null;
+    const fallback = path === 'deleteemploymenthistory'
+      ? 'Employment history deleted successfully.'
+      : path === 'updateemploymenthistory'
+        ? 'Employment history updated successfully.'
+        : 'Employment history added successfully.';
+
+    let msg: string = '';
+    if (typeof data?.message === 'string' && data.message.trim()) msg = data.message.trim();
+    if (!msg && typeof data?.resultMessage === 'string' && data.resultMessage.trim()) msg = data.resultMessage.trim();
+    if (!msg && typeof val === 'string' && val.trim()) msg = val.trim();
+    if (!msg && typeof val?.message === 'string' && val.message.trim()) msg = val.message.trim();
+    if (!msg && typeof val?.resultMessage === 'string' && val.resultMessage.trim()) msg = val.resultMessage.trim();
+    if (!msg) msg = fallback;
+
+    return { success: true, message: msg, data: val };
+  } catch (err: any) {
+    console.error(`[profileApi] ${path} failed:`, err);
+    return { success: false, message: err.message || `Failed to submit employment history.` };
+  }
+};
+
+/** POST /api/v1/addemploymenthistory — create a new employment history entry. */
+export const addEmploymentHistory = (payload: EmploymentHistory) =>
+  postEmploymentHistory('addemploymenthistory', payload);
+
+/** POST /api/v1/updateemploymenthistory — update an existing employment history entry. */
+export const updateEmploymentHistory = (payload: EmploymentHistory) =>
+  postEmploymentHistory('updateemploymenthistory', payload);
+
+/** POST /api/v1/deleteemploymenthistory — delete an employment history entry. */
+export const deleteEmploymentHistory = (payload: { employmentHistoryId: number; userId: number }) =>
+  postEmploymentHistory('deleteemploymenthistory', payload);
