@@ -52,9 +52,23 @@ export interface CandidateProfile {
   address?: string;
   qualification?: string;
   education?: string;
+  educationId?: number;
+  specializationId?: number;
   experienceYears?: number;
   experience?: number;
   specialization?: string;
+  courses?: string;
+  resumeHeadline?: string;
+  profileSummary?: string;
+  preferredJobLocations?: string;
+  preferredJobTypeId?: number | null;
+  jobType?: string;
+  preferredShiftId?: number | null;
+  shiftType?: string;
+  workStatus?: string;
+  currentSalary?: number | null;
+  expectation?: number | null;
+  noticePeriod?: number | null;
   skills?: string[];
   resumeUrl?: string;
   resumeName?: string;
@@ -90,7 +104,33 @@ export interface MyProfile {
   city?: string;
   district?: string;
   address?: string;
+  dob?: string;
+  gender?: string;
+  state?: string;
+  stateId?: number;
+  districtId?: number;
+  taluka?: string;
+  talukaId?: number;
+  maritalStatus?: string;
+  pincode?: string;
   qualification?: string;
+  educationInfoId?: number;
+  educationId?: number;
+  education?: string;
+  specializationId?: number;
+  specialization?: string;
+  courses?: string;
+  expectation?: string | null;
+  currentSalary?: number | null;
+  noticePeriod?: string | null;
+  preferredJobLocations?: string | null;
+  preferredJobTypeId?: number | null;
+  jobType?: string | null;
+  preferredShiftId?: number | null;
+  shiftType?: string | null;
+  workStatus?: string | null;
+  resumeHeadline?: string | null;
+  profileSummary?: string | null;
   experienceYears?: number;
   skills?: string[];
   companyName?: string;
@@ -156,16 +196,34 @@ export interface Job {
 
 export interface JobApplication {
   id: string;
+  applicationId?: number;
+  statusId?: number;
+  statusCode?: string;
+  applicationStatusHistoryId?: number;
   jobId: string;
+  jobCode?: string;
   jobTitle: string;
   companyName: string;
   companyId: string;
   candidateId: string;
   candidateName: string;
   candidatePhone: string;
-  status: 'Applied' | 'Reviewing' | 'Interview Scheduled' | 'Shortlisted' | 'Rejected' | 'Hired';
+  status: string;
+  remarks?: string;
   appliedAt: string;
   interviewDate?: string;
+  rawItem?: any;
+}
+
+export interface JobApplicationStatus {
+  id: number;
+  statusId?: number;
+  statusCode?: string;
+  statusName?: string;
+  name: string;
+  description?: string;
+  sortOrder?: number;
+  isFinalStatus?: boolean;
 }
 
 export interface Initiative {

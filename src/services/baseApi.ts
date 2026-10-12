@@ -64,6 +64,7 @@ export const baseApi = createApi({
       const token = (getState() as any).auth?.token;
       if (token) {
         headers.set('Authorization', `Bearer ${token}`);
+        headers.set('token', token);
       }
       return headers;
     }
@@ -76,7 +77,8 @@ export const baseApi = createApi({
     'SHG',
     'Application',
     'Initiative',
-    'Training'
+    'Training',
+    'SupportTicket'
   ],
   endpoints: () => ({}),
 });

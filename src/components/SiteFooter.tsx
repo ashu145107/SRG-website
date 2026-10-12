@@ -6,6 +6,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
+import { useSectionNav } from '../utils/sectionNav';
 import { ShieldCheck, CircleHelp, MessageCircle, Phone, Mail, Linkedin } from 'lucide-react';
 
 export interface SiteFooterHandlers {
@@ -21,7 +22,10 @@ export function SiteFooter({ scrollTo, openModal, enterGateway }: SiteFooterHand
   const L = (en: string, mr: string) => (isMr ? mr : en);
 
   const goHome = () => navigate('/');
-  const section = (id: string) => () => (scrollTo ? scrollTo(id) : goHome());
+  const goSection = useSectionNav();
+  // Prefer the host page's own scroller, otherwise fall back to routing home
+  // and letting Home scroll to the target.
+  const section = (id: string) => () => (scrollTo ? scrollTo(id) : goSection(id));
   const gateway = (role: string) => () => (enterGateway ? enterGateway(role) : goHome());
   const modal = (which: 'query' | 'feedback') => () => (openModal ? openModal(which) : goHome());
 
@@ -86,7 +90,7 @@ export function SiteFooter({ scrollTo, openModal, enterGateway }: SiteFooterHand
           <div>
             <h4 className="font-bold text-theme-darkViolet mb-6 tracking-wide">{L('Careers', 'करिअर')}</h4>
             <ul className="space-y-3 text-sm text-theme-darkViolet/60 font-medium">
-              <li><button onClick={section('jobs')} className="hover:text-theme-lavender transition cursor-pointer text-left">{L('Browse jobs', 'नोकऱ्या पहा')}</button></li>
+              <li><button onClick={gateway('CANDIDATE')} className="hover:text-theme-lavender transition cursor-pointer text-left">{L('Browse jobs', 'नोकऱ्या पहा')}</button></li>
               <li><button onClick={gateway('COMPANY')} className="hover:text-theme-lavender transition cursor-pointer text-left">{L('Post a requirement', 'आवश्यकता नोंदवा')}</button></li>
               <li><Link to="/login" className="hover:text-theme-lavender transition">{L('Login portals', 'लॉगिन पोर्टल्स')}</Link></li>
             </ul>
@@ -95,7 +99,7 @@ export function SiteFooter({ scrollTo, openModal, enterGateway }: SiteFooterHand
           <div>
             <h4 className="font-bold text-theme-darkViolet mb-6 tracking-wide">{L('Information', 'माहिती')}</h4>
             <ul className="space-y-3 text-sm text-theme-darkViolet/60 font-medium">
-              <li><button onClick={section('initiatives')} className="hover:text-theme-lavender transition cursor-pointer text-left">{L('About us', 'आमच्याबद्दल')}</button></li>
+              <li><button onClick={section('about')} className="hover:text-theme-lavender transition cursor-pointer text-left">{L('About us', 'आमच्याबद्दल')}</button></li>
               <li><button onClick={section('contact')} className="hover:text-theme-lavender transition cursor-pointer text-left">{L('Contact us', 'संपर्क साधा')}</button></li>
               <li><button onClick={modal('query')} className="hover:text-theme-lavender transition cursor-pointer text-left">{L('Ask a question', 'प्रश्न विचारा')}</button></li>
               <li><button onClick={modal('feedback')} className="hover:text-theme-lavender transition cursor-pointer text-left">{L('Give feedback', 'अभिप्राय द्या')}</button></li>

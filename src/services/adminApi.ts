@@ -101,6 +101,21 @@ const normalizeUser = (item: any): CandidateProfile => {
     ?? item.subEducation
     ?? '';
 
+  const courses = toStr(education.courses || item.courses);
+  const resumeHeadline = toStr(education.resumeHeadline || item.resumeHeadline);
+  const profileSummary = toStr(education.profileSummary || item.profileSummary);
+  const preferredJobLocations = toStr(education.preferredJobLocations || item.preferredJobLocations);
+  const jobType = toStr(education.jobType || item.jobType);
+  const shiftType = toStr(education.shiftType || item.shiftType);
+  const workStatus = toStr(education.workStatus || item.workStatus);
+  const currentSalary = education.currentSalary ?? item.currentSalary ?? null;
+  const expectation = education.expectation ?? item.expectation ?? null;
+  const noticePeriod = education.noticePeriod ?? item.noticePeriod ?? null;
+  const educationIdNum = education.educationId ?? item.educationId ?? 0;
+  const specializationIdNum = education.specializationId ?? item.specializationId ?? 0;
+  const preferredJobTypeIdNum = education.preferredJobTypeId ?? item.preferredJobTypeId ?? null;
+  const preferredShiftIdNum = education.preferredShiftId ?? item.preferredShiftId ?? null;
+
   const skillsRaw = education.skill ?? education.skills ?? item.skills;
   const skills = Array.isArray(skillsRaw)
     ? skillsRaw.map((s: any) => toStr(s)).filter(Boolean)
@@ -148,9 +163,23 @@ const normalizeUser = (item: any): CandidateProfile => {
     address: toStr(personal.address || item.address),
     qualification: toStr(education.education || education.qualification || item.qualification || item.education),
     education: toStr(education.education || item.education || item.qualification),
+    educationId: educationIdNum,
+    specializationId: specializationIdNum,
     experienceYears: toNum(experienceVal),
     experience: toNum(experienceVal),
     specialization: toStr(specializationVal),
+    courses,
+    resumeHeadline,
+    profileSummary,
+    preferredJobLocations,
+    preferredJobTypeId: preferredJobTypeIdNum,
+    jobType,
+    preferredShiftId: preferredShiftIdNum,
+    shiftType,
+    workStatus,
+    currentSalary,
+    expectation,
+    noticePeriod,
     skills,
     resumeUrl: toStr(education.resume_File_Path || item.resumeUrl || item.resume_File_Path || item.resumeFilePath || item.resumeFileName || item.resume),
     resumeName: toStr(education.resumeName || item.resumeName || item.resumeFileName),

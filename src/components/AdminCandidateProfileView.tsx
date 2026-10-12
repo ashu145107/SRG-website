@@ -27,8 +27,7 @@ import {
   Building2,
   Layers,
   CalendarDays,
-  BadgeCheck,
-  Camera
+  BadgeCheck
 } from 'lucide-react';
 import { Loader } from './ui/FeedbackComponents';
 import { EmploymentHistory } from '../types';
@@ -42,6 +41,17 @@ interface CandidateData {
   district: string;
   city: string;
   qualification: string;
+  specialization: string;
+  courses: string;
+  resumeHeadline: string;
+  profileSummary: string;
+  preferredJobLocations: string;
+  jobType: string;
+  shiftType: string;
+  workStatus: string;
+  currentSalary: number | null;
+  expectation: number | null;
+  noticePeriod: number | null;
   experienceYears: number | string;
   skills: string[];
   resumeUrl: string;
@@ -73,7 +83,7 @@ interface AdminCandidateProfileViewProps {
 }
 
 export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidateProfileViewProps) {
-  const [activeTab, setActiveTab] = useState<'details' | 'employment' | 'pic' | 'resume'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'education' | 'employment' | 'resume'>('details');
 
   const { data: profile, isLoading, error } = useGetAdminCandidateDetailQuery(candidateId, {
     skip: !candidateId,
@@ -89,6 +99,17 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
     district: profile.district || '',
     city: profile.city || '',
     qualification: profile.qualification || profile.education || '',
+    specialization: profile.specialization || '',
+    courses: profile.courses || '',
+    resumeHeadline: profile.resumeHeadline || '',
+    profileSummary: profile.profileSummary || '',
+    preferredJobLocations: profile.preferredJobLocations || '',
+    jobType: profile.jobType || '',
+    shiftType: profile.shiftType || '',
+    workStatus: profile.workStatus || '',
+    currentSalary: profile.currentSalary ?? null,
+    expectation: profile.expectation ?? null,
+    noticePeriod: profile.noticePeriod ?? null,
     experienceYears: profile.experienceYears || profile.experience || 0,
     skills: Array.isArray(profile.skills) ? profile.skills : [],
     resumeUrl: profile.resumeUrl || '',
@@ -102,8 +123,8 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
 
   const tabs = [
     { key: 'details' as const, label: 'Basic Details', icon: <UserCircle className="w-4 h-4" /> },
+    { key: 'education' as const, label: 'Education Details', icon: <GraduationCap className="w-4 h-4" /> },
     { key: 'employment' as const, label: 'Employment History', icon: <Briefcase className="w-4 h-4" /> },
-    { key: 'pic' as const, label: 'Profile Picture', icon: <Camera className="w-4 h-4" /> },
     { key: 'resume' as const, label: 'Resume / CV', icon: <FileText className="w-4 h-4" /> },
   ];
 
@@ -208,8 +229,25 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
                 <Field icon={<MapPin className="w-4 h-4" />} label="City" value={candidate.city} />
                 <Field icon={<MapPin className="w-4 h-4" />} label="District" value={candidate.district} />
                 <Field icon={<MapPin className="w-4 h-4" />} label="Address" value={candidate.address} fullWidth />
+              </div>
+            )}
+
+            {/* ---- TAB: Education Details (read-only) ---- */}
+            {activeTab === 'education' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field icon={<GraduationCap className="w-4 h-4" />} label="Qualification" value={candidate.qualification} />
+                <Field icon={<GraduationCap className="w-4 h-4" />} label="Specialization" value={candidate.specialization} />
+                <Field icon={<Layers className="w-4 h-4" />} label="Courses" value={candidate.courses} />
                 <Field icon={<Briefcase className="w-4 h-4" />} label="Experience (Years)" value={candidate.experienceYears ? String(candidate.experienceYears) : ''} />
+                <Field icon={<MapPin className="w-4 h-4" />} label="Preferred Job Locations" value={candidate.preferredJobLocations} fullWidth />
+                <Field icon={<Briefcase className="w-4 h-4" />} label="Job Type" value={candidate.jobType} />
+                <Field icon={<CalendarDays className="w-4 h-4" />} label="Shift Type" value={candidate.shiftType} />
+                <Field icon={<BadgeCheck className="w-4 h-4" />} label="Work Status" value={candidate.workStatus} />
+                <Field icon={<FileText className="w-4 h-4" />} label="Current Salary" value={typeof candidate.currentSalary === 'number' ? `₹${candidate.currentSalary}` : (candidate.currentSalary ?? '')} />
+                <Field icon={<FileText className="w-4 h-4" />} label="Expected / Salary Expectation" value={typeof candidate.expectation === 'number' ? `₹${candidate.expectation}` : (candidate.expectation ?? '')} />
+                <Field icon={<CalendarDays className="w-4 h-4" />} label="Notice Period" value={candidate.noticePeriod != null ? String(candidate.noticePeriod) : ''} />
+                <Field icon={<FileText className="w-4 h-4" />} label="Resume Headline" value={candidate.resumeHeadline} fullWidth />
+                <Field icon={<FileText className="w-4 h-4" />} label="Profile Summary" value={candidate.profileSummary} fullWidth />
 
                 {candidate.skills.length > 0 && (
                   <div className="bg-slate-50 rounded-xl p-4 sm:col-span-2">
@@ -302,28 +340,6 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
                   </div>
                 )}
               </>
-            )}
-
-            {/* ---- TAB: Profile Picture ---- */}
-            {activeTab === 'pic' && (
-              <div className="flex flex-col items-center justify-center py-10">
-                {candidate.profilePicUrl ? (
-                  <div className="w-48 h-48 rounded-2xl overflow-hidden ring-4 ring-orange-100 shadow-sm">
-                    <img
-                      src={candidate.profilePicUrl}
-                      alt={candidate.fullName || 'Candidate'}
-                      className="w-full h-full object-cover object-center"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-40 h-40 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center">
-                    <Camera className="w-14 h-14 text-slate-300" />
-                  </div>
-                )}
-                <p className="text-xs text-slate-500 font-medium mt-4">
-                  {candidate.profilePicUrl ? 'Profile Picture' : 'No profile picture uploaded by this candidate'}
-                </p>
-              </div>
             )}
 
             {/* ---- TAB 2: Resume / CV ---- */}

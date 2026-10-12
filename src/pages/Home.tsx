@@ -3,17 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { useGetDashboardStatsQuery } from '../services/dashboardApi';
 import { useGetInitiativesQuery } from '../services/initiativeApi';
-import { useSearchJobsQuery } from '../hooks/useJobQueries';
 import { MockDb } from '../services/mockDb';
 import { Navbar } from '../components/Navbar';
 import { SiteFooter } from '../components/SiteFooter';
+import { readSectionTarget } from '../utils/sectionNav';
 import {
   Briefcase,
   Users,
@@ -33,59 +33,48 @@ import {
   ChevronRight,
   Check,
   Star,
-  ShieldCheck,
-  Bookmark,
   Search,
   Linkedin,
   Quote,
   Leaf,
-  Package,
   Droplets,
   Handshake,
   MessageCircle,
   CircleHelp,
   X,
-  IndianRupee,
   Building
 } from 'lucide-react';
 
-const KEYWORDS = ['Career', 'Job', 'Service', 'SHG', 'Business', 'Team'];
+const KEYWORDS = [
+  { en: 'Job', mr: 'नोकरी' },
+  { en: 'Service', mr: 'सेवा' },
+  { en: 'SHG', mr: 'बचतगट' },
+  { en: 'Business', mr: 'व्यवसाय' },
+  { en: 'Career', mr: 'करिअर' },
+  { en: 'Team', mr: 'पथक' },
+];
 
-interface JobCard {
-  id: string;
-  jobId: number;
-  title: string;
-  companyName: string;
-  location: string;
-  type: string;
-  salary: string;
-  jobCode?: string;
-}
+/** Carousel slides stacked in the hero frame. The last one is the fallback photo. */
+const HERO_SLIDES = [
+  { src: '/home/carousel-job.jpg', labelEn: 'Jobs', labelMr: 'नोकरी' },
+  { src: '/home/carousel-services.jpg', labelEn: 'Services & Business', labelMr: 'सेवा व व्यवसाय' },
+  { src: '/home/carousel-shg.jpg', labelEn: 'SHG Network', labelMr: 'बचतगट नेटवर्क' },
+  { src: '/home/hero-person.jpg', labelEn: 'Swayamrojgar Vibhag', labelMr: 'स्वयंरोजगार विभाग' },
+];
 
-/** Normalizes either a live API JobRequirement or a MockDb Job into a rail card. */
-const toJobCard = (j: any): JobCard => {
-  const numId = Number(j.id ?? j.jobRequirementId);
-  const salaryRaw = j.salary;
-  let salary = 'Negotiable';
-  if (typeof salaryRaw === 'string' && salaryRaw.trim() && salaryRaw.replace(/[0-9]/g, '').includes('₹')) {
-    salary = salaryRaw;
-  } else {
-    const from = Number(salaryRaw) || 0;
-    const to = Number(j.salaryTo) || 0;
-    if (from && to && to > from) salary = `${from} - ${to}`;
-    else if (from) salary = `${from}`;
-  }
-  return {
-    id: String(j.id ?? j.jobRequirementId ?? ''),
-    jobId: numId && !Number.isNaN(numId) ? numId : 0,
-    title: j.profileHeader || j.jobDesignation || j.title || 'Job Vacancy',
-    companyName: j.companyName || 'Local Employer',
-    location: j.workPlace || j.jobLocation || j.location || 'Dindori',
-    type: j.jobTypeName || j.type || 'Full Time',
-    salary,
-    jobCode: j.jobCode,
-  };
+/** Slide each rotating keyword shows. Keywords absent here fall back to the last slide. */
+const HERO_SLIDE_BY_KEYWORD: Record<string, number> = {
+  Job: 0,
+  Service: 1,
+  Business: 1,
+  SHG: 2,
 };
+const HERO_FALLBACK_INDEX = HERO_SLIDES.length - 1;
+
+/** First keyword that shows a slide, so a dot click lands on a matching headline word. */
+const HERO_DOT_KEYWORDS = HERO_SLIDES.map(
+  (_, i) => KEYWORDS.find((k) => HERO_SLIDE_BY_KEYWORD[k.en] === i)?.en || null
+);
 
 const PRODUCTS = [
   { name: 'Eco-Friendly Cloth Bags', nameMr: 'इको-फ्रेंडली कापडी पिशव्या', desc: 'Block-printed cotton, made to last' },
@@ -135,9 +124,65 @@ function Reveal({
   );
 }
 
+/**
+ * Hero image frame. Stacks every slide and crossfades the one selected by the
+ * rotating headline keyword, with dots that jump the headline to that keyword.
+ */
+function HeroCarousel({
+  activeIdx,
+  onPick,
+  onHoverChange,
+  sizeClass,
+}: {
+  activeIdx: number;
+  onPick: (keyword: string) => void;
+  onHoverChange: (hovering: boolean) => void;
+  sizeClass: string;
+}) {
+  const { i18n } = useTranslation();
+  const L = (en: string, mr: string) => (i18n.language === 'mr' ? mr : en);
+
+  return (
+    <div
+      className={`absolute left-1/2 -translate-x-1/2 overflow-hidden shadow-2xl z-10 bg-white ${sizeClass}`}
+      onMouseEnter={() => onHoverChange(true)}
+      onMouseLeave={() => onHoverChange(false)}
+    >
+      {HERO_SLIDES.map((s, i) => (
+        <img
+          key={s.src}
+          src={s.src}
+          alt={L(s.labelEn, s.labelMr)}
+          className={`hero-slide ${i === activeIdx ? 'on' : ''}`}
+          loading={i === 0 ? 'eager' : 'lazy'}
+          decoding="async"
+        />
+      ))}
+
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1.5 backdrop-blur-sm">
+        {HERO_SLIDES.map((s, i) => {
+          const keyword = HERO_DOT_KEYWORDS[i];
+          if (!keyword) return null;
+          return (
+            <button
+              key={s.src}
+              type="button"
+              onClick={() => onPick(keyword)}
+              aria-label={L(`Show ${s.labelEn}`, `${s.labelMr} दाखवा`)}
+              aria-current={i === activeIdx}
+              className={`hero-dot ${i === activeIdx ? 'on' : ''}`}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
   const isMr = i18n.language === 'mr';
   const L = (en: string, mr: string) => (isMr ? mr : en);
@@ -151,23 +196,38 @@ export default function Home() {
   const stories = MockDb.getStories();
   const currentStory = stories[storyIndex];
 
-  // Hero rotating keyword
+  // Hero rotating keyword + the carousel slide it selects
   const [kwIndex, setKwIndex] = useState(0);
   const [kwSwap, setKwSwap] = useState(false);
+  const kwSwapTimer = useRef<number | null>(null);
+  const kwPaused = useRef(false);
 
-  // Hero search
-  const [searchType, setSearchType] = useState('job');
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [searchLocation, setSearchLocation] = useState('All Locations');
+  const activeIdx = HERO_SLIDE_BY_KEYWORD[KEYWORDS[kwIndex].en] ?? HERO_FALLBACK_INDEX;
 
-  // Saved jobs (persisted locally when the visitor is signed in)
-  const [savedJobs, setSavedJobs] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('srg_saved_jobs') || '[]'); } catch { return []; }
-  });
+  /** Two-phase swap: fade the word out, swap keyword + slide, fade back in. */
+  const swapKeyword = useCallback((pick: (cur: number) => number) => {
+    setKwSwap(true);
+    if (kwSwapTimer.current) window.clearTimeout(kwSwapTimer.current);
+    kwSwapTimer.current = window.setTimeout(() => {
+      setKwIndex((p) => pick(p));
+      setKwSwap(false);
+      kwSwapTimer.current = null;
+    }, 350);
+  }, []);
 
-  // Auto rail
-  const jobRailRef = useRef<HTMLDivElement>(null);
-  const railPaused = useRef(false);
+  /** Dot click / arrow key: jump straight to the keyword that owns a slide. */
+  const goSlide = useCallback(
+    (keyword: string) => {
+      const i = KEYWORDS.findIndex((k) => k.en === keyword);
+      if (i >= 0) swapKeyword(() => i);
+    },
+    [swapKeyword]
+  );
+
+  /** Hovering the carousel pauses the auto-rotation so a slide can be read. */
+  const setKwHover = useCallback((hovering: boolean) => {
+    kwPaused.current = hovering;
+  }, []);
 
   // Modals
   const [queryOpen, setQueryOpen] = useState(false);
@@ -177,15 +237,16 @@ export default function Home() {
   const [rating, setRating] = useState(-1);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setKwSwap(true);
-      setTimeout(() => {
-        setKwIndex((p) => (p + 1) % KEYWORDS.length);
-        setKwSwap(false);
-      }, 350);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const id = window.setInterval(() => {
+      if (kwPaused.current) return;
+      swapKeyword((p) => (p + 1) % KEYWORDS.length);
     }, 2200);
-    return () => clearInterval(id);
-  }, []);
+    return () => {
+      window.clearInterval(id);
+      if (kwSwapTimer.current) window.clearTimeout(kwSwapTimer.current);
+    };
+  }, [swapKeyword]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -197,29 +258,22 @@ export default function Home() {
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
+  // A section link clicked from another page routes here with a pending target.
+  useEffect(() => {
+    const target = readSectionTarget(location.state);
+    if (!target) return;
+    const id = window.setTimeout(() => {
+      document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+    return () => window.clearTimeout(id);
+  }, [location.state]);
+
   useEffect(() => {
     document.body.style.overflow = queryOpen || feedbackOpen ? 'hidden' : '';
     return () => {
       document.body.style.overflow = '';
     };
   }, [queryOpen, feedbackOpen]);
-
-  // Auto-run the featured jobs rail
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const id = setInterval(() => {
-      const rail = jobRailRef.current;
-      if (!rail || railPaused.current) return;
-      const card = rail.firstElementChild as HTMLElement | null;
-      const step = card ? card.getBoundingClientRect().width + 20 : 340;
-      if (rail.scrollLeft >= rail.scrollWidth - rail.clientWidth - 4) {
-        rail.scrollTo({ left: 0, behavior: 'smooth' });
-      } else {
-        rail.scrollBy({ left: step, behavior: 'smooth' });
-      }
-    }, 3200);
-    return () => clearInterval(id);
-  }, []);
 
   const scrollToId = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -237,16 +291,8 @@ export default function Home() {
     navigate('/register', { state: { preferredRole: roleTarget } });
   };
 
-  const handleSearch = () => {
-    if (searchType === 'job') {
-      scrollToId('jobs');
-    } else if (searchType === 'hire') {
-      handleEnterGateway('COMPANY');
-    } else if (searchType === 'service') {
-      scrollToId('services');
-    } else {
-      handleEnterGateway('SHG');
-    }
+  const goLogin = () => {
+    navigate('/login');
   };
 
   const getLocalizedInitiative = (init: any) => ({
@@ -259,12 +305,12 @@ export default function Home() {
   // Hero action cards: rendered as floating badges on desktop, as a responsive
   // grid on mobile/tablet so they never overlap the hero image.
   const heroCards = [
-    { en: 'Find a Job', mr: 'नोकरी शोधा', subEn: '', subMr: '', icon: Briefcase, chipBg: 'bg-theme-lavender text-white', big: false, pos: 'left-0 top-6', from: 'from-left', go: () => scrollToId('jobs') },
+    { en: 'Find a Job', mr: 'नोकरी शोधा', subEn: '', subMr: '', icon: Briefcase, chipBg: 'bg-theme-lavender text-white', big: false, pos: 'left-0 top-6', from: 'from-left', go: () => handleEnterGateway('CANDIDATE') },
     { en: 'Hire Talent', mr: 'उमेदवार निवडा', subEn: '', subMr: '', icon: UserPlus, chipBg: 'bg-theme-terracotta text-white', big: false, pos: 'right-0 top-0', from: 'from-top', go: () => handleEnterGateway('COMPANY') },
     { en: 'Skill Training', mr: 'कौशल्य प्रशिक्षण', subEn: 'MPSC / UPSC & trades', subMr: 'MPSC / UPSC आणि व्यवसाय', icon: GraduationCap, chipBg: 'bg-theme-deepTeal/15 text-theme-deepTeal', big: true, pos: '-left-3 top-[40%]', from: 'from-left', go: () => scrollToId('services') },
     { en: 'Start a Business', mr: 'व्यवसाय सुरू करा', subEn: 'Udyojakta Manch', subMr: 'उद्योजकता मंच', icon: Store, chipBg: 'bg-theme-lavender/15 text-theme-lavender', big: true, pos: '-right-3 top-[36%]', from: 'from-right', go: () => scrollToId('services') },
     { en: 'SHG / Bachat Gat', mr: 'बचत गट', subEn: 'Register, train and sell', subMr: 'नोंदणी, प्रशिक्षण आणि विक्री', icon: HandCoins, chipBg: 'bg-theme-mint/25 text-theme-deepTeal', big: true, pos: 'left-0 bottom-10', from: 'from-bottom', go: () => handleEnterGateway('SHG') },
-    { en: 'Employment Fairs', mr: 'रोजगार मेळावे', subEn: 'Meet companies directly', subMr: 'कंपन्यांना थेट भेटा', icon: Users, chipBg: 'bg-theme-gold/20 text-theme-gold', big: true, pos: 'right-0 bottom-2', from: 'from-right', go: () => scrollToId('jobs') },
+    { en: 'Employment Fairs', mr: 'रोजगार मेळावे', subEn: 'Meet companies directly', subMr: 'कंपन्यांना थेट भेटा', icon: Users, chipBg: 'bg-theme-gold/20 text-theme-gold', big: true, pos: 'right-0 bottom-2', from: 'from-right', go: () => handleEnterGateway('CANDIDATE') },
   ];
 
   const openModal = (which: 'query' | 'feedback') => {
@@ -280,50 +326,6 @@ export default function Home() {
   const submitFeedback = (e: React.FormEvent) => {
     e.preventDefault();
     setFeedbackSent(true);
-  };
-
-  const { data: searchJobsData, isFetching: jobsFetching } = useSearchJobsQuery({
-    searchPhrase: searchKeyword.trim() || undefined,
-    page: 1,
-    limit: 8,
-  });
-
-  const liveCount = searchJobsData?.totalCount || 0;
-
-  const railJobs = React.useMemo(() => {
-    const fromApi = (searchJobsData?.jobs || []).map(toJobCard);
-    const list = fromApi.length > 0
-      ? fromApi
-      : MockDb.getJobs().filter((j) => j.isApproved).map(toJobCard);
-    if (searchLocation !== 'All Locations') {
-      const q = searchLocation.toLowerCase();
-      return list
-        .filter((j) => j.location.toLowerCase().includes(q) || q.includes(j.location.toLowerCase()))
-        .slice(0, 4);
-    }
-    return list.slice(0, 4);
-  }, [searchJobsData, searchLocation]);
-
-  const toggleSave = (id: string) => {
-    if (!isAuthenticated) {
-      handleEnterGateway('CANDIDATE');
-      return;
-    }
-    setSavedJobs((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      try { localStorage.setItem('srg_saved_jobs', JSON.stringify(next)); } catch { /* ignore */ }
-      return next;
-    });
-  };
-
-  const isSaved = (id: string) => savedJobs.includes(id);
-
-  const openJob = (job: JobCard) => {
-    if (job.jobId && isAuthenticated) {
-      navigate(`/job/${job.jobId}`);
-    } else {
-      handleEnterGateway('CANDIDATE');
-    }
   };
 
   const hiredCount = stats?.totalCandidates ? `${stats.totalCandidates}+` : '1,500+';
@@ -355,73 +357,36 @@ export default function Home() {
                 <span className="gloss-teal">{L('Your', 'आदर्श')}</span>{' '}
                 <span className="gloss">{L('Perfect', '...')}</span>
                 <br className="hidden md:block" />
-                <span className={`kw-box ${kwSwap ? 'swap' : ''}`}>{KEYWORDS[kwIndex]}</span>
+                <span className={`kw-box ${kwSwap ? 'swap' : ''}`}>{L(KEYWORDS[kwIndex].en, KEYWORDS[kwIndex].mr)}</span>
               </h1>
 
               <p className="text-base md:text-lg text-theme-darkViolet/70 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
                 {L(
-                  'Search a job, hire local talent, book a service or register your self-help group. Whatever you have come here for, start below.',
-                  'नोकरी शोधा, स्थानिक उमेदवार निवडा, सेवा बुक करा किंवा तुमचा बचत गट नोंदवा. तुम्ही जे काही करायला आले असाल, ते खालून सुरू करा.'
+                  'Search a job, hire local talent, book a service or register your self-help group. Create a free account to get started.',
+                  'नोकरी शोधा, स्थानिक उमेदवार निवडा, सेवा बुक करा किंवा तुमचा बचत गट नोंदवा. सुरुवात करण्यासाठी मोफत खाते तयार करा.'
                 )}
               </p>
 
-              {/* Search bar */}
-              <div className="glass p-2.5 rounded-2xl max-w-2xl mx-auto lg:mx-0">
-                <div className="flex flex-col md:flex-row items-stretch gap-2">
-                  <div className="px-4 py-2 md:border-r border-theme-lightViolet text-left md:w-40 shrink-0">
-                    <label className="block text-[10px] text-theme-darkViolet/50 font-bold uppercase tracking-widest mb-1">{L('I want to', 'मला हवे आहे')}</label>
-                    <select
-                      value={searchType}
-                      onChange={(e) => setSearchType(e.target.value)}
-                      className="w-full text-sm outline-none text-theme-darkViolet font-bold bg-transparent appearance-none cursor-pointer"
-                    >
-                      <option value="job">{L('Find a Job', 'नोकरी शोधा')}</option>
-                      <option value="hire">{L('Hire Talent', 'उमेदवार निवडा')}</option>
-                      <option value="service">{L('Use a Service', 'सेवा घ्या')}</option>
-                      <option value="shg">{L('Join / Register SHG', 'बचतगटात सामील व्हा')}</option>
-                    </select>
-                  </div>
-
-                  <div className="px-4 py-2 md:border-r border-theme-lightViolet text-left flex-1">
-                    <label className="block text-[10px] text-theme-darkViolet/50 font-bold uppercase tracking-widest mb-1">{L('Keyword', 'कीवर्ड')}</label>
-                    <input
-                      type="text"
-                      value={searchKeyword}
-                      onChange={(e) => setSearchKeyword(e.target.value)}
-                      placeholder="Marketing Manager, ITI, Papad..."
-                      className="w-full text-sm outline-none text-theme-darkViolet font-bold bg-transparent placeholder-theme-darkViolet/30"
-                    />
-                  </div>
-
-                  <div className="px-4 py-2 text-left md:w-40 shrink-0">
-                    <label className="block text-[10px] text-theme-darkViolet/50 font-bold uppercase tracking-widest mb-1">{L('Location', 'ठिकाण')}</label>
-                    <select
-                      value={searchLocation}
-                      onChange={(e) => setSearchLocation(e.target.value)}
-                      className="w-full text-sm outline-none text-theme-darkViolet font-bold bg-transparent appearance-none cursor-pointer"
-                    >
-                      <option>{L('All Locations', 'सर्व ठिकाणे')}</option>
-                      <option>Dindori, Nashik</option>
-                      <option>Akarale</option>
-                      <option>Thergaon, Pune</option>
-                      <option>Vani</option>
-                      <option>Ozar</option>
-                    </select>
-                  </div>
-
-                  <button
-                    onClick={handleSearch}
-                    className="btn-gloss bg-theme-lavender text-white px-8 py-3.5 rounded-xl font-bold hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30 whitespace-nowrap cursor-pointer"
-                  >
-                    {L('Search', 'शोधा')}
-                  </button>
-                </div>
+              {/* Primary CTA - job browsing lives behind an account */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 max-w-2xl mx-auto lg:mx-0">
+                <button
+                  onClick={() => handleEnterGateway('CANDIDATE')}
+                  className="btn-gloss bg-theme-lavender text-white px-8 py-3.5 rounded-xl font-bold hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30 whitespace-nowrap cursor-pointer"
+                >
+                  {L('Get Started Free', 'मोफत सुरुवात करा')} <ArrowRight className="inline w-4 h-4 -mt-0.5" />
+                </button>
+                <button
+                  onClick={goLogin}
+                  className="bg-white border border-theme-lightViolet text-theme-darkViolet px-8 py-3.5 rounded-xl font-bold hover:border-theme-lavender hover:text-theme-lavender transition-all whitespace-nowrap cursor-pointer"
+                >
+                  {L('Login', 'लॉगिन')}
+                </button>
               </div>
 
               {/* Chips */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mt-6">
                 <span className="text-sm font-bold text-theme-darkViolet/70 mr-1">{L('Go straight to:', 'थेट जा:')}</span>
-                <button onClick={() => scrollToId('jobs')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{L('Jobs', 'नोकऱ्या')}</button>
+                <button onClick={() => handleEnterGateway('CANDIDATE')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{L('Jobs', 'नोकऱ्या')}</button>
                 <button onClick={() => handleEnterGateway('COMPANY')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{L('Hire', 'भरती')}</button>
                 <button onClick={() => scrollToId('services')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{L('Services', 'सेवा')}</button>
                 <button onClick={() => handleEnterGateway('SHG')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{L('SHG', 'बचतगट')}</button>
@@ -441,9 +406,12 @@ export default function Home() {
 
                   <div className="ring-dash absolute left-1/2 -translate-x-1/2 top-3 w-[260px] h-[330px] min-[340px]:w-[290px] min-[380px]:w-[310px] sm:w-[360px] sm:h-[440px] rounded-[3rem] border-2 border-dashed border-theme-lavender/35"></div>
 
-                  <div className="absolute left-1/2 -translate-x-1/2 top-6 w-[220px] h-[300px] min-[340px]:w-[250px] min-[380px]:w-[270px] sm:w-[320px] sm:h-[400px] rounded-[2.5rem] overflow-hidden shadow-2xl z-10 bg-white">
-                    <img src="/home/hero-person.jpg" alt={L('Swayamrojgar Vibhag', 'स्वयंरोजगार विभाग')} className="w-full h-full object-cover" />
-                  </div>
+                  <HeroCarousel
+                    activeIdx={activeIdx}
+                    onPick={goSlide}
+                    onHoverChange={setKwHover}
+                    sizeClass="top-6 w-[220px] h-[300px] min-[340px]:w-[250px] min-[380px]:w-[270px] sm:w-[320px] sm:h-[400px] rounded-[2.5rem]"
+                  />
 
                   <div className="deco text-theme-gold text-3xl font-bold right-4 top-1 ico-bob">+</div>
                   <div className="deco text-theme-lavender text-2xl font-bold left-2 top-1/3 ico-bob s2">+</div>
@@ -482,9 +450,12 @@ export default function Home() {
 
                 <div className="ring-dash absolute left-1/2 -translate-x-1/2 top-4 w-[420px] h-[540px] rounded-[3.5rem] border-2 border-dashed border-theme-lavender/35"></div>
 
-                <div className="absolute left-1/2 -translate-x-1/2 top-8 w-[380px] h-[500px] rounded-[3rem] overflow-hidden shadow-2xl z-10 bg-white">
-                  <img src="/home/hero-person.jpg" alt={L('Swayamrojgar Vibhag', 'स्वयंरोजगार विभाग')} className="w-full h-full object-cover" />
-                </div>
+                <HeroCarousel
+                  activeIdx={activeIdx}
+                  onPick={goSlide}
+                  onHoverChange={setKwHover}
+                  sizeClass="top-8 w-[380px] h-[500px] rounded-[3rem]"
+                />
 
                 <div className="deco text-theme-gold text-3xl font-bold right-6 top-10 ico-bob">+</div>
                 <div className="deco text-theme-lavender text-2xl font-bold left-4 top-1/3 ico-bob s2">+</div>
@@ -514,7 +485,7 @@ export default function Home() {
       </section>
 
       {/* CHOOSE YOUR PLATFORM */}
-      <section id="platform" className="relative py-20 overflow-hidden">
+      <section id="about" className="scroll-mt-20 sm:scroll-mt-24 relative py-20 overflow-hidden">
         <div className="absolute top-10 left-[8%] w-3 h-3 rounded-full bg-theme-gold ico-bob"></div>
         <div className="absolute bottom-16 right-[10%] w-4 h-4 rounded-full border-2 border-theme-terracotta ico-bob s2"></div>
         <div className="absolute top-1/3 right-[6%] text-theme-lavender/40 text-2xl font-bold ico-bob s3">+</div>
@@ -560,14 +531,14 @@ export default function Home() {
                   {L(' looking to hire reliable local talent.', ' स्थानिक विश्वासू उमेदवारांची भरती.')}
                 </p>
                 <div className="relative z-10 w-full space-y-2.5">
-                  <button onClick={() => scrollToId('jobs')} className="btn-gloss block w-full bg-theme-lavender text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30 text-sm cursor-pointer">{L('Find Work', 'नोकरी शोधा')}</button>
+                  <button onClick={() => handleEnterGateway('CANDIDATE')} className="btn-gloss block w-full bg-theme-lavender text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30 text-sm cursor-pointer">{L('Find Work', 'नोकरी शोधा')}</button>
                   <button onClick={() => handleEnterGateway('COMPANY')} className="block w-full bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold hover:border-theme-lavender hover:text-theme-lavender transition-all text-sm cursor-pointer">{L('Hire Talent', 'उमेदवार निवडा')}</button>
                 </div>
               </div>
             </div>
 
             {/* 2. SERVICES */}
-            <div id="services" className="tile group relative rounded-[2rem] p-[2px] bg-gradient-to-br from-theme-deepTeal/60 via-theme-deepTeal/10 to-transparent hover:from-theme-deepTeal hover:via-theme-mint/50 transition-all duration-500">
+            <div id="services" className="tile scroll-mt-20 sm:scroll-mt-24 group relative rounded-[2rem] p-[2px] bg-gradient-to-br from-theme-deepTeal/60 via-theme-deepTeal/10 to-transparent hover:from-theme-deepTeal hover:via-theme-mint/50 transition-all duration-500">
               <div className="relative h-full rounded-[1.9rem] bg-white p-8 flex flex-col items-center text-center overflow-hidden">
                 <span className="absolute -top-16 -right-16 w-44 h-44 rounded-full bg-theme-deepTeal/[0.07] group-hover:scale-150 transition-transform duration-700"></span>
                 <span className="absolute top-5 right-6 text-6xl font-extrabold text-theme-deepTeal/10 leading-none select-none">02</span>
@@ -585,14 +556,14 @@ export default function Home() {
                   {L('Career counselling, competitive examination guidance, business and licence help, machinery support and skill training.', 'करिअर समुपदेशन, स्पर्धा परीक्षा मार्गदर्शन, व्यवसाय व परवाना साहाय्य, यंत्रसाहाय्य आणि कौशल्य प्रशिक्षण.')}
                 </p>
                 <div className="relative z-10 w-full space-y-2.5">
-                  <button onClick={() => scrollToId('platform')} className="btn-gloss block w-full bg-theme-deepTeal text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md text-sm cursor-pointer">{L('Explore Services', 'सेवा पहा')}</button>
+                  <button onClick={() => scrollToId('about')} className="btn-gloss block w-full bg-theme-deepTeal text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md text-sm cursor-pointer">{L('Explore Services', 'सेवा पहा')}</button>
                   <button onClick={() => openModal('query')} className="block w-full bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold hover:border-theme-deepTeal hover:text-theme-deepTeal transition-all text-sm cursor-pointer">{L('Book Guidance', 'मार्गदर्शन मिळवा')}</button>
                 </div>
               </div>
             </div>
 
             {/* 3. SHG */}
-            <div id="shg" className="tile group relative rounded-[2rem] p-[2px] bg-gradient-to-br from-theme-terracotta/60 via-theme-terracotta/10 to-transparent hover:from-theme-terracotta hover:via-theme-gold/50 transition-all duration-500">
+            <div id="shg" className="tile scroll-mt-20 sm:scroll-mt-24 group relative rounded-[2rem] p-[2px] bg-gradient-to-br from-theme-terracotta/60 via-theme-terracotta/10 to-transparent hover:from-theme-terracotta hover:via-theme-gold/50 transition-all duration-500">
               <div className="relative h-full rounded-[1.9rem] bg-white p-8 flex flex-col items-center text-center overflow-hidden">
                 <span className="absolute -top-16 -right-16 w-44 h-44 rounded-full bg-theme-terracotta/[0.07] group-hover:scale-150 transition-transform duration-700"></span>
                 <span className="absolute top-5 right-6 text-6xl font-extrabold text-theme-terracotta/10 leading-none select-none">03</span>
@@ -623,134 +594,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FEATURED JOBS */}
-      <section id="jobs" className="relative py-16 bg-theme-lightViolet/50 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-12 gap-10 items-center">
-
-            {/* LEFT image */}
-            <div className="lg:col-span-4 relative hidden lg:block order-first">
-              <div className="morphing absolute inset-x-2 top-6 bottom-6 blob-b bg-theme-lavender/15"></div>
-              <div className="deco left-0 top-4 text-theme-gold text-3xl font-bold ico-bob">+</div>
-              <div className="deco right-2 bottom-20 w-8 h-8 rounded-full border-[4px] border-theme-terracotta/40"></div>
-              <img src="/home/pointing-girl.jpg" alt={L('Pointing to opportunities', 'संधी दाखवताना')} className="relative z-10 rounded-[2rem] object-cover w-full h-full drop-shadow-xl" />
-              <div className="stat-badge absolute -right-3 bottom-28 glass rounded-2xl px-4 py-3 z-20 flex items-center gap-3">
-                <span className="w-9 h-9 rounded-lg bg-theme-mint/25 text-theme-deepTeal flex items-center justify-center"><Check className="w-4 h-4" /></span>
-                <div className="text-left leading-none">
-                  <div className="text-base font-extrabold text-theme-darkViolet">{L('100% Free', '100% मोफत')}</div>
-                  <div className="text-[10px] font-bold text-theme-darkViolet/50 uppercase tracking-wider mt-1">{L('No fee, ever', 'कधीही शुल्क नाही')}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT job rail */}
-            <div className="lg:col-span-8">
-              <div className="mb-7">
-                <span className="inline-flex items-center gap-2 bg-white text-theme-wine px-3.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-widest shadow-sm mb-3">
-                  <span className="w-1.5 h-1.5 rounded-full bg-theme-wine animate-pulse"></span> {L('Live openings', 'थेट संधी')}
-                  {(liveCount > 0 || jobsFetching) && (
-                    <span className="inline-flex items-center gap-1 bg-theme-wine/10 text-theme-wine px-2 py-0.5 rounded-full normal-case">
-                      {jobsFetching && <span className="w-2 h-2 rounded-full border-2 border-theme-wine/30 border-t-theme-wine animate-spin"></span>}
-                      {liveCount > 0 ? liveCount : L('Updating', 'अद्ययावत')}
-                    </span>
-                  )}
-                </span>
-                <h2 className="text-3xl lg:text-4xl font-extrabold text-theme-darkViolet leading-tight">
-                  {L('Featured', 'ठळक')} <span className="gloss">{L('Jobs', 'नोकऱ्या')}</span>
-                </h2>
-                <p className="text-theme-darkViolet/60 mt-2 text-sm max-w-lg">
-                  {L('Verified openings with local employers — free for every candidate.', 'स्थानिक नियोक्त्यांच्या पडताळलेल्या संधी — प्रत्येक उमेदवारासाठी मोफत.')}
-                </p>
-              </div>
-
-              <div
-                id="jobRail"
-                ref={jobRailRef}
-                className="rail"
-                onMouseEnter={() => { railPaused.current = true; }}
-                onMouseLeave={() => { railPaused.current = false; }}
-              >
-                {railJobs.map((job) => (
-                  <div key={`${job.id}-${job.title}`} onClick={() => openJob(job)} className="job-card group relative bg-white rounded-2xl border border-theme-lightViolet p-5 hover:shadow-xl hover:-translate-y-1.5 hover:border-theme-lavender/40 transition-all duration-300 cursor-pointer">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleSave(job.id); }}
-                      className={`absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center transition cursor-pointer ${isSaved(job.id) ? 'bg-theme-lavender text-white shadow-md shadow-theme-lavender/30' : 'bg-theme-lightViolet/70 text-theme-lavender/70 hover:bg-theme-lavender hover:text-white'}`}
-                      aria-label={L('Save job', 'नोकरी जतन करा')}
-                    >
-                      <Bookmark className={`text-xs w-4 h-4 ${isSaved(job.id) ? 'fill-current' : ''}`} />
-                    </button>
-                    <div className="flex items-start gap-3.5 mb-3.5 pr-9">
-                      <span className="w-12 h-12 rounded-xl bg-theme-lavender/10 text-theme-lavender flex items-center justify-center shrink-0 ico-hop">
-                        <Briefcase className="w-5 h-5" />
-                      </span>
-                      <div className="min-w-0">
-                        <h4 className="font-extrabold text-theme-darkViolet leading-tight truncate">{job.title}</h4>
-                        <p className="text-xs text-theme-darkViolet/55 mt-0.5 truncate">{job.companyName}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mb-3.5">
-                      <span className="bg-theme-lightViolet text-theme-darkViolet/70 text-[11px] font-bold px-2.5 py-1 rounded-full">
-                        <MapPin className="inline w-3 h-3 mr-1 text-theme-lavender/70 -mt-0.5" />{job.location}
-                      </span>
-                      <span className="bg-theme-mint/15 text-theme-deepTeal text-[11px] font-bold px-2.5 py-1 rounded-full">{job.type}</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-theme-lightViolet">
-                      <span className="text-sm font-extrabold text-theme-darkViolet">
-                        {job.salary === 'Negotiable' ? (
-                          <span className="text-[11px] font-bold text-theme-darkViolet/45">{L('Salary Negotiable', 'वेतन ठरवता येईल')}</span>
-                        ) : job.salary.replace(/[0-9]/g, '').includes('₹') ? (
-                          job.salary
-                        ) : (
-                          <>
-                            <IndianRupee className="inline w-3 h-3 mr-0.5 text-theme-lavender -mt-0.5" />{job.salary}
-                            <span className="text-[11px] font-semibold text-theme-darkViolet/45"> / {L('month', 'महिना')}</span>
-                          </>
-                        )}
-                      </span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openJob(job); }}
-                        className="text-xs font-extrabold text-theme-lavender opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all cursor-pointer"
-                      >
-                        {L('Apply', 'अर्ज करा')} <ArrowRight className="inline w-3 h-3 -mt-0.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex items-center justify-between gap-4 mt-2">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => { const r = jobRailRef.current; if (r && r.firstElementChild) { const w = (r.firstElementChild as HTMLElement).getBoundingClientRect().width + 20; r.scrollBy({ left: -w, behavior: 'smooth' }); } }}
-                    className="nav-btn w-12 h-12 rounded-full bg-white text-theme-lavender border border-theme-lightViolet shadow-md hover:bg-theme-lavender hover:text-white flex items-center justify-center cursor-pointer"
-                    aria-label="Previous jobs"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => { const r = jobRailRef.current; if (r && r.firstElementChild) { const w = (r.firstElementChild as HTMLElement).getBoundingClientRect().width + 20; r.scrollBy({ left: w, behavior: 'smooth' }); } }}
-                    className="nav-btn w-12 h-12 rounded-full bg-theme-lavender text-white shadow-lg shadow-theme-lavender/30 hover:bg-theme-darkViolet flex items-center justify-center cursor-pointer"
-                    aria-label="Next jobs"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-                <button onClick={() => handleEnterGateway('CANDIDATE')} className="btn-gloss inline-flex items-center gap-2 bg-theme-lavender text-white px-7 py-3.5 rounded-xl font-bold text-sm hover:bg-theme-darkViolet transition-all shadow-lg shadow-theme-lavender/30 cursor-pointer">
-                  {L('All Jobs', 'सर्व नोकऱ्या')} <ArrowRight className="text-xs w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <p className="text-center text-sm text-theme-darkViolet/50 mt-10">
-            <ShieldCheck className="inline w-4 h-4 text-theme-lavender mr-1.5 -mt-0.5" />
-            {L('Every listing is verified. The Swayamrojgar Vibhag never charges a candidate any fee.', 'प्रत्येक नोकरी पडताळलेली असते. स्वयंरोजगार विभाग उमेदवाराकडून कधीही शुल्क घेत नाही.')}
-          </p>
-        </div>
-      </section>
-
       {/* COMMUNITY PRODUCTS */}
-      <section id="products" className="py-20 bg-white relative overflow-hidden">
+      <section id="products" className="scroll-mt-20 sm:scroll-mt-24 py-20 bg-white relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-12 gap-12 items-center">
 
@@ -789,18 +634,18 @@ export default function Home() {
                 {PRODUCTS.map((p, i) => (
                   <React.Fragment key={p.name}>
                     <Reveal direction="r" delay={`dly${i + 1}`}>
-                    <a className="prod-row group block px-5 py-5 rounded-xl cursor-pointer" onClick={() => openModal('query')}>
-                      <div className="relative z-10 flex items-center gap-5">
-                        <span className="num text-lg font-extrabold text-theme-darkViolet/25 w-8 shrink-0">0{i + 1}</span>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-extrabold text-theme-darkViolet leading-tight">{isMr ? p.nameMr : p.name}</div>
-                          <div className="text-xs text-theme-darkViolet/55 mt-1">{isMr ? L(p.desc, p.desc) : L(p.desc, p.desc)} &middot; <span className="text-theme-deepTeal font-bold">{L('Our Bachat Gats', 'आमचे बचत गट')}</span></div>
+                      <a className="prod-row group block px-5 py-5 rounded-xl cursor-pointer" onClick={() => openModal('query')}>
+                        <div className="relative z-10 flex items-center gap-5">
+                          <span className="num text-lg font-extrabold text-theme-darkViolet/25 w-8 shrink-0">0{i + 1}</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-extrabold text-theme-darkViolet leading-tight">{isMr ? p.nameMr : p.name}</div>
+                            <div className="text-xs text-theme-darkViolet/55 mt-1">{isMr ? L(p.desc, p.desc) : L(p.desc, p.desc)} &middot; <span className="text-theme-deepTeal font-bold">{L('Our Bachat Gats', 'आमचे बचत गट')}</span></div>
+                          </div>
+                          <span className="go text-theme-lavender shrink-0"><ArrowRight className="w-4 h-4" /></span>
                         </div>
-                        <span className="go text-theme-lavender shrink-0"><ArrowRight className="w-4 h-4" /></span>
-                      </div>
-                      <span className="line block h-px bg-theme-lavender/40 mt-4 relative z-10"></span>
-                    </a>
-                  </Reveal>
+                        <span className="line block h-px bg-theme-lavender/40 mt-4 relative z-10"></span>
+                      </a>
+                    </Reveal>
                   </React.Fragment>
                 ))}
               </div>
@@ -814,7 +659,7 @@ export default function Home() {
       </section>
 
       {/* INITIATIVES */}
-      <section id="initiatives" className="py-20 bg-theme-lightViolet/40 relative overflow-hidden">
+      <section id="initiatives" className="scroll-mt-20 sm:scroll-mt-24 py-20 bg-theme-lightViolet/40 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <span className="inline-flex items-center gap-2 bg-theme-gold/15 text-theme-gold px-4 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-widest mb-4">
@@ -846,18 +691,18 @@ export default function Home() {
                 return (
                   <React.Fragment key={init.id}>
                     <Reveal>
-                    <div className="h-full bg-white rounded-2xl border border-theme-lightViolet p-6 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col">
-                      <div className="flex items-center gap-2 mb-3.5">
-                        <span className={`w-2 h-2 rounded-full animate-pulse ${activeInitiativeTab === 'upcoming' ? 'bg-theme-mint' : 'bg-theme-gold'}`}></span>
-                        <span className="text-xs font-bold text-theme-darkViolet/70 bg-theme-lightViolet px-2.5 py-1 rounded-full">{localized.date}</span>
+                      <div className="h-full bg-white rounded-2xl border border-theme-lightViolet p-6 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col">
+                        <div className="flex items-center gap-2 mb-3.5">
+                          <span className={`w-2 h-2 rounded-full animate-pulse ${activeInitiativeTab === 'upcoming' ? 'bg-theme-mint' : 'bg-theme-gold'}`}></span>
+                          <span className="text-xs font-bold text-theme-darkViolet/70 bg-theme-lightViolet px-2.5 py-1 rounded-full">{localized.date}</span>
+                        </div>
+                        <h4 className="text-base font-extrabold text-theme-darkViolet leading-snug">{localized.title}</h4>
+                        <p className="text-[13px] text-theme-darkViolet/65 mt-2 leading-relaxed flex-grow">{localized.desc}</p>
+                        <div className="mt-5 pt-3 border-t border-theme-lightViolet flex items-center gap-2 text-theme-darkViolet/60">
+                          <MapPin className="w-4 h-4 text-theme-lavender shrink-0" />
+                          <span className="text-xs font-bold leading-none truncate">{localized.location}</span>
+                        </div>
                       </div>
-                      <h4 className="text-base font-extrabold text-theme-darkViolet leading-snug">{localized.title}</h4>
-                      <p className="text-[13px] text-theme-darkViolet/65 mt-2 leading-relaxed flex-grow">{localized.desc}</p>
-                      <div className="mt-5 pt-3 border-t border-theme-lightViolet flex items-center gap-2 text-theme-darkViolet/60">
-                        <MapPin className="w-4 h-4 text-theme-lavender shrink-0" />
-                        <span className="text-xs font-bold leading-none truncate">{localized.location}</span>
-                      </div>
-                    </div>
                     </Reveal>
                   </React.Fragment>
                 );
@@ -919,7 +764,7 @@ export default function Home() {
       )}
 
       {/* FRANCHISE */}
-      <section id="franchise" className="relative bg-theme-lightViolet/70 py-10 overflow-hidden">
+      <section id="franchise" className="scroll-mt-20 sm:scroll-mt-24 relative bg-theme-lightViolet/70 py-10 overflow-hidden">
         <div className="fr-blob absolute -top-16 left-10 w-48 h-48 rounded-full bg-theme-lavender/15 blur-3xl"></div>
         <div className="fr-blob b2 absolute -bottom-16 right-24 w-48 h-48 rounded-full bg-theme-mint/15 blur-3xl"></div>
 
@@ -981,7 +826,7 @@ export default function Home() {
       </section>
 
       {/* CONTACT & MAP */}
-      <section id="contact" className="py-20 bg-white relative overflow-hidden">
+      <section id="contact" className="scroll-mt-20 sm:scroll-mt-24 py-20 bg-white relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <span className="inline-flex items-center gap-2 bg-theme-lightViolet text-theme-lavender px-4 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-widest mb-4">

@@ -22,6 +22,7 @@ import ActivateAccount from './pages/ActivateAccount';
 import { JobRequirementDetail } from './pages/JobRequirementDetail';
 import ChangePassword from './pages/ChangePassword';
 import { ProtectedRoute } from './components/ui/UtilityComponents';
+import { ScrollToTop } from './components/ScrollToTop';
 
 // Redirect non-hash URL path `/ActivateAccount` or `/activateaccount` to hash-based `#/ActivateAccount`
 if (window.location.pathname.toLowerCase().includes('/activateaccount')) {
@@ -43,6 +44,7 @@ export default function App() {
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <HashRouter>
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<GuestOnly><Home /></GuestOnly>} />
             <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />

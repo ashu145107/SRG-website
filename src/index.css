@@ -86,6 +86,46 @@
 }
 .kw-box.swap { opacity: 0; transform: translateY(-8px); }
 
+/* Hero carousel : slides stacked in the hero frame, crossfaded in sync with the
+   rotating "Find Your Perfect ___" keyword. Only the active slide has .on. */
+.hero-slide {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.05);
+  transition: opacity .9s ease, transform 1.2s ease;
+  will-change: opacity, transform;
+}
+.hero-slide.on { opacity: 1; transform: scale(1); }
+
+.hero-dot {
+  width: .5rem; height: .5rem;
+  border-radius: 9999px;
+  background: rgba(255,255,255,.55);
+  transition: width .3s ease, background .3s ease;
+  cursor: pointer;
+}
+.hero-dot:hover { background: #fff; }
+.hero-dot.on { width: 1.3rem; background: #FFB020; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-slide { transition: opacity .2s linear; transform: none; }
+}
+
+/* Coming-soon popup : pulsing halo + drifting feature icon behind the dashed ring */
+@keyframes csGlow  { 0%,100% { transform: scale(1);    opacity: .5; } 50% { transform: scale(1.16); opacity: .95; } }
+@keyframes csFloat { 0%,100% { transform: translateY(0)    rotate(-2deg); } 50% { transform: translateY(-7px) rotate(2deg); } }
+@keyframes csPop   { 0% { opacity: 0; transform: translateY(24px) scale(.94); } 100% { opacity: 1; transform: none; } }
+.cs-glow  { animation: csGlow 2.8s ease-in-out infinite; }
+.cs-float { animation: csFloat 3.4s ease-in-out infinite; }
+.cs-pop   { animation: csPop .45s cubic-bezier(.2,.8,.3,1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cs-glow, .cs-float { animation: none; }
+  .cs-pop { animation-duration: .01ms; }
+}
+
 /* Small stat badge that pops onto a card */
 @keyframes badgePop { 0% { opacity:0; transform: translateY(14px) scale(.9); } 100% { opacity:1; transform: translateY(0) scale(1); } }
 .stat-badge { animation: badgePop .7s cubic-bezier(.2,.8,.3,1) .6s forwards; opacity: 0; }

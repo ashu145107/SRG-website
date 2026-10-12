@@ -11,7 +11,9 @@ import { RootState } from '../store';
 import { logout } from '../store/authSlice';
 import { LanguageSwitcher } from './ui/UtilityComponents';
 import { NotificationBell } from './NotificationBell';
-import { Menu, X, ChevronDown, User, LogOut, LayoutDashboard, Briefcase, Users, Phone, Info } from 'lucide-react';
+import { ComingSoonModal, ComingSoonContent } from './ComingSoonModal';
+import { useSectionNav } from '../utils/sectionNav';
+import { Menu, X, ChevronDown, LogOut, LayoutDashboard, Package, HandCoins, Network } from 'lucide-react';
 
 interface NavbarProps {
   activePage?: string;
@@ -26,8 +28,55 @@ export function Navbar({ activePage, compact }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [jobsDropdown, setJobsDropdown] = useState(false);
   const [shgDropdown, setShgDropdown] = useState(false);
+  const [soonOpen, setSoonOpen] = useState(false);
+  const [soonContent, setSoonContent] = useState<ComingSoonContent | null>(null);
+
+  const goSection = useSectionNav();
 
   const isMr = i18n.language === 'mr';
+
+  /** Home sections are in-page targets, so close the drawer and scroll. */
+  const goSectionAndClose = (id: string) => {
+    setMobileMenuOpen(false);
+    goSection(id);
+  };
+
+  /** SHG & Livelihood entries are not built yet, so they open the coming-soon popup. */
+  const openSoon = (content: ComingSoonContent) => {
+    setSoonContent(content);
+    setSoonOpen(true);
+    setShgDropdown(false);
+  };
+
+  const SHG_SOON: ComingSoonContent[] = [
+    {
+      icon: Network,
+      labelEn: 'About Self-Help Groups',
+      labelMr: 'महिला बचतगट माहिती',
+      titleEn: 'Self-Help Group Information',
+      titleMr: 'बचतगट माहिती',
+      bodyEn: 'Detailed information about self-help groups, their progress and success stories is on the way.',
+      bodyMr: 'बचतगटांची सविस्तर माहिती, त्यांची प्रगती आणि यशस्वी कथा लवकरच उपलब्ध होत आहेत.',
+    },
+    {
+      icon: Package,
+      labelEn: 'Community Products',
+      labelMr: 'उत्पादन कॅटलॉग',
+      titleEn: 'Community Products',
+      titleMr: 'उत्पादन कॅटलॉग',
+      bodyEn: 'Our community product catalogue is being prepared and will be available here very soon.',
+      bodyMr: 'आमचा उत्पादन कॅटलॉग तयार करत आहे, लवकरच येथे उपलब्ध होईल.',
+    },
+    {
+      icon: HandCoins,
+      labelEn: 'Register Your Group',
+      labelMr: 'बचतगट नोंदणी',
+      titleEn: 'Register Your Group',
+      titleMr: 'बचतगट नोंदणी',
+      bodyEn: 'Online self-help group registration will open shortly. Please check back soon.',
+      bodyMr: 'बचतगटाची ऑनलाइन नोंदणी लवकरच सुरू होत आहे. कृपया थोडक्यात पुन्हा तपासा.',
+    },
+  ];
 
   const handleLogout = () => {
     dispatch(logout());
@@ -45,7 +94,11 @@ export function Navbar({ activePage, compact }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20 sm:h-24 gap-2">
           {/* Logo & Branding */}
-          <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group text-left min-w-0 flex-1 mr-1">
+          <Link
+            to="/"
+            onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })}
+            className="flex items-center gap-2.5 sm:gap-3 group text-left min-w-0 flex-1 mr-1"
+          >
             <div className="w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-2xl shadow-md flex items-center justify-center border border-theme-lightViolet p-1 shrink-0 group-hover:scale-105 transition-transform">
               <img src="/home/logo.png" alt="SRG Logo" className="w-full h-full object-contain" />
             </div>
@@ -63,6 +116,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
           <nav className="hidden lg:flex items-center gap-4 xl:gap-6">
             <Link
               to="/"
+              onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })}
               className={`text-sm font-bold transition-colors ${
                 activePage === 'home' ? 'text-theme-lavender font-extrabold' : 'text-theme-darkViolet/80 hover:text-theme-lavender'
               }`}
@@ -72,12 +126,12 @@ export function Navbar({ activePage, compact }: NavbarProps) {
 
             {!compact && (
               <>
-                <a
-                  href="/#about"
-                  className="text-theme-darkViolet/75 hover:text-theme-lavender font-semibold text-sm transition-colors"
+                <button
+                  onClick={() => goSection('about')}
+                  className="text-theme-darkViolet/75 hover:text-theme-lavender font-semibold text-sm transition-colors cursor-pointer"
                 >
                   {isMr ? 'आमच्याबद्दल' : 'About Us'}
-                </a>
+                </button>
 
                 {/* Jobs Dropdown */}
                 <div
@@ -92,12 +146,6 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                   {jobsDropdown && (
                     <div className="absolute left-0 top-full pt-1 z-50 animate-fade-in w-60">
                       <div className="glass rounded-2xl py-2 shadow-xl border border-white/90 bg-white/95 backdrop-blur-md">
-                        <Link
-                          to="/#careers"
-                          className="block px-4 py-2 text-xs font-bold text-theme-darkViolet/80 hover:text-theme-lavender hover:bg-theme-lightViolet/60 transition-colors"
-                        >
-                          {isMr ? 'नोकऱ्या शोधा' : 'Browse Jobs'}
-                        </Link>
                         <Link
                           to="/register?type=employer"
                           className="block px-4 py-2 text-xs font-bold text-theme-darkViolet/80 hover:text-theme-lavender hover:bg-theme-lightViolet/60 transition-colors"
@@ -128,35 +176,30 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                   {shgDropdown && (
                     <div className="absolute left-0 top-full pt-1 z-50 animate-fade-in w-64">
                       <div className="glass rounded-2xl py-2 shadow-xl border border-white/90 bg-white/95 backdrop-blur-md">
-                        <Link
-                          to="/#shg"
-                          className="block px-4 py-2 text-xs font-bold text-theme-darkViolet/80 hover:text-theme-lavender hover:bg-theme-lightViolet/60 transition-colors"
-                        >
-                          {isMr ? 'महिला बचतगट माहिती' : 'About Self-Help Groups'}
-                        </Link>
-                        <Link
-                          to="/#products"
-                          className="block px-4 py-2 text-xs font-bold text-theme-darkViolet/80 hover:text-theme-lavender hover:bg-theme-lightViolet/60 transition-colors"
-                        >
-                          {isMr ? 'उत्पादन कॅटलॉग' : 'Community Products'}
-                        </Link>
-                        <Link
-                          to="/register?type=candidate"
-                          className="block px-4 py-2 text-xs font-bold text-theme-darkViolet/80 hover:text-theme-lavender hover:bg-theme-lightViolet/60 transition-colors"
-                        >
-                          {isMr ? 'बचतगट नोंदणी' : 'Register Your Group'}
-                        </Link>
+                        {SHG_SOON.map((item) => (
+                          <button
+                            key={item.labelEn}
+                            onClick={() => openSoon(item)}
+                            className="w-full text-left flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-theme-darkViolet/80 hover:text-theme-lavender hover:bg-theme-lightViolet/60 transition-colors cursor-pointer"
+                          >
+                            <item.icon className="w-3.5 h-3.5 shrink-0 text-theme-lavender/70" />
+                            <span className="flex-1">{isMr ? item.labelMr : item.labelEn}</span>
+                            <span className="shrink-0 bg-theme-gold/25 text-theme-darkViolet/70 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full">
+                              {isMr ? 'लवकरच' : 'Soon'}
+                            </span>
+                          </button>
+                        ))}
                       </div>
                     </div>
                   )}
                 </div>
 
-                <a
-                  href="/#contact"
-                  className="text-theme-darkViolet/75 hover:text-theme-lavender font-semibold text-sm transition-colors"
+                <button
+                  onClick={() => goSection('contact')}
+                  className="text-theme-darkViolet/75 hover:text-theme-lavender font-semibold text-sm transition-colors cursor-pointer"
                 >
                   {isMr ? 'संपर्क' : 'Contact'}
-                </a>
+                </button>
               </>
             )}
           </nav>
@@ -226,7 +269,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
         <div className="lg:hidden border-t border-theme-lightViolet/80 bg-theme-cream/98 px-4 pt-4 pb-6 space-y-3 shadow-2xl animate-fade-in text-left">
           <Link
             to="/"
-            onClick={() => setMobileMenuOpen(false)}
+            onClick={() => { setMobileMenuOpen(false); window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); }}
             className={navLinkClass(activePage === 'home')}
           >
             {isMr ? 'मुख्यपृष्ठ / Home' : 'Home'}
@@ -234,34 +277,30 @@ export function Navbar({ activePage, compact }: NavbarProps) {
 
           {!compact && (
             <>
-              <a
-                href="/#about"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-xl text-sm font-semibold text-theme-darkViolet hover:bg-theme-lightViolet/40"
+              <button
+                onClick={() => goSectionAndClose('about')}
+                className="block w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-theme-darkViolet hover:bg-theme-lightViolet/40 cursor-pointer"
               >
                 {isMr ? 'आमच्याबद्दल / About Us' : 'About Us'}
-              </a>
-              <a
-                href="/#careers"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-xl text-sm font-semibold text-theme-darkViolet hover:bg-theme-lightViolet/40"
+              </button>
+              <button
+                onClick={() => goSectionAndClose('about')}
+                className="block w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-theme-darkViolet hover:bg-theme-lightViolet/40 cursor-pointer"
               >
                 {isMr ? 'नोकऱ्या / Jobs' : 'Jobs'}
-              </a>
-              <a
-                href="/#shg"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-xl text-sm font-semibold text-theme-darkViolet hover:bg-theme-lightViolet/40"
+              </button>
+              <button
+                onClick={() => goSectionAndClose('shg')}
+                className="block w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-theme-darkViolet hover:bg-theme-lightViolet/40 cursor-pointer"
               >
                 {isMr ? 'बचतगट / SHG & Products' : 'SHG & Products'}
-              </a>
-              <a
-                href="/#contact"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-xl text-sm font-semibold text-theme-darkViolet hover:bg-theme-lightViolet/40"
+              </button>
+              <button
+                onClick={() => goSectionAndClose('contact')}
+                className="block w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-theme-darkViolet hover:bg-theme-lightViolet/40 cursor-pointer"
               >
                 {isMr ? 'संपर्क / Contact' : 'Contact'}
-              </a>
+              </button>
             </>
           )}
 
@@ -319,6 +358,8 @@ export function Navbar({ activePage, compact }: NavbarProps) {
           </div>
         </div>
       )}
+
+      <ComingSoonModal isOpen={soonOpen} onClose={() => setSoonOpen(false)} content={soonContent} />
     </header>
   );
 }

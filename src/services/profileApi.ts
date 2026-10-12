@@ -3,9 +3,36 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { baseApi } from './baseApi';
+import { baseApi, getApiBaseUrl } from './baseApi';
 import { store } from '../store';
 import { EmploymentHistory, MyProfile, UserRole } from '../types';
+
+/**
+ * Build a /api/v1 URL. In development this stays relative so requests go
+ * through the local Vite/Express proxy, which forwards them to the backend and
+ * avoids browser CORS (the backend's error responses omit CORS headers, which
+ * otherwise surface as a misleading "Failed to fetch").
+ */
+const apiV1 = (path: string): string => `${getApiBaseUrl()}/api/v1/${path}`;
+
+/**
+ * Cache-busting version for uploaded profile images. The backend serves a
+ * picture from a stable URL, so browsers keep showing the previous cached
+ * image after an upload until a hard refresh. Bumping this version (and
+ * refetching the profile) appends a fresh query param so the new image is
+ * displayed immediately without a page reload.
+ */
+let profileMediaVersion = '';
+
+/** Force the next profile fetch to produce fresh, non-cached image URLs. */
+export const bustProfileImageCache = () => {
+  profileMediaVersion = String(Date.now());
+};
+
+const withMediaVersion = (url?: string): string => {
+  if (!url || !profileMediaVersion) return url || '';
+  return `${url}${url.includes('?') ? '&' : '?'}v=${profileMediaVersion}`;
+};
 
 /**
  * Normalize raw API response into MyProfile.
@@ -35,7 +62,32 @@ const normalizeProfile = (data: any): MyProfile => {
   const address = personal.address || raw.address || '';
   const district = typeof personal.district === 'string' ? personal.district : raw.district || '';
   const city = personal.city || raw.city || '';
+  const dob = personal.dob || raw.dob || '';
+  const gender = personal.gender || raw.gender || '';
+  const state = personal.state || personal.stateName || raw.state || raw.stateName || '';
+  const stateId = personal.stateId ?? raw.stateId ?? 0;
+  const districtId = personal.districtId ?? raw.districtId ?? 0;
+  const taluka = personal.taluka || personal.talukaName || raw.taluka || raw.talukaName || '';
+  const talukaId = personal.talukaId ?? raw.talukaId ?? 0;
+  const maritalStatus = personal.maritalStatus || raw.maritalStatus || '';
+  const pincode = personal.pincode || raw.pincode || '';
   const qualification = education.education || raw.qualification || raw.education || '';
+  const educationInfoId = education.id ?? raw.educationInfoId ?? 0;
+  const educationId = education.educationId ?? raw.educationId ?? 0;
+  const specializationId = education.specializationId ?? raw.specializationId ?? 0;
+  const specialization = education.specialization || raw.specialization || '';
+  const courses = education.courses || raw.courses || '';
+  const expectation = education.expectation ?? raw.expectation ?? null;
+  const currentSalary = education.currentSalary ?? raw.currentSalary ?? null;
+  const noticePeriod = education.noticePeriod ?? raw.noticePeriod ?? null;
+  const preferredJobLocations = education.preferredJobLocations ?? raw.preferredJobLocations ?? null;
+  const preferredJobTypeId = education.preferredJobTypeId ?? raw.preferredJobTypeId ?? null;
+  const jobType = education.jobType ?? raw.jobType ?? null;
+  const preferredShiftId = education.preferredShiftId ?? raw.preferredShiftId ?? null;
+  const shiftType = education.shiftType ?? raw.shiftType ?? null;
+  const workStatus = education.workStatus ?? raw.workStatus ?? null;
+  const resumeHeadline = education.resumeHeadline ?? raw.resumeHeadline ?? null;
+  const profileSummary = education.profileSummary ?? raw.profileSummary ?? null;
   const experienceYears = education.experience ?? raw.experienceYears ?? raw.experience ?? 0;
   const skills = education.skill
     ? education.skill.split(',').map((s: string) => s.trim()).filter(Boolean)
@@ -77,7 +129,33 @@ const normalizeProfile = (data: any): MyProfile => {
     city,
     district,
     address,
+    dob,
+    gender,
+    state,
+    stateId,
+    districtId,
+    taluka,
+    talukaId,
+    maritalStatus,
+    pincode,
     qualification,
+    educationInfoId,
+    educationId,
+    education: qualification,
+    specializationId,
+    specialization,
+    courses,
+    expectation,
+    currentSalary,
+    noticePeriod,
+    preferredJobLocations,
+    preferredJobTypeId,
+    jobType,
+    preferredShiftId,
+    shiftType,
+    workStatus,
+    resumeHeadline,
+    profileSummary,
     experienceYears,
     skills,
     companyName: raw.companyName || '',
@@ -124,8 +202,8 @@ export const profileApi = baseApi.injectEndpoints({
           const { cleanToken, role } = readAuth();
           const isCompany = role === UserRole.COMPANY;
           const profileUrl = isCompany
-            ? 'https://srgapp.dindoripranit.org/api/v1/company/myprofile'
-            : 'https://srgapp.dindoripranit.org/api/v1/myprofile';
+            ? apiV1('company/myprofile')
+            : apiV1('myprofile');
 
           console.log(`[profileApi] getMyProfile → fetching from SRG directly (${isCompany ? 'company' : 'default'} endpoint)`);
           const res = await fetch(profileUrl, {
@@ -144,7 +222,9 @@ export const profileApi = baseApi.injectEndpoints({
             return { error: { status: res.status, data: data?.message || `HTTP ${res.status}` } };
           }
 
-          return { data: normalizeProfile(data) };
+          const profile = normalizeProfile(data);
+          profile.profilePicUrl = withMediaVersion(profile.profilePicUrl);
+          return { data: profile };
         } catch (err) {
           console.error('[profileApi] getMyProfile failed:', err);
           return { error: { status: 'FETCH_ERROR', error: String(err) } };
@@ -158,9 +238,9 @@ export const profileApi = baseApi.injectEndpoints({
 export const { useGetMyProfileQuery } = profileApi;
 
 /**
- * Upload profile picture via POST https://srgapp.dindoripranit.org/api/v1/profilepic
+ * Upload profile picture via POST /api/v1/profilepic
  * Same endpoint for job seekers and employers — auth tokens come from the logged-in user.
- * Direct call (bypasses proxy) — sends file as PNG with proper image MIME type.
+ * Routed through getApiBaseUrl() so dev uses the local proxy (avoids browser CORS).
  */
 export const uploadProfilePic = async (file: File): Promise<{ success: boolean; message: string; url?: string }> => {
   // Ensure the file is sent as a PNG image
@@ -175,7 +255,7 @@ export const uploadProfilePic = async (file: File): Promise<{ success: boolean; 
   console.log('[uploadProfilePic] Token present:', !!cleanToken);
 
   try {
-    const res = await fetch('https://srgapp.dindoripranit.org/api/v1/profilepic', {
+    const res = await fetch(apiV1('profilepic'), {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${cleanToken}`,
@@ -192,8 +272,10 @@ export const uploadProfilePic = async (file: File): Promise<{ success: boolean; 
       return { success: false, message: msg };
     }
 
-    // API-level error even when HTTP 200
-    if (data?.isSuccess === false || data?.isFailure === true || data?.error) {
+    // Only treat as failure when the backend explicitly marks it as one.
+    // Some success responses still carry an `error` field (e.g. { code: "error" }),
+    // so the mere presence of `error` must NOT be interpreted as a failure.
+    if (data?.isSuccess === false || data?.isFailure === true) {
       const raw = data?.message || data?.error?.message || data?.error || JSON.stringify(data);
       const msg = typeof raw === 'string' ? raw : JSON.stringify(raw);
       return { success: false, message: msg };
@@ -208,8 +290,8 @@ export const uploadProfilePic = async (file: File): Promise<{ success: boolean; 
 };
 
 /**
- * Upload resume via POST https://srgapp.dindoripranit.org/api/v1/resume
- * Direct call (bypasses proxy).
+ * Upload resume via POST /api/v1/resume
+ * Routed through getApiBaseUrl() so dev uses the local proxy (avoids browser CORS).
  */
 export const uploadResume = async (file: File): Promise<{ success: boolean; message: string; url?: string; name?: string }> => {
   const formData = new FormData();
@@ -231,7 +313,7 @@ export const uploadResume = async (file: File): Promise<{ success: boolean; mess
   console.log('[uploadResume] File:', file.name, 'size:', file.size, 'type:', file.type);
 
   try {
-    const res = await fetch('https://srgapp.dindoripranit.org/api/v1/resume', {
+    const res = await fetch(apiV1('resume'), {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${cleanToken}`,
@@ -248,8 +330,10 @@ export const uploadResume = async (file: File): Promise<{ success: boolean; mess
       return { success: false, message: msg };
     }
 
-    // API-level error even when HTTP 200
-    if (data?.isSuccess === false || data?.isFailure === true || data?.error) {
+    // Only treat as failure when the backend explicitly marks it as one.
+    // Some success responses still carry an `error` field (e.g. { code: "error" }),
+    // so the mere presence of `error` must NOT be interpreted as a failure.
+    if (data?.isSuccess === false || data?.isFailure === true) {
       const raw = data?.message || data?.error?.message || data?.error || JSON.stringify(data);
       const msg = typeof raw === 'string' ? raw : JSON.stringify(raw);
       return { success: false, message: msg };
@@ -264,14 +348,24 @@ export const uploadResume = async (file: File): Promise<{ success: boolean; mess
 };
 
 /**
- * Generic POST helper for employment history endpoints.
- * Always attaches the auth token (Authorization + token headers) before calling.
+ * Generic JSON POST helper for profile endpoints (employment history, personal
+ * info, etc.). Always attaches the auth token (Authorization + token headers)
+ * before calling and only treats a response as failed when the backend
+ * explicitly marks it as one.
  */
-const postEmploymentHistory = async (path: string, body: unknown): Promise<{ success: boolean; message: string; data?: any }> => {
-  const { cleanToken } = readAuth();
+const postProfileJson = async (
+  path: string,
+  body: unknown,
+  fallbackSuccessMessage: string,
+  fallbackErrorMessage = 'Failed to submit request.',
+): Promise<{ success: boolean; message: string; data?: any }> => {
+  const { cleanToken, role } = readAuth();
 
   try {
-    const res = await fetch(`https://srgapp.dindoripranit.org/api/v1/${path}`, {
+    console.log(`[profileApi] ${path} POST | token present: ${!!cleanToken} | role: ${role}`);
+    console.log(`[profileApi] ${path} payload:`, body);
+
+    const res = await fetch(apiV1(path), {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -282,16 +376,22 @@ const postEmploymentHistory = async (path: string, body: unknown): Promise<{ suc
       body: JSON.stringify(body),
     });
 
+    // Read raw text first so non-JSON error bodies (e.g. IIS 500 HTML pages)
+    // are preserved for diagnostics instead of throwing inside res.json().
+    const rawText = await res.text();
     let data: any = null;
     try {
-      data = await res.json();
+      data = rawText ? JSON.parse(rawText) : null;
     } catch (e) {
       data = null;
     }
-    console.log(`[profileApi] ${path} response:`, res.status, data);
+    console.log(`[profileApi] ${path} response:`, res.status, data || rawText.slice(0, 400));
 
     if (!res.ok) {
-      const msg = data?.message || data?.error?.message || (typeof data === 'string' ? data : null) || `Server returned ${res.status}`;
+      const snippet = rawText && rawText.trim() ? rawText.trim().slice(0, 200) : '';
+      const msg = data?.message || data?.error?.message
+        || (typeof data === 'string' && data ? data : null)
+        || (snippet ? `Server returned ${res.status}. ${snippet}` : `Server returned ${res.status}`);
       return { success: false, message: msg, data };
     }
 
@@ -306,11 +406,6 @@ const postEmploymentHistory = async (path: string, body: unknown): Promise<{ suc
     }
 
     const val = data?.value ?? data?.data ?? null;
-    const fallback = path === 'deleteemploymenthistory'
-      ? 'Employment history deleted successfully.'
-      : path === 'updateemploymenthistory'
-        ? 'Employment history updated successfully.'
-        : 'Employment history added successfully.';
 
     let msg: string = '';
     if (typeof data?.message === 'string' && data.message.trim()) msg = data.message.trim();
@@ -318,13 +413,23 @@ const postEmploymentHistory = async (path: string, body: unknown): Promise<{ suc
     if (!msg && typeof val === 'string' && val.trim()) msg = val.trim();
     if (!msg && typeof val?.message === 'string' && val.message.trim()) msg = val.message.trim();
     if (!msg && typeof val?.resultMessage === 'string' && val.resultMessage.trim()) msg = val.resultMessage.trim();
-    if (!msg) msg = fallback;
+    if (!msg) msg = fallbackSuccessMessage;
 
     return { success: true, message: msg, data: val };
   } catch (err: any) {
     console.error(`[profileApi] ${path} failed:`, err);
-    return { success: false, message: err.message || `Failed to submit employment history.` };
+    return { success: false, message: err.message || fallbackErrorMessage };
   }
+};
+
+/** Employment-history endpoints share the generic JSON POST helper. */
+const postEmploymentHistory = (path: string, body: unknown) => {
+  const fallback = path === 'deleteemploymenthistory'
+    ? 'Employment history deleted successfully.'
+    : path === 'updateemploymenthistory'
+      ? 'Employment history updated successfully.'
+      : 'Employment history added successfully.';
+  return postProfileJson(path, body, fallback, 'Failed to submit employment history.');
 };
 
 /** POST /api/v1/addemploymenthistory — create a new employment history entry. */
@@ -338,3 +443,66 @@ export const updateEmploymentHistory = (payload: EmploymentHistory) =>
 /** POST /api/v1/deleteemploymenthistory — delete an employment history entry. */
 export const deleteEmploymentHistory = (payload: { employmentHistoryId: number; userId: number }) =>
   postEmploymentHistory('deleteemploymenthistory', payload);
+
+/** Payload accepted by POST /api/v1/updateuserpersonalinfo. */
+export interface UpdateUserPersonalInfoPayload {
+  userId: number;
+  fullName: string;
+  mobile: string;
+  email: string;
+  profilePic: string;
+  dob: string | null;
+  gender: string;
+  address: string;
+  stateId: number;
+  state: string;
+  districtId: number;
+  district: string;
+  talukaId: number;
+  taluka: string;
+  maritalStatus: string;
+  pincode: string;
+}
+
+/** POST /api/v1/updateuserpersonalinfo — update the logged-in user's personal details. */
+export const updateUserPersonalInfo = (payload: UpdateUserPersonalInfoPayload) =>
+  postProfileJson(
+    'updateuserpersonalinfo',
+    payload,
+    'Personal information updated successfully.',
+    'Failed to update personal information.',
+  );
+
+/** Payload accepted by POST /api/v1/updateusereducationinfo. */
+export interface UpdateUserEducationInfoPayload {
+  id: number;
+  userId: number;
+  educationId: number;
+  education: string;
+  specializationId: number;
+  specialization: string;
+  skill: string;
+  courses: string;
+  experience: number;
+  expectation: number | null;
+  resume_File_Path: string;
+  currentSalary: number | null;
+  noticePeriod: number | null;
+  preferredJobLocations: string;
+  preferredJobTypeId: number;
+  jobType: string;
+  preferredShiftId: number;
+  shiftType: string;
+  workStatus: string;
+  resumeHeadline: string;
+  profileSummary: string;
+}
+
+/** POST /api/v1/updateusereducationinfo — update the logged-in user's education details. */
+export const updateUserEducationInfo = (payload: UpdateUserEducationInfoPayload) =>
+  postProfileJson(
+    'updateusereducationinfo',
+    payload,
+    'Education information updated successfully.',
+    'Failed to update education information.',
+  );
