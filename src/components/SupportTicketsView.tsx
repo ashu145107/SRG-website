@@ -25,6 +25,8 @@ const PRIORITY_OPTIONS = [
   { value: 'High', label: 'उच्च / High' }
 ];
 
+const MAX_TICKET_DESCRIPTION_LENGTH = 4000;
+
 const priorityBadgeType = (priority?: string): 'primary' | 'secondary' | 'success' | 'warning' | 'danger' => {
   const p = (priority || '').toLowerCase();
   if (p.includes('high') || p.includes('urgent')) return 'danger';
@@ -62,6 +64,10 @@ export const SupportTicketsView: React.FC<SupportTicketsViewProps> = ({ setToast
     e.preventDefault();
     if (!subject.trim() || !description.trim()) {
       setToastMsg('ERROR:कृपया विषय व तपशील भरा / Please fill in subject and description.');
+      return;
+    }
+    if (description.length > MAX_TICKET_DESCRIPTION_LENGTH) {
+      setToastMsg(`ERROR:तपशील ${MAX_TICKET_DESCRIPTION_LENGTH} अक्षरांपेक्षा जास्त असू शकत नाही / Description cannot exceed ${MAX_TICKET_DESCRIPTION_LENGTH} characters.`);
       return;
     }
     try {

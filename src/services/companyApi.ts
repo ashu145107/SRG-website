@@ -4,20 +4,20 @@
  */
 
 import { baseApi } from './baseApi';
-import { MockDb } from './mockDb';
+
 import { CompanyProfile } from '../types';
 
 export const companyApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getCompanies: builder.query<CompanyProfile[], void>({
       queryFn: async () => {
-        return { data: MockDb.getCompanies() };
+        return { data: [] };
       },
       providesTags: ['Company']
     }),
     getCompanyById: builder.query<CompanyProfile, string>({
       queryFn: async (id) => {
-        const companies = MockDb.getCompanies();
+        const companies = [];
         const found = companies.find(c => c.id === id);
         if (!found) return { error: { status: 404, data: 'Company not found' } };
         return { data: found };
@@ -26,7 +26,7 @@ export const companyApi = baseApi.injectEndpoints({
     }),
     updateCompany: builder.mutation<CompanyProfile, Partial<CompanyProfile> & { id: string }>({
       queryFn: async (updated) => {
-        const companies = MockDb.getCompanies();
+        const companies = [];
         const index = companies.findIndex(c => c.id === updated.id);
         if (index === -1) {
           // If not found, let's append it
@@ -41,11 +41,11 @@ export const companyApi = baseApi.injectEndpoints({
             isApproved: updated.isApproved ?? false
           };
           companies.push(newComp);
-          MockDb.setCompanies(companies);
+          //(companies);
           return { data: newComp };
         }
         companies[index] = { ...companies[index], ...updated } as CompanyProfile;
-        MockDb.setCompanies(companies);
+        //(companies);
         return { data: companies[index] };
       },
       invalidatesTags: (result, error, arg) => ['Company', { type: 'Company', id: arg.id }]

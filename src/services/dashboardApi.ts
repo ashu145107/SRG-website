@@ -4,7 +4,7 @@
  */
 
 import { baseApi } from './baseApi';
-import { MockDb } from './mockDb';
+
 
 export interface DashboardStats {
   totalUsers: number;
@@ -127,12 +127,12 @@ export const dashboardApi = baseApi.injectEndpoints({
         const loggedUser = state.auth?.user;
         const roleStr = String(loggedUser?.role || '').toLowerCase();
 
-        const users = MockDb.getUsers();
-        const jobs = MockDb.getJobs();
-        const companies = MockDb.getCompanies();
-        const candidates = MockDb.getCandidates();
-        const shgs = MockDb.getSHGs();
-        const applications = MockDb.getApplications();
+        const users = [];
+        const jobs = [];
+        const companies = [];
+        const candidates = [];
+        const shgs = [];
+        const applications = [];
 
         let userType = 2; // Default to Candidate
         let adminDashboard = null;

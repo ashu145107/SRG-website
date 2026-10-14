@@ -4,7 +4,7 @@
  */
 
 import { baseApi } from './baseApi';
-import { MockDb } from './mockDb';
+
 import { Job } from '../types';
 import { store } from '../store';
 
@@ -62,7 +62,7 @@ export const jobApi = baseApi.injectEndpoints({
               companyName: item.companyName || item.postingNotes || 'Employer',
               companyId: String(item.companyId || item.userId || ''),
               location: item.jobLocation || item.workPlace || 'Nashik',
-              salary: item.salary ? `₹${item.salary} - ₹${item.salaryTo || item.salary}` : 'Negotiable',
+              salary: item.salary ? `â‚¹${item.salary} - â‚¹${item.salaryTo || item.salary}` : 'Negotiable',
               description: item.jobDiscription || item.profileHeader || 'No description provided.',
               requirements: item.skill ? item.skill.split(',').map((s: string) => s.trim()) : [],
               type: item.workModeId === 1 ? 'Full-time' : item.workModeId === 2 ? 'Part-time' : 'Contract',
@@ -96,7 +96,7 @@ export const jobApi = baseApi.injectEndpoints({
           console.warn('[jobApi] Could not fetch /api/v1/jobsearch, falling back to mock data:', err);
         }
 
-        let jobs = MockDb.getJobs();
+        let jobs = [];
         if (params) {
           if (params.approvedOnly) {
             jobs = jobs.filter(j => j.isApproved);
@@ -121,7 +121,7 @@ export const jobApi = baseApi.injectEndpoints({
 
     createJob: builder.mutation<Job, Omit<Job, 'id' | 'createdAt' | 'isApproved'>>({
       queryFn: async (newJobPayload) => {
-        const jobs = MockDb.getJobs();
+        const jobs = [];
         const newJob: Job = {
           ...newJobPayload,
           id: `job-${Date.now()}`,
@@ -129,7 +129,7 @@ export const jobApi = baseApi.injectEndpoints({
           createdAt: new Date().toISOString().split('T')[0]
         };
         jobs.push(newJob);
-        MockDb.setJobs(jobs);
+        // MockDb.setJobs(jobs);
         return { data: newJob };
       },
       invalidatesTags: ['Job']
@@ -137,12 +137,12 @@ export const jobApi = baseApi.injectEndpoints({
 
     updateJob: builder.mutation<Job, Partial<Job> & { id: string }>({
       queryFn: async (updates) => {
-        const jobs = MockDb.getJobs();
+        const jobs = [];
         const idx = jobs.findIndex(j => j.id === updates.id);
         if (idx === -1) return { error: { status: 404, data: 'Job not found' } };
         
         jobs[idx] = { ...jobs[idx], ...updates };
-        MockDb.setJobs(jobs);
+        // MockDb.setJobs(jobs);
         return { data: jobs[idx] };
       },
       invalidatesTags: ['Job']
@@ -150,9 +150,9 @@ export const jobApi = baseApi.injectEndpoints({
 
     deleteJob: builder.mutation<{ success: boolean }, string>({
       queryFn: async (id) => {
-        const jobs = MockDb.getJobs();
+        const jobs = [];
         const filtered = jobs.filter(j => j.id !== id);
-        MockDb.setJobs(filtered);
+        // MockDb.setJobs(filtered);
         return { data: { success: true } };
       },
       invalidatesTags: ['Job']

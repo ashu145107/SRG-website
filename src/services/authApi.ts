@@ -4,7 +4,6 @@
  */
 
 import { baseApi, getApiBaseUrl, getClientIp } from './baseApi';
-import { MockDb } from './mockDb';
 import { User, UserRole, HandlerPermissions } from '../types';
 
 export const authApi = baseApi.injectEndpoints({
@@ -15,7 +14,7 @@ export const authApi = baseApi.injectEndpoints({
     >({
       queryFn: async ({ email, password }) => {
         const inputVal = email.trim().toLowerCase();
-        const users = MockDb.getUsers();
+        const users = [];
         
         // Match against list of demo accounts first for local convenience
         const isDemo = ['admin@dindori.org123', 'admin@dindori.org', 'employer@tata.com', 'candidate@gmail.com', 'shg@shg.org', 'handler@dindori.org'].includes(inputVal);
@@ -151,7 +150,7 @@ export const authApi = baseApi.injectEndpoints({
       }
     >({
       queryFn: async (payload) => {
-        const users = MockDb.getUsers();
+        const users = [];
         
         // Check uniqueness only if email is provided
         if (payload.email && payload.email.trim()) {
@@ -215,7 +214,7 @@ export const authApi = baseApi.injectEndpoints({
               // Successfully registered in real backend database!
               // Now we also create the local candidate profile so the rest of the application runs perfectly.
               candidateId = `cand-${Date.now()}`;
-              const cands = MockDb.getCandidates();
+              const cands = [];
               const newCand = {
                 id: candidateId,
                 fullName: payload.name,
@@ -227,7 +226,7 @@ export const authApi = baseApi.injectEndpoints({
                 skills: []
               };
               cands.push(newCand);
-              MockDb.setCandidates(cands);
+              // MockDb.setCandidates(cands);
 
               const newUser: User = {
                 id: newUserId,
@@ -240,7 +239,7 @@ export const authApi = baseApi.injectEndpoints({
               };
 
               const updatedUsers = [...users, newUser];
-              MockDb.setUsers(updatedUsers);
+              // MockDb.setUsers(updatedUsers);
 
               return { data: { user: newUser, token: newUser.token } };
             } else {
@@ -262,7 +261,7 @@ export const authApi = baseApi.injectEndpoints({
           }
         } else if (payload.role === UserRole.COMPANY) {
           companyId = `comp-${Date.now()}`;
-          const comps = MockDb.getCompanies();
+          const comps = [];
           comps.push({
             id: companyId,
             companyName: payload.name,
@@ -273,10 +272,10 @@ export const authApi = baseApi.injectEndpoints({
             address: `${payload.sevaKendraName || ''}, ${payload.talukaName || ''}, ${payload.districtName || ''}, ${payload.stateName || ''}`,
             isApproved: false // Requires admin approval status! Beautiful
           });
-          MockDb.setCompanies(comps);
+          // MockDb.setCompanies(comps);
         } else if (payload.role === UserRole.SHG) {
           shgId = `shg-${Date.now()}`;
-          const shgs = MockDb.getSHGs();
+          const shgs = [];
           shgs.push({
             id: shgId,
             shgName: payload.name,
@@ -287,7 +286,7 @@ export const authApi = baseApi.injectEndpoints({
             activities: [],
             productShowcase: []
           });
-          MockDb.setSHGs(shgs);
+          // MockDb.setSHGs(shgs);
         }
 
         const handlerPermissions: HandlerPermissions | undefined = payload.role === UserRole.HANDLER ? {
@@ -314,7 +313,7 @@ export const authApi = baseApi.injectEndpoints({
         };
 
         const updatedUsers = [...users, newUser];
-        MockDb.setUsers(updatedUsers);
+        // MockDb.setUsers(updatedUsers);
 
         return { data: { user: newUser, token } };
       },
@@ -342,7 +341,7 @@ export const authApi = baseApi.injectEndpoints({
       }
     >({
       queryFn: async (payload) => {
-        const users = MockDb.getUsers();
+        const users = [];
         try {
           const clientIp = await getClientIp();
           
@@ -389,7 +388,7 @@ export const authApi = baseApi.injectEndpoints({
             const companyId = `comp-${Date.now()}`;
             const token = `jwt-real-comp-${Date.now()}`;
 
-            const comps = MockDb.getCompanies();
+            const comps = [];
             comps.push({
               id: companyId,
               companyName: payload.fullname,
@@ -400,7 +399,7 @@ export const authApi = baseApi.injectEndpoints({
               address: payload.address,
               isApproved: false
             });
-            MockDb.setCompanies(comps);
+            // MockDb.setCompanies(comps);
 
             const newUser: User = {
               id: newUserId,
@@ -413,7 +412,7 @@ export const authApi = baseApi.injectEndpoints({
             };
 
             const updatedUsers = [...users, newUser];
-            MockDb.setUsers(updatedUsers);
+            // MockDb.setUsers(updatedUsers);
 
             return { data: { user: newUser, token } };
           } else {

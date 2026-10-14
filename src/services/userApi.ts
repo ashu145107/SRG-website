@@ -4,35 +4,34 @@
  */
 
 import { baseApi } from './baseApi';
-import { MockDb } from './mockDb';
 import { User } from '../types';
+
+const userStore: User[] = [];
 
 export const userApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getUsers: builder.query<User[], void>({
       queryFn: async () => {
-        return { data: MockDb.getUsers() };
+        return { data: [...userStore] };
       },
       providesTags: ['User']
     }),
     updateUser: builder.mutation<User, Partial<User> & { id: string }>({
       queryFn: async (updatedUser) => {
-        const users = MockDb.getUsers();
+        const users = userStore;
         const index = users.findIndex(u => u.id === updatedUser.id);
         if (index === -1) {
           return { error: { status: 404, data: 'User not found' } };
         }
         users[index] = { ...users[index], ...updatedUser };
-        MockDb.setUsers(users);
         return { data: users[index] };
       },
       invalidatesTags: ['User']
     }),
     deleteUser: builder.mutation<{ success: boolean }, string>({
       queryFn: async (userId) => {
-        const users = MockDb.getUsers();
-        const updated = users.filter(u => u.id !== userId);
-        MockDb.setUsers(updated);
+        const index = userStore.findIndex(u => u.id === userId);
+        if (index !== -1) userStore.splice(index, 1);
         return { data: { success: true } };
       },
       invalidatesTags: ['User']

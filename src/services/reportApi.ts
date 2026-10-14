@@ -4,7 +4,7 @@
  */
 
 import { baseApi } from './baseApi';
-import { MockDb } from './mockDb';
+
 
 export interface ReportItem {
   id: string;
@@ -18,8 +18,8 @@ export const reportApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getReports: builder.query<{ applicationsByStatus: ReportItem[]; shgStats: ReportItem[] }, void>({
       queryFn: async () => {
-        const apps = MockDb.getApplications();
-        const shgs = MockDb.getSHGs();
+        const apps = [];
+        const shgs = [];
 
         // Group applications by status
         const statusMap: Record<string, number> = {};

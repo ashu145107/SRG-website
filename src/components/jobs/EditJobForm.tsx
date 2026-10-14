@@ -21,6 +21,8 @@ import {
 } from '../../services/jobMasterApi';
 import { Alert, Toast } from '../ui/FeedbackComponents';
 
+const MAX_JOB_DESCRIPTION_LENGTH = 4000;
+
 interface EditJobFormProps {
   jobId: number;
   onSuccess?: (updatedJob: JobRequirement) => void;
@@ -865,11 +867,15 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
           <textarea
             name="jobDiscription"
             rows={5}
+            maxLength={MAX_JOB_DESCRIPTION_LENGTH}
             value={form.jobDiscription}
             onChange={handleChange}
             className="form-input resize-none"
             required
           />
+          <div className={`mt-1 text-[10px] font-semibold text-right ${form.jobDiscription.length >= MAX_JOB_DESCRIPTION_LENGTH ? 'text-rose-600' : 'text-slate-400'}`}>
+            {MAX_JOB_DESCRIPTION_LENGTH - form.jobDiscription.length} characters left ({form.jobDiscription.length}/{MAX_JOB_DESCRIPTION_LENGTH})
+          </div>
         </div>
 
         <div>

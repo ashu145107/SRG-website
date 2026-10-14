@@ -2,7 +2,6 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-
 import React, { useState, useRef, useEffect, useContext, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store';
@@ -51,7 +50,6 @@ import {
   useGetSubEducationsListQuery
 } from '../services/masterApi';
 import { useGetReportsQuery } from '../services/reportApi';
-
 import {
   PrimaryButton,
   SecondaryButton,
@@ -114,8 +112,6 @@ import {
   Camera,
   LifeBuoy
 } from 'lucide-react';
-import { MockDb } from '../services/mockDb';
-
 // Import newly created paginated lists for admin role
 import { AdminRegisteredCompanies } from '../components/AdminRegisteredCompanies';
 import { AdminRegisteredUsers } from '../components/AdminRegisteredUsers';
@@ -123,14 +119,11 @@ import { AdminJobRequirements } from '../components/AdminJobRequirements';
 import { AdminJobApplications } from '../components/AdminJobApplications';
 import { AdminCandidateProfileView } from '../components/AdminCandidateProfileView';
 import { AdminCompanyProfileView } from '../components/AdminCompanyProfileView';
-
 export default function DashboardHub() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
   const { user, lastLogin } = useSelector((state: RootState) => state.auth);
-
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-theme-cream text-slate-800 antialiased font-sans">
@@ -141,7 +134,6 @@ export default function DashboardHub() {
       </div>
     );
   }
-
   const [toastMsg, setToastMsg] = useState('');
   // Job requirement detail mode: open via #/dashboard?view=jobRequirement&id=<id>
   // Candidate detail mode:       open via #/dashboard?view=candidate&id=<id>
@@ -158,7 +150,6 @@ export default function DashboardHub() {
     isAdminBoard && urlView === 'jobRequirement' && !Number.isNaN(urlReqId) && urlReqId > 0;
   const isCandidateDetailMode = isAdminBoard && urlView === 'candidate' && urlCandidateId !== '';
   const isCompanyDetailMode = isAdminBoard && urlView === 'company' && urlCompanyId !== '';
-
   const defaultTab =
     user.role === UserRole.SHG
       ? 'trainings'
@@ -170,7 +161,6 @@ export default function DashboardHub() {
             ? 'registered_companies'
             : 'overview';
   const [activeTab, setActiveTab] = useState(defaultTab);
-
   const [detailReqId, setDetailReqId] = useState<number>(isReqDetailMode ? urlReqId : 0);
   const [detailCandidateId, setDetailCandidateId] = useState<string>(isCandidateDetailMode ? urlCandidateId : '');
   const [detailCompanyId, setDetailCompanyId] = useState<string>(isCompanyDetailMode ? urlCompanyId : '');
@@ -179,7 +169,6 @@ export default function DashboardHub() {
   const [candidateFromReqId, setCandidateFromReqId] = useState<number>(
     isCandidateDetailMode && urlOriginView === 'jobRequirement' ? urlOriginReqId : 0
   );
-
   // Keep detail modes in sync with URL changes (e.g. candidate -> job requirement back-navigation).
   useEffect(() => {
     if (isReqDetailMode) {
@@ -207,39 +196,31 @@ export default function DashboardHub() {
       setCandidateFromReqId(0);
     }
   }, [isReqDetailMode, isCandidateDetailMode, isCompanyDetailMode, urlReqId, urlCandidateId, urlCompanyId, urlOriginView, urlOriginReqId]);
-
   // Leaving a detail-bearing tab closes its detail view.
   useEffect(() => {
     if (activeTab !== 'job_requirements') setDetailReqId(0);
     if (activeTab !== 'registered_users') setDetailCandidateId('');
     if (activeTab !== 'registered_companies') setDetailCompanyId('');
   }, [activeTab]);
-
   // Multi-state for modals
   const [showJobModal, setShowJobModal] = useState(false);
   const [showInterviewModal, setShowInterviewModal] = useState(false);
   const [targetApplicationId, setTargetApplicationId] = useState('');
   const [interviewDate, setInterviewDate] = useState('');
-
   // Dropdown states
   const { data: locations = [] } = useGetLocationsQuery();
   const { data: jobCategories = [] } = useGetJobCategoriesQuery();
-
   // API hooks for triggers
   const { refetch: refetchStats } = useGetDashboardStatsQuery(undefined, { skip: !user });
-
   // Profile dropdown state
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
   // Mobile/tablet collapsible menu (header hamburger) state
   const [navMenuOpen, setNavMenuOpen] = useState(false);
   const toggleNavMenu = useCallback(() => setNavMenuOpen((v) => !v), []);
   const closeNavMenu = useCallback(() => setNavMenuOpen(false), []);
-
   // Fetch profile for pic display in navbar
   const { data: navProfile } = useGetMyProfileQuery(undefined, { skip: !user });
-
   // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -250,7 +231,6 @@ export default function DashboardHub() {
     if (showProfileDropdown) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [showProfileDropdown]);
-
   return (
     <DashboardMenuContext.Provider value={{ open: navMenuOpen, toggle: toggleNavMenu, close: closeNavMenu }}>
       <div className="h-dvh bg-theme-cream flex flex-col antialiased font-sans overflow-hidden">
@@ -278,7 +258,6 @@ export default function DashboardHub() {
                 </span>
               </div>
             </div>
-
             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
               {/* Last Login - visible always */}
               {lastLogin && (
@@ -310,7 +289,6 @@ export default function DashboardHub() {
                   <span className="hidden sm:inline text-left max-w-[120px] truncate">{user.email}</span>
                   <ChevronDown className={`w-3 h-3 transition-transform ${showProfileDropdown ? 'rotate-180' : ''}`} />
                 </button>
-
                 {showProfileDropdown && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-theme-lightViolet/80 z-50 py-1 animate-fade-in text-slate-800">
                     <div className="px-4 py-3 border-b border-theme-lightViolet/60 flex items-center gap-3">
@@ -369,7 +347,6 @@ export default function DashboardHub() {
             </div>
           </div>
         </nav>
-
         {/* Primary Layout and Shell wrapper */}
         <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-5 lg:px-6 py-4 lg:py-8 2xl:max-w-app w-full text-slate-800 overflow-y-auto overscroll-contain">
           {/* -------------------- 1. SUPER ADMIN / ADMIN BOARD -------------------- */}
@@ -383,7 +360,6 @@ export default function DashboardHub() {
                 >
                   <Tag className="w-4 h-4" /><span className="truncate min-w-0">Seva / सेवा (Overview)</span>
                 </button>
-
                 <button
                   onClick={() => { setActiveTab('registered_companies'); setDetailCompanyId(''); }}
                   className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'registered_companies' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
@@ -391,7 +367,6 @@ export default function DashboardHub() {
                 >
                   <Building2 className="w-4 h-4" /><span className="truncate min-w-0">Registered Company / नोंदणीकृत कंपनी</span>
                 </button>
-
                 <button
                   onClick={() => { setActiveTab('registered_users'); setDetailCandidateId(''); }}
                   className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'registered_users' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
@@ -399,7 +374,6 @@ export default function DashboardHub() {
                 >
                   <Users className="w-4 h-4" /><span className="truncate min-w-0">Registered User / नोंदणीकृत वापरकर्ते</span>
                 </button>
-
                 <button
                   onClick={() => { setActiveTab('job_requirements'); setDetailReqId(0); }}
                   className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'job_requirements' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
@@ -407,7 +381,6 @@ export default function DashboardHub() {
                 >
                   <Send className="w-4 h-4" /><span className="truncate min-w-0">Job Requirement / नोकरी आवश्यकता</span>
                 </button>
-
                 <button
                   onClick={() => setActiveTab('job_applications')}
                   className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'job_applications' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
@@ -415,7 +388,6 @@ export default function DashboardHub() {
                 >
                   <Mail className="w-4 h-4" /><span className="truncate min-w-0">Job Application / नोकरी अर्ज</span>
                 </button>
-
                 <button
                   onClick={() => setActiveTab('support_tickets')}
                   className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'support_tickets' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
@@ -423,9 +395,7 @@ export default function DashboardHub() {
                 >
                   <LifeBuoy className="w-4 h-4" /><span className="truncate min-w-0">View Ticket / तिकीट पहा</span>
                 </button>
-
                 <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
-
                 <button
                   onClick={() => {
                     if (window.confirm('Are you sure you want to log off?')) {
@@ -438,7 +408,6 @@ export default function DashboardHub() {
                   <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
                 </button>
               </DashboardMenu>
-
               <div className="lg:col-span-9 space-y-6">
                 {activeTab === 'job_requirements' && detailReqId > 0 ? (
                   <>
@@ -488,27 +457,22 @@ export default function DashboardHub() {
                     {activeTab === 'overview' && (
                       <AdminOverviewTab />
                     )}
-
                     {/* Registered Companies Paginated List */}
                     {activeTab === 'registered_companies' && (
                       <AdminRegisteredCompanies />
                     )}
-
                     {/* Registered Users Paginated List */}
                     {activeTab === 'registered_users' && (
                       <AdminRegisteredUsers />
                     )}
-
                     {/* Job Requirements Paginated List */}
                     {activeTab === 'job_requirements' && (
                       <AdminJobRequirements />
                     )}
-
                     {/* Job Applications Paginated List */}
                     {activeTab === 'job_applications' && (
                       <AdminJobApplications />
                     )}
-
                     {/* Support Tickets */}
                     {activeTab === 'support_tickets' && (
                       <SupportTicketsView setToastMsg={setToastMsg} />
@@ -518,7 +482,6 @@ export default function DashboardHub() {
               </div>
             </div>
           )}
-
           {/* -------------------- 2. HANDLER STAFF DASHBOARD (Dynamic Privileges) -------------------- */}
           {user.role === UserRole.HANDLER && (
             <div className="space-y-8 text-left">
@@ -544,7 +507,6 @@ export default function DashboardHub() {
                   </span>
                 </div>
               </div>
-
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 <DashboardMenu>
                   <button
@@ -603,56 +565,47 @@ export default function DashboardHub() {
                     <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
                   </button>
                 </DashboardMenu>
-
                 <div className="lg:col-span-9 space-y-6">
                   {activeTab === 'overview' && (
                     <AdminOverviewTab />
                   )}
-
                   {activeTab === 'jobs' && (
                     <PermissionGuard permission="canApproveJobs">
                       <AdminJobsApprovalTab setToastMsg={setToastMsg} />
                     </PermissionGuard>
                   )}
-
                   {activeTab === 'companies' && (
                     <PermissionGuard permission="canManageCompanies">
                       <AdminCompaniesApprovalTab setToastMsg={setToastMsg} />
                     </PermissionGuard>
                   )}
-
                   {activeTab === 'shg' && (
                     <PermissionGuard permission="canManageSHG">
                       <HandlerSHGTab setToastMsg={setToastMsg} />
                     </PermissionGuard>
                   )}
-
                   {activeTab === 'reports' && (
                     <PermissionGuard permission="canViewReports">
-                      <AdminReportsTab />
+                      {/* Reports removed - implement as needed */}
                     </PermissionGuard>
                   )}
                 </div>
               </div>
             </div>
           )}
-
           {/* -------------------- 3. RECRUITER / COMPANY EMPLOYER DASHBOARD -------------------- */}
           {user.role === UserRole.COMPANY && (
             <CompanyEmployerDashboard companyId={user.companyId || ''} setToastMsg={setToastMsg} />
           )}
-
           {/* -------------------- 4. CANDIDATE / JOB SEEKER PORTAL -------------------- */}
           {user.role === UserRole.CANDIDATE && (
             <CandidateSeekerDashboard candidateId={user.candidateId || ''} setToastMsg={setToastMsg} />
           )}
-
           {/* -------------------- 5. SHG SELF EMPLOYMENT BOARD -------------------- */}
           {user.role === UserRole.SHG && (
             <SHGGroupDashboard shgId={user.shgId || ''} setToastMsg={setToastMsg} />
           )}
         </main>
-
         {/* Floating toast notify systems */}
         {toastMsg && (
           <Toast
@@ -665,7 +618,6 @@ export default function DashboardHub() {
     </DashboardMenuContext.Provider>
   );
 }
-
 // ==========================================
 // COLLAPSIBLE DASHBOARD NAV: hamburger in header, dropdown on mobile/tablet
 // ==========================================
@@ -674,12 +626,10 @@ export const DashboardMenuContext = React.createContext<{ open: boolean; toggle:
   toggle: () => { },
   close: () => { },
 });
-
 export function DashboardMenu({ children, variant = 'sidebar' }: { children: React.ReactNode; variant?: 'sidebar' | 'drawer' }) {
   const { open, close } = useContext(DashboardMenuContext);
   const { user } = useSelector((state: RootState) => state.auth);
   const menuRef = useRef<HTMLDivElement>(null);
-
   const roleLabel =
     {
       [UserRole.SUPER_ADMIN]: 'Super Admin',
@@ -695,7 +645,6 @@ export function DashboardMenu({ children, variant = 'sidebar' }: { children: Rea
     .slice(0, 2)
     .map((w) => w.charAt(0).toUpperCase())
     .join('');
-
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -714,7 +663,6 @@ export function DashboardMenu({ children, variant = 'sidebar' }: { children: Rea
       document.removeEventListener('keydown', escHandler);
     };
   }, [open, close]);
-
   return (
     <div className="lg:col-span-3">
       {/* Mobile & tablet: slide-in drawer (trigger is the header hamburger) */}
@@ -740,7 +688,6 @@ export function DashboardMenu({ children, variant = 'sidebar' }: { children: Rea
               <div className="absolute -top-10 -right-8 w-32 h-32 rounded-full bg-theme-gold/25 blur-2xl pointer-events-none"></div>
               <div className="absolute -bottom-16 -left-8 w-36 h-36 rounded-full bg-theme-deepTeal/25 blur-2xl pointer-events-none"></div>
               <div className="absolute top-14 right-14 w-12 h-12 rounded-full bg-white/10 blur-md pointer-events-none"></div>
-
               <div className="relative flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <img src="/home/logo.png" alt="SRG Logo" className="w-9 h-9 object-contain drop-shadow-lg shrink-0" />
@@ -757,7 +704,6 @@ export function DashboardMenu({ children, variant = 'sidebar' }: { children: Rea
                   <X className="w-4 h-4" />
                 </button>
               </div>
-
               {/* Current user card */}
               <div className="relative mt-4 flex items-center gap-2.5 rounded-2xl bg-white/10 border border-white/15 px-3 py-2.5 backdrop-blur-sm">
                 <div className="w-9 h-9 rounded-full bg-linear-to-br from-theme-gold to-theme-terracotta flex items-center justify-center text-white text-xs font-black shrink-0 shadow-md ring-2 ring-white/25">
@@ -772,7 +718,6 @@ export function DashboardMenu({ children, variant = 'sidebar' }: { children: Rea
                 </span>
               </div>
             </div>
-
             {/* Drawer body */}
             <div
               className="drawer-menu-body flex-1 overflow-y-auto overscroll-contain p-3 grid grid-cols-1 gap-1.5 content-start bg-linear-to-b from-theme-lightViolet/40 to-white border-t border-theme-lightViolet/40"
@@ -780,7 +725,6 @@ export function DashboardMenu({ children, variant = 'sidebar' }: { children: Rea
             >
               {children}
             </div>
-
             {/* Drawer footer */}
             <div className="shrink-0 px-5 py-2.5 bg-white text-center">
               <p className="text-[9px] font-bold text-theme-darkViolet/40 uppercase tracking-wider">
@@ -790,7 +734,6 @@ export function DashboardMenu({ children, variant = 'sidebar' }: { children: Rea
           </aside>
         </div>
       )}
-
       {/* Desktop: static compact column */}
       {variant === 'sidebar' && (
         <div className="hidden lg:grid grid-cols-1 gap-1.5 content-start">
@@ -800,14 +743,12 @@ export function DashboardMenu({ children, variant = 'sidebar' }: { children: Rea
     </div>
   );
 }
-
 // ==========================================
 // SUB-TAB VIEWS: DYNAMIC LIVE API STATISTICS
 // ==========================================
 function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: number }) {
   const { user } = useSelector((state: RootState) => state.auth);
   const { data: stats, isLoading, error } = useGetDashboardStatsQuery(undefined, { skip: !user });
-
   if (isLoading) {
     return (
       <div className="bg-white rounded-2xl p-6 border border-slate-150 shadow-xs flex items-center justify-center min-h-[140px]">
@@ -818,16 +759,12 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
       </div>
     );
   }
-
   if (error || !stats) {
     return null;
   }
-
   const { adminDashboard, employerDashboard, candidateDashboard, isMock } = stats;
-
   let title = "माहिती फलक आकडेवारी / Dashboard Statistics";
   let items: { labelMr: string; labelEn: string; value: any; icon: React.ReactNode; colorClass: string }[] = [];
-
   // Per-card accent gradients (top strip + icon ring) keyed by the card's colorClass.
   const CARD_ACCENTS: Record<string, { strip: string; ring: string }> = {
     'bg-indigo-50/70 border-indigo-100': { strip: 'from-indigo-400 via-indigo-500 to-indigo-700', ring: 'from-indigo-400 to-indigo-700' },
@@ -838,7 +775,6 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
     'bg-violet-50/70 border-violet-100': { strip: 'from-violet-400 via-violet-500 to-violet-700', ring: 'from-violet-400 to-violet-700' },
   };
   const noAccent = { strip: 'from-theme-lavender via-purple-500 to-theme-darkViolet', ring: 'from-theme-lavender to-theme-darkViolet' };
-
   if (adminDashboard) {
     title = "प्रशासक नियंत्रण फलक / Admin Control Dashboard";
     items = [
@@ -924,7 +860,6 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
   } else {
     return null;
   }
-
   return (
     <div className="space-y-4 lg:space-y-6">
       <div className="bg-white rounded-2xl border border-gray-150 shadow-xs p-4 lg:p-6 space-y-3 lg:space-y-4 text-left">
@@ -945,7 +880,6 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
             </span>
           )}
         </div>
-
         <div className={`grid grid-cols-1 min-[420px]:grid-cols-2 ${items.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2 2xl:grid-cols-4'} gap-2.5 lg:gap-4`}>
           {items.map((item, idx) => {
             const accent = CARD_ACCENTS[item.colorClass] || noAccent;
@@ -957,17 +891,14 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
               >
                 {/* Top gradient accent strip */}
                 <div className={`absolute inset-x-0 top-0 h-1 bg-linear-to-r ${accent.strip}`}></div>
-
                 {/* Decorative pattern + glows */}
                 <div className="pointer-events-none absolute inset-0 dot-grid opacity-60"></div>
                 <div className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full bg-white/60 blur-2xl opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="pointer-events-none absolute -bottom-12 -left-8 h-24 w-24 rounded-full bg-white/40 blur-2xl"></div>
-
                 {/* Faint icon watermark in the corner */}
                 <div className="pointer-events-none absolute top-3 right-3 opacity-15 group-hover:opacity-40 group-hover:-rotate-6 transition-all duration-300">
                   {item.icon}
                 </div>
-
                 {/* Label on top, count below (compact KPI card) */}
                 <div className="relative flex items-start gap-2 min-w-0">
                   <div className={`relative shrink-0 rounded-lg p-[2px] bg-linear-to-br ${accent.ring} shadow-md`}>
@@ -995,7 +926,6 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
     </div>
   );
 }
-
 // ==========================================
 // SUB-TAB VIEWS: 1. ADMINS OVERVIEW METRICS
 // ==========================================
@@ -1004,15 +934,11 @@ function AdminOverviewTab() {
   const { data: stats, isLoading } = useGetDashboardStatsQuery(undefined, { skip: !user });
   const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const { t } = useTranslation();
-
   if (isLoading || !stats) return <Loader />;
-
   return (
     <div className="space-y-6 font-sans">
       <LiveDashboardStats />
-
       <ActivityLogPanel logs={stats.adminDashboard?.activityLogs || []} />
-
       {/* Informative system logs */}
       <div className="bg-linear-to-tr from-orange-400 to-amber-500 rounded-2xl p-6 text-white text-left space-y-4 shadow-sm border border-orange-200 max-w-2xl">
         <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-lg">🙏</div>
@@ -1029,20 +955,16 @@ function AdminOverviewTab() {
     </div>
   );
 }
-
 // ==========================================
 // ACTIVITY LOG PANEL: TABLE / BAR GRAPH / PIE CHART
 // ==========================================
-
 type ActivityMetricKey = 'newReg' | 'jobApps' | 'newReq' | 'logins';
-
 const ACTIVITY_METRICS: { key: ActivityMetricKey; labelMr: string; labelEn: string; color: string }[] = [
   { key: 'newReg', labelMr: 'नवीन नोंदणी', labelEn: 'New Registration', color: '#10B981' },
   { key: 'jobApps', labelMr: 'नोकरी अर्ज', labelEn: 'Job Applications', color: '#0EA5E9' },
   { key: 'newReq', labelMr: 'नवीन आवश्यकता', labelEn: 'New Requirements', color: '#F59E0B' },
   { key: 'logins', labelMr: 'यूजर लॉगिन', labelEn: 'User Login', color: '#8B5CF6' },
 ];
-
 interface ActivityRow {
   date: string;
   newReg: number;
@@ -1050,13 +972,11 @@ interface ActivityRow {
   newReq: number;
   logins: number;
 }
-
 const parseActivityNum = (v: unknown): number => {
   if (typeof v === 'number') return v;
   const n = parseInt(String(v ?? '').replace(/[^0-9]/g, ''), 10);
   return isNaN(n) ? 0 : n;
 };
-
 const normalizeActivityLogs = (logs: any[]): ActivityRow[] =>
   (Array.isArray(logs) ? logs : []).map((l: any) => ({
     date: String(l?.activityDate ?? l?.date ?? ''),
@@ -1065,14 +985,11 @@ const normalizeActivityLogs = (logs: any[]): ActivityRow[] =>
     newReq: parseActivityNum(l?.newRequirements ?? l?.newrequirements),
     logins: parseActivityNum(l?.userLogin ?? l?.userlogin),
   }));
-
 const weekShortLabel = (row: ActivityRow): string => {
   const m = /^([A-Za-z]{3})\s+\d{1,2}/.exec(row.date);
   return m ? m[0] : row.date;
 };
-
 type ActivityViewMode = 'table' | 'bar' | 'pie';
-
 function ActivityLegend() {
   return (
     <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
@@ -1085,13 +1002,11 @@ function ActivityLegend() {
     </div>
   );
 }
-
 function ActivityLogTable({ rows }: { rows: ActivityRow[] }) {
   const totals = ACTIVITY_METRICS.reduce((acc, m) => {
     acc[m.key] = rows.reduce((s, r) => s + r[m.key], 0);
     return acc;
   }, {} as Record<ActivityMetricKey, number>);
-
   return (
     <div className="srg-scroll overflow-x-auto overflow-y-auto max-h-[70vh] rounded-xl border border-slate-100">
       <table className="w-full min-w-[560px] divide-y divide-slate-100 text-left text-xs">
@@ -1145,7 +1060,6 @@ function ActivityLogTable({ rows }: { rows: ActivityRow[] }) {
     </div>
   );
 }
-
 function ActivityBarChart({ rows }: { rows: ActivityRow[] }) {
   const allValues = rows.flatMap((r) => ACTIVITY_METRICS.map((m) => r[m.key]));
   const maxVal = Math.max(...allValues, 1);
@@ -1165,7 +1079,6 @@ function ActivityBarChart({ rows }: { rows: ActivityRow[] }) {
   const barW = Math.min(24, Math.max(8, (groupW - (nBars - 1) * barGap) / nBars - 2));
   const totalBW = nBars * barW + (nBars - 1) * barGap;
   const gridVals = [0, niceMax / 2, niceMax];
-
   return (
     <div>
       <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto" role="img" aria-label="Activity bar graph">
@@ -1224,7 +1137,6 @@ function ActivityBarChart({ rows }: { rows: ActivityRow[] }) {
     </div>
   );
 }
-
 function ActivityDonutChart({ rows }: { rows: ActivityRow[] }) {
   const totals = ACTIVITY_METRICS.map((m) => ({
     ...m,
@@ -1242,7 +1154,6 @@ function ActivityDonutChart({ rows }: { rows: ActivityRow[] }) {
     acc += len;
     return seg;
   });
-
   return (
     <div className="flex flex-col sm:flex-row items-center gap-6">
       <div className="relative shrink-0">
@@ -1292,17 +1203,14 @@ function ActivityDonutChart({ rows }: { rows: ActivityRow[] }) {
     </div>
   );
 }
-
 function ActivityLogPanel({ logs }: { logs: any[] }) {
   const [view, setView] = useState<ActivityViewMode>('table');
   const rows = normalizeActivityLogs(logs);
-
   const headerBtns: { mode: ActivityViewMode; icon: React.ReactNode; label: string }[] = [
     { mode: 'table', icon: <Table2 className="w-3.5 h-3.5" />, label: 'Table' },
     { mode: 'bar', icon: <BarChart3 className="w-3.5 h-3.5" />, label: 'Bar Graph' },
     { mode: 'pie', icon: <ChartPie className="w-3.5 h-3.5" />, label: 'Pie Chart' },
   ];
-
   return (
     <div className="bg-white rounded-2xl border border-gray-150 shadow-xs text-left overflow-hidden">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 border-b border-gray-100 p-5">
@@ -1335,7 +1243,6 @@ function ActivityLogPanel({ logs }: { logs: any[] }) {
           ))}
         </div>
       </div>
-
       <div className="p-5">
         {rows.length === 0 ? (
           <div className="py-8 text-center text-xs text-slate-400 font-medium">
@@ -1352,7 +1259,6 @@ function ActivityLogPanel({ logs }: { logs: any[] }) {
     </div>
   );
 }
-
 // ==========================================
 // COMPONENT LIST: 3. JOBS APPROVAL GRID WITH LIST AND EDIT
 // ==========================================
@@ -1366,7 +1272,6 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
   const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const [updateJob] = useUpdateJobMutation();
   const [deleteJob] = useDeleteJobMutation();
-
   const handleApprove = async (jobId: string) => {
     try {
       await updateJob({ id: jobId, isApproved: true }).unwrap();
@@ -1376,7 +1281,6 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
       setToastMsg('Failed to approve vacancy.');
     }
   };
-
   const handleDelete = async (jobId: string) => {
     try {
       await deleteJob(jobId).unwrap();
@@ -1386,7 +1290,6 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
       setToastMsg('Deletions failed');
     }
   };
-
   if (selectedJobIdForDetail) {
     return (
       <JobDetailsView
@@ -1396,7 +1299,6 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
       />
     );
   }
-
   if (isPostingNewJob) {
     return (
       <AddJobForm
@@ -1409,7 +1311,6 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
       />
     );
   }
-
   return (
     <div className="space-y-6 text-left">
       {/* 1. Recruiter Vacancies Approval Desk */}
@@ -1417,7 +1318,6 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
         <p className="text-xs text-slate-500 mb-6 font-semibold">
           कंपन्यांनी / नियोक्त्यांनी टाकलेल्या जाहिरातींची पडताळणी करा आणि उमेदवारांना दिसण्यासाठी मंजूर करा.
         </p>
-
         {jobs.length === 0 ? (
           <EmptyState title="No vacancies listed" desc="Vacancies submitted by employers appear here." />
         ) : (
@@ -1437,7 +1337,6 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
                   <p className="text-xs text-slate-500 font-semibold block leading-relaxed">{job.description}</p>
                   <p className="text-[10px] text-orange-600 font-semibold block uppercase">वर्गवारी: {job.category} | वेतन: {job.salary}</p>
                 </div>
-
                 <div className="flex items-center gap-2 mt-2 md:mt-0">
                   {!job.isApproved && (
                     <PrimaryButton onClick={() => handleApprove(job.id)} className="px-3.5 py-1.5 text-xs font-bold">
@@ -1453,7 +1352,6 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
           </div>
         )}
       </Card>
-
       {/* 2. Unified Job Listings view with Edit option */}
       <Card title="सर्व सक्रिय नोकऱ्यांची यादी / List of All Jobs">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
@@ -1469,7 +1367,6 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
           onEditJob={(id) => setSelectedJobIdForEdit(id)}
         />
       </Card>
-
       {/* Edit Job popup modal */}
       <Modal
         isOpen={selectedJobIdForEdit !== null}
@@ -1492,8 +1389,6 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
     </div>
   );
 }
-
-
 // ==========================================
 // COMPONENT LIST: 4. COMPANIES APPROVAL GRID
 // ==========================================
@@ -1502,7 +1397,6 @@ function AdminCompaniesApprovalTab({ setToastMsg }: { setToastMsg: (msg: string)
   const { data: companies = [], refetch } = useGetCompaniesQuery(undefined, { skip: !user });
   const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const [updateCompany] = useUpdateCompanyMutation();
-
   const handleApproveComp = async (compId: string) => {
     try {
       await updateCompany({ id: compId, isApproved: true }).unwrap();
@@ -1512,13 +1406,11 @@ function AdminCompaniesApprovalTab({ setToastMsg }: { setToastMsg: (msg: string)
       setToastMsg('Failed company edit approval.');
     }
   };
-
   return (
     <Card title="नियोक्ते व उद्योग पडताळणी / Recruiters Verification Suite">
       <p className="text-xs text-slate-550 mb-6 font-semibold">
         उद्योगपती व नियोक्त्यांनी नोंदणी केल्यावर त्यांच्या प्रोफाइलची कसून तपासणी करून अप्रूव्ह करा.
       </p>
-
       {companies.length === 0 ? (
         <EmptyState title="No Corporate Listings" desc="Awaiting employer signups." />
       ) : (
@@ -1541,7 +1433,6 @@ function AdminCompaniesApprovalTab({ setToastMsg }: { setToastMsg: (msg: string)
                   संपर्क: {comp.email} | {comp.phone} | पत्ता: {comp.address}
                 </p>
               </div>
-
               <div>
                 {!comp.isApproved && (
                   <PrimaryButton onClick={() => handleApproveComp(comp.id)} className="px-3.5 py-1.5 text-xs font-bold font-sans">
@@ -1556,76 +1447,18 @@ function AdminCompaniesApprovalTab({ setToastMsg }: { setToastMsg: (msg: string)
     </Card>
   );
 }
-
 // ==========================================
 // SUB-TAB VIEW: 5. ANALYTICAL REPORTS
-// ==========================================
-function AdminReportsTab() {
-  const { user } = useSelector((state: RootState) => state.auth);
-  const { data: reports, isLoading } = useGetReportsQuery(undefined, { skip: !user });
-  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
-
-  if (isLoading || !reports) return <Loader />;
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left font-sans">
-      <Card title="अर्जदारांची स्थिती / Applications Workflow Status Distribution">
-        <p className="text-[11px] text-gray-500 mb-4 font-semibold">
-          एकूण अर्जांची विविध टप्प्यांनुसार झालेली विभागणी खालीलप्रमाणे आहे.
-        </p>
-
-        {reports.applicationsByStatus.length === 0 ? (
-          <EmptyState title="No Applications Logs" desc="Stats populates when seekers apply to approved openings." />
-        ) : (
-          <div className="space-y-3">
-            {reports.applicationsByStatus.map((rep) => (
-              <div key={rep.id} className="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                <span className="text-xs font-extrabold text-blue-900">{rep.name}</span>
-                <span className="text-xs font-black bg-blue-100 text-blue-950 px-3 py-1 rounded-md">{rep.count}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      <Card title="बचतगट सक्षमीकरण आढावा / Self Help Groups Direct Members counts">
-        <p className="text-[11px] text-gray-500 mb-4 font-semibold">
-          स्वयंरोजगार विभागाशी संलग्न महिला बचत गट आणि त्यांचे कार्यरत सभासद संख्या.
-        </p>
-        <div className="space-y-3">
-          {reports.shgStats.map((shg) => (
-            <div key={shg.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-extrabold text-slate-800">{shg.name}</span>
-                <span className="text-xs font-bold text-orange-700 bg-orange-150 px-2 rounded-lg">
-                  {shg.count} सभासद (Members)
-                </span>
-              </div>
-              <span className="text-[10px] text-slate-500 font-semibold leading-relaxed block truncate">
-                मुख्य उत्पादने / Activities: {shg.status}
-              </span>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-// ==========================================
-// SUB-TAB VIEW: 6. HANDLER STAFF - SHGs TAB
 // ==========================================
 function HandlerSHGTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) {
   const { user } = useSelector((state: RootState) => state.auth);
   const { data: list = [], refetch } = useGetSHGProfilesQuery(undefined, { skip: !user });
   const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
-
   return (
     <Card title="बचतगट गृहउद्योग पडताळणी / Women SHGs Micro-enterprise verification">
       <p className="text-xs text-slate-500 mb-6 font-semibold">
         लायजन / मदतनीस म्हणून तुम्ही महिला बचत गटांच्या हस्तकला आणि गृहउद्योग उत्पादनांना बाजाराशी जोडून देऊ शकता.
       </p>
-
       <div className="space-y-4 text-left">
         {list.map((shg) => (
           <div key={shg.id} className="p-5 bg-slate-50 border border-slate-100 rounded-2xl relative">
@@ -1652,7 +1485,6 @@ function HandlerSHGTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) 
     </Card>
   );
 }
-
 // ==========================================
 // INTEGRATED SUB-BOARD: COMPANY RECRUITER / EMPLOYER PORTAL
 // ==========================================
@@ -1664,14 +1496,12 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<string>(() => {
     const tab = searchParams.get('tab') || 'overview';
-    return ['overview', 'pipeline', 'listings', 'post', 'profile'].includes(tab) ? tab : 'overview';
+    return ['overview', 'pipeline', 'listings', 'post', 'profile', 'support_tickets'].includes(tab) ? tab : 'overview';
   });
-
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
   const [selectedJobCode, setSelectedJobCode] = useState<string | undefined>(undefined);
   const [selectedJobIdForEdit, setSelectedJobIdForEdit] = useState<number | null>(null);
   const [isPostingNewJob, setIsPostingNewJob] = useState<boolean>(false);
-
   // Pipeline search & filter state
   const [pipelineSearch, setPipelineSearch] = useState('');
   const [pipelineStatusFilter, setPipelineStatusFilter] = useState('');
@@ -1687,20 +1517,15 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   // pipeline and candidate applied list re-render with the latest status.
   const [statusStoreVersion, setStatusStoreVersion] = useState(0);
   useEffect(() => subscribeApplicationStatusOverrides(() => setStatusStoreVersion(v => v + 1)), []);
-
   const { data: locations = [] } = useGetLocationsQuery(undefined, { skip: !user });
   const { data: jobCategories = [] } = useGetJobCategoriesQuery(undefined, { skip: !user });
-
   // Load recruiter profile from unified endpoint
   const { data: profile, refetch: refetchProfile } = useGetMyProfileQuery(undefined, { skip: !user });
-
   // Load applicants pipelines & jobs (employer-specific endpoints with Bearer token)
   const { data: pipelineApps = [], refetch: refetchApps } = useGetMyJobApplicationsQuery(undefined, { skip: !user });
   const { data: jobsList = [], refetch: refetchJobs } = useGetMyRequirementsQuery(undefined, { skip: !user });
-
   // Master list of application statuses → resolve the numeric statusId for the edit API.
   const { data: statusList = [] } = useGetApplicationStatusListQuery(undefined, { skip: !user });
-
   // Seed the pipeline badge/dropdown with the last saved status from the shared
   // store so a reload never falls back to a stale ("Submitted") API value.
   useEffect(() => {
@@ -1723,7 +1548,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       return changed ? next : prev;
     });
   }, [pipelineApps, statusStoreVersion]);
-
   // Default master statuses aligned with /api/v1/jobapplicationstatuslist
   const defaultStatusOptions: JobApplicationStatus[] = React.useMemo(() => [
     { id: 1, statusId: 1, statusCode: 'APPLIED', name: 'Applied', statusName: 'Applied', description: 'Application submitted', sortOrder: 1, isFinalStatus: false },
@@ -1737,12 +1561,10 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
     { id: 9, statusId: 9, statusCode: 'WITHDRAWN', name: 'Withdrawn', statusName: 'Withdrawn', description: 'Application withdrawn by candidate', sortOrder: 9, isFinalStatus: true },
     { id: 10, statusId: 10, statusCode: 'ON_HOLD', name: 'On Hold', statusName: 'On Hold', description: 'Application temporarily put on hold', sortOrder: 10, isFinalStatus: false }
   ], []);
-
   // Dropdown options: prefer the backend master list, otherwise fall back to defaults.
   const pipelineStatusOptions: JobApplicationStatus[] = statusList.length > 0
     ? [...statusList].sort((a, b) => (a.sortOrder || a.id) - (b.sortOrder || b.id))
     : defaultStatusOptions;
-
   const statusIdMap = React.useMemo(() => {
     const map: Record<string, number> = {};
     pipelineStatusOptions.forEach(s => {
@@ -1752,7 +1574,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
     });
     return map;
   }, [pipelineStatusOptions]);
-
   const resolveStatusId = (statusIdentifier: string | number): number => {
     if (typeof statusIdentifier === 'number' && Number.isFinite(statusIdentifier) && statusIdentifier > 0) {
       return statusIdentifier;
@@ -1760,7 +1581,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
     const clean = String(statusIdentifier || '').toLowerCase().trim();
     return statusIdMap[clean] || 0;
   };
-
   const getStatusNameById = (id?: number, fallbackText?: string): string => {
     if (id) {
       const match = pipelineStatusOptions.find(s => s.id === id);
@@ -1768,17 +1588,14 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
     }
     return fallbackText || 'Applied';
   };
-
   // Unique job titles from applications for filter dropdown
   const uniqueJobTitles = React.useMemo(() => {
     const titles = pipelineApps.map(a => a.jobTitle).filter(Boolean);
     return [...new Set(titles)].sort();
   }, [pipelineApps]);
-
   // Filtered pipeline list based on search + dropdowns
   const filteredPipelineApps = React.useMemo(() => {
     let result = [...pipelineApps];
-
     if (pipelineSearch.trim()) {
       const phrase = pipelineSearch.toLowerCase();
       result = result.filter(a =>
@@ -1787,7 +1604,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         (a.candidatePhone || '').toLowerCase().includes(phrase)
       );
     }
-
     if (pipelineStatusFilter) {
       const filterNum = Number(pipelineStatusFilter);
       result = result.filter(a => {
@@ -1798,26 +1614,20 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         return a.status.toLowerCase() === pipelineStatusFilter.toLowerCase();
       });
     }
-
     if (pipelineJobFilter) {
       result = result.filter(a => a.jobTitle === pipelineJobFilter);
     }
-
     return result;
   }, [pipelineApps, pipelineSearch, pipelineStatusFilter, pipelineJobFilter, localStatusOverrides]);
-
   // Infinite scroll slice of the filtered pipeline (10 records per batch)
   const visiblePipelineApps = React.useMemo(() => {
     return filteredPipelineApps.slice(0, pipelineVisibleCount);
   }, [filteredPipelineApps, pipelineVisibleCount]);
-
   const pipelineHasMore = filteredPipelineApps.length > pipelineVisibleCount;
-
   // Reset visible count when filters change
   React.useEffect(() => {
     setPipelineVisibleCount(PIPELINE_PAGE_SIZE);
   }, [pipelineSearch, pipelineStatusFilter, pipelineJobFilter]);
-
   // Infinite scroll: load the next 10 records when the sentinel is near the viewport
   const loadMorePipeline = React.useCallback(() => {
     if (!pipelineHasMore || pipelineLoadingMore) return;
@@ -1828,7 +1638,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       setPipelineLoadingMore(false);
     }, 350);
   }, [pipelineHasMore, pipelineLoadingMore, filteredPipelineApps.length]);
-
   React.useEffect(() => {
     const el = loadMoreRef.current;
     if (!el || !pipelineHasMore) return;
@@ -1841,7 +1650,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
     observer.observe(el);
     return () => observer.disconnect();
   }, [pipelineHasMore, loadMorePipeline]);
-
   // Job creation forms state
   const [vacancyTitle, setVacancyTitle] = useState('');
   const [vacancyLocation, setVacancyLocation] = useState('Nashik');
@@ -1850,9 +1658,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   const [vacancyType, setVacancyType] = useState<'Full-time' | 'Part-time' | 'Contract' | 'Remote'>('Full-time');
   const [vacancyDesc, setVacancyDesc] = useState('');
   const [vacancyReqText, setVacancyReqText] = useState('');
-
   const [createJob, { isLoading: isPublishing }] = useCreateJobMutation();
-
   // Form edit elements for Recruiter Corporate details
   const [compName, setCompName] = useState('');
   const [compContact, setCompContact] = useState('');
@@ -1873,18 +1679,15 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   const [compPicPreview, setCompPicPreview] = useState('');
   const [compPicUploading, setCompPicUploading] = useState(false);
   const compPicInputRef = useRef<HTMLInputElement | null>(null);
-
   // Status change modal & remarks state
   const [statusUpdateApp, setStatusUpdateApp] = useState<JobApplication | null>(null);
   const [selectedStatusObj, setSelectedStatusObj] = useState<JobApplicationStatus | null>(null);
   const [statusRemarks, setStatusRemarks] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-
   // OTP Interview scheduling state
   const [targetAppId, setTargetAppId] = useState('');
   const [showInterviewModal, setShowInterviewModal] = useState(false);
   const [interviewDate, setInterviewDate] = useState('');
-
   // Prefill corporate edit profile when model load
   React.useEffect(() => {
     if (profile) {
@@ -1897,15 +1700,12 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       setCompDistrict(profile.district || '');
     }
   }, [profile]);
-
   const handlePostVacancy = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!vacancyTitle || !vacancySalary || !vacancyDesc) {
       setToastMsg('Required vacancy data missing.');
       return;
     }
-
     try {
       await createJob({
         title: vacancyTitle,
@@ -1918,7 +1718,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         type: vacancyType,
         category: vacancyCategory
       }).unwrap();
-
       setToastMsg('नोकरी रिक्त जागा जोडली (Pending Admin Validation)!');
       // Reset form fields
       setVacancyTitle('');
@@ -1931,7 +1730,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       setToastMsg('Failed vacancy listing addition.');
     }
   };
-
   const toNumId = (raw?: unknown): number => {
     if (raw === undefined || raw === null) return 0;
     const n = Number(raw);
@@ -1941,16 +1739,13 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
     const d = Number(digits);
     return Number.isFinite(d) ? d : 0;
   };
-
   const resolveChangedBy = (): number => toNumId(user?.id);
-
   const resolveAppNumericId = (app: JobApplication): number => {
     if (app.applicationId && Number.isFinite(app.applicationId) && app.applicationId > 0) {
       return Math.trunc(app.applicationId);
     }
     const fromId = toNumId(app.id);
     if (fromId > 0) return fromId;
-
     // Deep check raw item keys if available
     if (app.rawItem && typeof app.rawItem === 'object') {
       const keys = Object.keys(app.rawItem);
@@ -1967,7 +1762,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
     console.error('[DashboardHub] Unable to determine numeric applicationId for app:', app);
     return 0;
   };
-
   const buildStatusPayload = (app: JobApplication, statusId: number, extra?: Partial<UpdateApplicationStatusPayload>): UpdateApplicationStatusPayload => ({
     applicationStatusHistoryId: app.applicationStatusHistoryId || 0,
     applicationId: resolveAppNumericId(app),
@@ -1976,14 +1770,11 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
     changedBy: resolveChangedBy(),
     ...extra,
   });
-
   const handleStatusSelectChange = (app: JobApplication, chosenStatusIdOrName: string) => {
     const numId = Number(chosenStatusIdOrName);
     const statusObj = pipelineStatusOptions.find(s => s.id === numId) ||
       pipelineStatusOptions.find(s => s.name.toLowerCase() === chosenStatusIdOrName.toLowerCase());
-
     if (!statusObj) return;
-
     // If changing to Interview, prompt with scheduling datetime modal
     if (statusObj.name.toLowerCase().includes('interview') || statusObj.statusCode === 'INTERVIEW') {
       setTargetAppId(app.id);
@@ -1991,17 +1782,14 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       setShowInterviewModal(true);
       return;
     }
-
     // Prompt status change modal with remarks field
     setStatusUpdateApp(app);
     setSelectedStatusObj(statusObj);
     setStatusRemarks('');
   };
-
   const executeStatusUpdate = async (app: JobApplication, statusObj: JobApplicationStatus, remarksText: string = '') => {
     const statusId = statusObj.id;
     const payload = buildStatusPayload(app, statusId, { remarks: remarksText });
-
     if (!payload.statusId) {
       setToastMsg(`Status ID not resolved for "${statusObj.name}". Please try again.`);
       return;
@@ -2011,7 +1799,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       setToastMsg('Application ID unavailable for this applicant. Cannot update status.');
       return;
     }
-
     setIsUpdatingStatus(true);
     try {
       const result = await updateJobApplicationStatus(payload);
@@ -2036,28 +1823,23 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       setIsUpdatingStatus(false);
     }
   };
-
   const handleScheduleInterviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!interviewDate) return;
-
     const app = pipelineApps.find(a => a.id === targetAppId);
     const statusId = selectedStatusObj?.id || resolveStatusId('Interview');
     if (!statusId) {
       setToastMsg('Status ID not resolved for "Interview". Please try again.');
       return;
     }
-
     const payload: UpdateApplicationStatusPayload = app
       ? buildStatusPayload(app, statusId)
       : { applicationStatusHistoryId: 0, applicationId: 0, statusId, remarks: '', changedBy: resolveChangedBy() };
     payload.remarks = `Interview scheduled on ${interviewDate}`;
-
     if (!payload.applicationId) {
       setToastMsg('Application ID unavailable for this applicant. Cannot schedule interview.');
       return;
     }
-
     try {
       const result = await updateJobApplicationStatus(payload);
       if (result.success) {
@@ -2085,7 +1867,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       setToastMsg('Interview schedules failed.');
     }
   };
-
   const handleSaveCorporateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -2100,7 +1881,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         }
         bustProfileImageCache();
       }
-
       const res = await updateCompanyProfile({
         address: compAddress,
         stateId: 0,
@@ -2122,7 +1902,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         website: compWebsite,
         alternateEmail: compAltEmail,
       });
-
       if (res.success) {
         setToastMsg('प्रोफाइल जतन केले / Profile updated successfully!');
         setCompPicFile(null);
@@ -2137,7 +1916,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       setCompPicUploading(false);
     }
   };
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start text-left font-sans">
       <DashboardMenu>
@@ -2176,6 +1954,13 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         >
           <Settings className="w-4 h-4" /><span className="truncate min-w-0">कंपनी प्रोफाइल / Profile Settings</span>
         </button>
+        <button
+          onClick={() => setActiveTab('support_tickets')}
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'support_tickets' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
+            }`}
+        >
+          <LifeBuoy className="w-4 h-4" /><span className="truncate min-w-0">View Ticket / तिकीट पहा</span>
+        </button>
         <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
         <button
           onClick={() => {
@@ -2189,13 +1974,11 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
           <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
         </button>
       </DashboardMenu>
-
       <div className="lg:col-span-9 space-y-6">
         {/* Overview tab - Employer Control Dashboard */}
         {activeTab === 'overview' && (
           <LiveDashboardStats />
         )}
-
         {/* Verification Alert status banner if unapproved recruiter */}
         {profile && !profile.isApproved && (
           <Alert
@@ -2204,7 +1987,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
             message="Your employer recruiter profile verification is actively pending review by Shri Swami Samarth self-employment staff handlers. Once verified, your posted vacancies will instantly receive high-priority visibility!"
           />
         )}
-
         {/* 1. Job application Pipelines tab */}
         {activeTab === 'pipeline' && (
           <Card title="उमेदवारांचे अर्ज प्रक्रिया / Applicant Pipeline Tracking">
@@ -2258,12 +2040,10 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                     )}
                   </div>
                 </div>
-
                 {/* Results count */}
                 <div className="text-[10px] text-slate-400 font-bold pt-2">
                   Showing {filteredPipelineApps.length === 0 ? 0 : 1} to {Math.min(pipelineVisibleCount, filteredPipelineApps.length)} of {filteredPipelineApps.length} applicants
                 </div>
-
                 {/* Applicant cards */}
                 <div className="space-y-4 pt-2">
                   {visiblePipelineApps.length === 0 ? (
@@ -2284,7 +2064,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                               मोबाईल: {app.candidatePhone} | अर्ज दिनांक: {app.appliedAt}
                             </p>
                           </div>
-
                           <div>
                             {(() => {
                               const override = localStatusOverrides[app.id];
@@ -2292,7 +2071,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                               const currentStatusObj = pipelineStatusOptions.find(s => s.id === sId);
                               const displayName = override?.statusName || currentStatusObj?.name || app.status || 'Applied';
                               const code = currentStatusObj?.statusCode || '';
-
                               if (code === 'INTERVIEW' || displayName.toLowerCase().includes('interview')) {
                                 return (
                                   <Badge type="secondary">
@@ -2313,7 +2091,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                             })()}
                           </div>
                         </div>
-
                         {/* Interactive Status dropdown + Resume */}
                         <div className="flex flex-wrap gap-2 items-center">
                           <label className="text-[10px] font-bold text-slate-500 uppercase">Status:</label>
@@ -2326,13 +2103,11 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                               <option key={opt.id} value={opt.id}>{opt.name}</option>
                             ))}
                           </select>
-
                           {app.remarks && (
                             <span className="text-[10px] text-slate-500 italic max-w-xs truncate" title={app.remarks}>
                               Note: {app.remarks}
                             </span>
                           )}
-
                           {/* Resume download mock button */}
                           <button
                             onClick={() => setToastMsg('Mock Resume Download complete! (Rahul_Resume.pdf)')}
@@ -2345,7 +2120,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                     ))
                   )}
                 </div>
-
                 {/* Infinite scroll footer */}
                 <div className="pt-4 border-t border-slate-100">
                   {pipelineHasMore && (
@@ -2372,7 +2146,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
             )}
           </Card>
         )}
-
         {/* 2. Job Listings tab */}
         {activeTab === 'listings' && (
           selectedJobIdForDetail ? (
@@ -2407,12 +2180,14 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
             </>
           )
         )}
-
         {/* 3. Job creation Post vacancy Form tab */}
         {activeTab === 'post' && (
           <AddJobForm onSuccess={() => setActiveTab('listings')} />
         )}
-
+        {/* Support Tickets - View Ticket */}
+        {activeTab === 'support_tickets' && (
+          <SupportTicketsView setToastMsg={setToastMsg} />
+        )}
         {/* 4. Recruiter Settings Profile card updater */}
         {activeTab === 'profile' && (
           <Card title="नियोक्ता माहिती संपादन / Employer Profile Settings">
@@ -2455,7 +2230,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                   />
                 </div>
               </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <TextBox
                   label="संपर्क व्यक्ती / Liaison Name (Contact Person)"
@@ -2521,19 +2295,16 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                   onChange={(e) => setCompTaluka(e.target.value)}
                 />
               </div>
-
               <TextArea
                 label="पत्ता / Corporate Head Office Address"
                 value={compAddress}
                 onChange={(e) => setCompAddress(e.target.value)}
               />
-
               <TextArea
                 label="कंपनी वर्णन / Company Description"
                 value={compDescription}
                 onChange={(e) => setCompDescription(e.target.value)}
               />
-
               <div className="flex justify-end">
                 <PrimaryButton type="submit" disabled={compPicUploading}>
                   {compPicUploading ? 'अपलोड होत आहे / Uploading...' : t('dashboard.save')}
@@ -2543,7 +2314,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
           </Card>
         )}
       </div>
-
       {/* Dynamic Interview scheduling modal popup dialog */}
       <Modal
         isOpen={showInterviewModal}
@@ -2554,7 +2324,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
           <p className="text-xs text-gray-500 leading-relaxed font-semibold">
             Choose a suitable date and coordinates timing setup. An automated notification will sync to the applicant tracking panel.
           </p>
-
           <TextBox
             label="मुलाखत दिनांक / Interview date and Clock timings"
             type="datetime-local"
@@ -2562,7 +2331,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
             onChange={(e) => setInterviewDate(e.target.value)}
             required
           />
-
           <div className="flex justify-end gap-2.5 pt-4">
             <SecondaryButton onClick={() => setShowInterviewModal(false)}>
               बंद करा / Cancel
@@ -2573,7 +2341,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
           </div>
         </form>
       </Modal>
-
       {/* Status Update Confirmation & Remarks Dialog */}
       <Modal
         isOpen={statusUpdateApp !== null && selectedStatusObj !== null}
@@ -2613,7 +2380,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                 </p>
               )}
             </div>
-
             <TextArea
               label="शेरा / Remarks (Optional)"
               value={statusRemarks}
@@ -2621,7 +2387,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
               placeholder="e.g., Shortlisted based on profile screening, round completed, etc."
               rows={3}
             />
-
             <div className="flex justify-end gap-2.5 pt-3">
               <SecondaryButton
                 disabled={isUpdatingStatus}
@@ -2643,7 +2408,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
     </div>
   );
 }
-
 // ==========================================
 // INTEGRATED SUB-BOARD: JOB SEEKER / CANDIDATE PORTAL
 // ==========================================
@@ -2653,17 +2417,13 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
   const [activeTab, setActiveTab] = useState('overview');
-
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
   const [selectedJobCode, setSelectedJobCode] = useState<string | undefined>(undefined);
-
   // Optimistic tracking of newly applied job IDs for instant UI updates
   const [recentlyAppliedIds, setRecentlyAppliedIds] = useState<Set<string>>(new Set());
-
   // Load seeker profile from unified endpoint
   const { data: profile, refetch: refetchProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const [updateProfile] = useUpdateCandidateMutation();
-
   // Load jobs lists (Approved only!) — skip until user/token are ready
   const { data: availableJobs = [], refetch: refetchJobs } = useGetJobsQuery({ approvedOnly: true }, { skip: !user });
   // Load jobs from TanStack Query (same source as JobListingView, has userJobStatus)
@@ -2671,10 +2431,8 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
   const searchJobs = searchJobsData?.jobs || [];
   // Load applications history tracking
   const { data: myApps = [], refetch: refetchMyApps } = useGetApplicationsQuery({ candidateId }, { skip: !user || !candidateId });
-
   // Load options metadata
   const { data: locations = [] } = useGetLocationsQuery();
-
   // Profile data forms state
   const [fullName, setFullName] = useState('');
   const [seekerCity, setSeekerCity] = useState('Nashik');
@@ -2682,7 +2440,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
   const [experience, setExperience] = useState(0);
   const [skillsText, setSkillsText] = useState('');
   const [resumeName, setResumeName] = useState('');
-
   // Dynamic Live API Cascaded Dropdowns Section
   const [liveCountryId, setLiveCountryId] = useState<number>(1); // Default to India (1)
   const [liveStateId, setLiveStateId] = useState<number>(1); // Default to Maharashtra (1)
@@ -2691,7 +2448,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
   const [liveSevaKendraId, setLiveSevaKendraId] = useState<number>(159);
   const [liveEducationId, setLiveEducationId] = useState<number>(12); // Default to B.Tech/B.E. (12)
   const [liveSubEducationId, setLiveSubEducationId] = useState<number>(0);
-
   const { data: liveCountries = [] } = useGetCountriesQuery();
   const { data: liveStates = [] } = useGetStatesQuery(liveCountryId, { skip: !liveCountryId });
   const { data: liveDistricts = [] } = useGetDistrictsQuery(liveStateId, { skip: !liveStateId });
@@ -2699,7 +2455,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
   const { data: liveSevaKendras = [] } = useGetSevaKendrasQuery(liveTalukaId, { skip: !liveTalukaId });
   const { data: liveEducationsList = [] } = useGetEducationsListQuery();
   const { data: liveSubEducationsList = [] } = useGetSubEducationsListQuery(liveEducationId, { skip: !liveEducationId });
-
   const handleAutofillLiveSelections = () => {
     const countryObj = liveCountries.find(c => c.id === Number(liveCountryId));
     const stateObj = liveStates.find(s => s.id === Number(liveStateId));
@@ -2708,30 +2463,23 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
     const skObj = liveSevaKendras.find(sk => sk.id === Number(liveSevaKendraId));
     const eduObj = liveEducationsList.find(e => e.id === Number(liveEducationId));
     const subEduObj = liveSubEducationsList.find(se => se.id === Number(liveSubEducationId));
-
     const parts: string[] = [];
     if (skObj) parts.push(skObj.name);
     if (talukaObj) parts.push(talukaObj.name);
     if (districtObj) parts.push(districtObj.name);
     if (stateObj) parts.push(stateObj.name);
     if (countryObj && countryObj.name !== 'INDIA') parts.push(countryObj.name);
-
     if (parts.length > 0) {
       setSeekerCity(parts.join(', '));
     }
-
     if (eduObj) {
       setQualification(subEduObj ? `${eduObj.name} - ${subEduObj.name}` : eduObj.name);
     }
-
     setToastMsg('थेट एपीआय निवडलेली माहिती वर यशस्वीपणे भरली! सेव्ह बदल वर क्लिक करा. / Selections populated! Now click Save.');
   };
-
   // Search parameters filter state
   const [searchPhrase, setSearchPhrase] = useState('');
-
   const [applyToJob, { isLoading: isApplying }] = useApplyToJobMutation();
-
   // Prefill candidate on data load
   React.useEffect(() => {
     if (profile) {
@@ -2743,7 +2491,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
       setResumeName(profile.resumeName || '');
     }
   }, [profile]);
-
   const handleApplyNow = async (job: Job) => {
     try {
       await applyToJob({
@@ -2752,17 +2499,15 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
         companyName: job.companyName,
         companyId: job.companyId,
         candidateId,
-        candidateName: fullName || 'Rahul Ramesh Patil',
-        candidatePhone: profile?.phone || '8887776660'
+        candidateName: fullName || fullName || "",
+        candidatePhone: profile?.phone || profile?.phone || ""
       }).unwrap();
-
       setToastMsg('अर्ज यशस्वीरीत्या सादर केला! / Applied to role successfully!');
       refetchMyApps();
     } catch (err: any) {
       setToastMsg(err.data || 'Duplicated applications blocked.');
     }
   };
-
   const handleSaveSeekerProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -2775,14 +2520,12 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
         skills: skillsText.split(',').map(s => s.trim()).filter(Boolean),
         resumeName
       }).unwrap();
-
       setToastMsg('माहिती अद्ययावत केली / Candidate profile details saved!');
       refetchProfile();
     } catch (_) {
       setToastMsg('Profile updates failed.');
     }
   };
-
   // Mock Resume upload system
   const handleMockResumeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -2791,17 +2534,14 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
       setToastMsg(`CV File: "${file.name}" uploaded to draft profile! Click Save.`);
     }
   };
-
   const hasAppliedStatus = (status?: string): boolean => {
     const s = (status || '').trim();
     return !!s && !/^not\s*applied$/i.test(s);
   };
-
   const displayAppliedStatus = (status?: string): string => {
     const s = (status || '').trim();
     return !s || /^already\s*applied$/i.test(s) ? 'Applied' : s;
   };
-
   const isJobApplied = (jobId: number, job?: Job): boolean => {
     if (recentlyAppliedIds.has(String(jobId))) return true;
     if (job?.jobCode && recentlyAppliedIds.has(job.jobCode)) return true;
@@ -2810,7 +2550,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
     if (sj && hasAppliedStatus(sj.userJobStatus)) return true;
     return false;
   };
-
   const appliedJobIds = React.useMemo(() => {
     const ids = new Set<number>();
     const addFrom = (list: any[]) =>
@@ -2821,13 +2560,11 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
     addFrom(searchJobs);
     return [...ids];
   }, [availableJobs, searchJobs, recentlyAppliedIds]);
-
   const apiAppliedCount = Math.max(
     searchJobs.filter((j: any) => hasAppliedStatus(j.userJobStatus)).length,
     availableJobs.filter((j) => hasAppliedStatus(j.userJobStatus)).length
   );
   const appliedCount = Math.max(apiAppliedCount, recentlyAppliedIds.size, myApps.length);
-
   const filteredJobs = availableJobs.filter((j) => {
     const query = searchPhrase.toLowerCase();
     const sj = searchJobs.find((s: any) => String(s.id) === String(j.id) || s.jobCode === j.jobCode);
@@ -2840,7 +2577,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
         j.category.toLowerCase().includes(query))
     );
   });
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start text-left font-sans">
       <DashboardMenu>
@@ -2892,7 +2628,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
           <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
         </button>
       </DashboardMenu>
-
       <div className="lg:col-span-9 space-y-6">
         {/* Overview tab - Candidate Dashboard */}
         {activeTab === 'overview' && (
@@ -2916,7 +2651,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
             <LiveDashboardStats appliedJobsOverride={appliedCount} />
           </>
         )}
-
         {/* Profile incomplete warning to push CV uploads */}
         {!resumeName && (
           <Alert
@@ -2925,7 +2659,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
             message="Please upload your digital Resume/CV in PDF format under 'Complete Profile' tab to ensure verified recruiters can download and review your competencies!"
           />
         )}
-
         {/* 1. Job search list tab */}
         {activeTab === 'search' && (
           selectedJobIdForDetail ? (
@@ -2960,7 +2693,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
             />
           )
         )}
-
         {/* 2. Job history tab */}
         {activeTab === 'history' && (
           selectedJobIdForDetail ? (
@@ -2979,7 +2711,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                   const s = String(k).trim();
                   if (s) seenKeys.add(s);
                 };
-
                 // Applications from the applications history API (myApps) carry the
                 // authoritative, employer-updated status → add these first.
                 myApps.forEach((a) => {
@@ -3004,7 +2735,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                     if (validNum) addKey(validNum);
                   }
                 });
-
                 // Jobs from searchJobs API (TanStack Query) where userJobStatus indicates
                 // already applied — only used as a fallback for jobs not in myApps.
                 searchJobs.forEach((j: any) => {
@@ -3018,7 +2748,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                     }
                   }
                 });
-
                 // Also check availableJobs (RTK Query) as a fallback.
                 availableJobs.forEach((j) => {
                   if (hasAppliedStatus(j.userJobStatus)) {
@@ -3031,7 +2760,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                     }
                   }
                 });
-
                 // Optimistic entries from recent applies in this session
                 recentlyAppliedIds.forEach((code) => {
                   if (!seenKeys.has(code)) {
@@ -3054,7 +2782,7 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                   }
                 });
                 if (mergedApps.length === 0) {
-                  return <EmptyState title="No Applications tracking logs" desc="Go seek and apply on active vacancys listed under Find Jobs." />;
+                  return <EmptyState title="No Applications" desc="You have not applied to any job yet." />;
                 }
                 return (
                   <div className="space-y-4">
@@ -3079,12 +2807,10 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
             </Card>
           )
         )}
-
         {/* Support Tickets - View Ticket */}
         {activeTab === 'support_tickets' && (
           <SupportTicketsView setToastMsg={setToastMsg} />
         )}
-
         {/* 3. Seeker Profile settings updater */}
         {activeTab === 'profile' && (
           <Card title="उमेदवाराची सविस्तर माहिती / Candidate Profile Settings">            <form onSubmit={handleSaveSeekerProfile} className="space-y-5">
@@ -3094,7 +2820,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                 onChange={(e) => setFullName(e.target.value)}
                 required
               />
-
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Dropdown
                   label="राहण्याचे शहर / City Location"
@@ -3116,14 +2841,12 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                   onChange={(e) => setExperience(Number(e.target.value))}
                 />
               </div>
-
               <TextBox
                 label="मुख्य कौशल्ये (स्वल्पविराम द्या) / Key Skills"
                 value={skillsText}
                 placeholder="E.g. Sales, Drivers license, Computer typing, tailoring"
                 onChange={(e) => setSkillsText(e.target.value)}
               />
-
               {/* Live srgapp Swagger APIs location locator */}
               <div className="bg-orange-50/40 border border-orange-100 rounded-2xl p-5 space-y-4">
                 <div className="text-left">
@@ -3134,12 +2857,10 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                     आपल्या प्रोफाइलसाठी अधिकृत दिंडोरी प्रणीत एपीआय वरून थेट रिअल-टाइम देश, राज्य, जिल्हा, तालुका, सेवा केंद्र आणि शिक्षण सूची निवडा! (Select and pop from real-time API)
                   </p>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {/* Location Group */}
                   <div className="space-y-3">
                     <h5 className="text-xs font-bold text-orange-700 uppercase tracking-wider block text-left">ठिकाण पडताळणी / Location Cascade</h5>
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="text-left">
                         <label className="block text-[10px] font-bold text-gray-500 mb-1">देश / Country</label>
@@ -3160,7 +2881,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                           ))}
                         </select>
                       </div>
-
                       <div className="text-left">
                         <label className="block text-[10px] font-bold text-gray-500 mb-1">राज्य / State</label>
                         <select
@@ -3181,7 +2901,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                         </select>
                       </div>
                     </div>
-
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="text-left">
                         <label className="block text-[10px] font-bold text-gray-500 mb-1">जिल्हा / District</label>
@@ -3201,7 +2920,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                           ))}
                         </select>
                       </div>
-
                       <div className="text-left">
                         <label className="block text-[10px] font-bold text-gray-500 mb-1">तालुका / Taluka</label>
                         <select
@@ -3219,7 +2937,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                           ))}
                         </select>
                       </div>
-
                       <div className="text-left">
                         <label className="block text-[10px] font-bold text-gray-500 mb-1">सेवाकेंद्र / Seva Kendra</label>
                         <select
@@ -3236,11 +2953,9 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                       </div>
                     </div>
                   </div>
-
                   {/* Education Group */}
                   <div className="space-y-3 border-t md:border-t-0 md:border-l border-gray-200 pt-4 md:pt-0 md:pl-5">
                     <h5 className="text-xs font-bold text-orange-700 uppercase tracking-wider block text-left">शिक्षण पात्रता / Education Cascade</h5>
-
                     <div className="space-y-3">
                       <div className="text-left">
                         <label className="block text-[10px] font-bold text-gray-500 mb-1">शिक्षण प्रकार / Highest Education</label>
@@ -3258,7 +2973,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                           ))}
                         </select>
                       </div>
-
                       <div className="text-left">
                         <label className="block text-[10px] font-bold text-gray-500 mb-1">उप-शिक्षण / Sub Education Course</label>
                         <select
@@ -3276,7 +2990,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                     </div>
                   </div>
                 </div>
-
                 <div className="flex justify-end pt-2">
                   <button
                     type="button"
@@ -3287,7 +3000,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                   </button>
                 </div>
               </div>
-
               {/* Real Resume Drag and Drop / select mock upload */}
               <div className="space-y-1.5 text-left">
                 <label className="block text-xs font-semibold text-gray-700">
@@ -3307,7 +3019,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                   <span className="text-[10px] text-gray-400 mt-1 block">Supports PDF, DOCX up to 4MB</span>
                 </div>
               </div>
-
               <div className="flex justify-end pt-3">
                 <PrimaryButton type="submit">
                   {t('dashboard.save')}
@@ -3320,7 +3031,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
     </div>
   );
 }
-
 // ==========================================
 // INTEGRATED SUB-BOARD: SELF HELP GROUPS (SHG) PORTAL
 // ==========================================
@@ -3329,20 +3039,16 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
   const [activeTab, setActiveTab] = useState('trainings');
-
   // Load trainings list
   const { data: trainings = [] } = useGetTrainingsQuery(undefined, { skip: !user });
   const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
-
   // Load dynamic SHG state
   const [shgName, setShgName] = useState('Swami Samarth Mahila Gruhudyog');
   const [shgLeader, setShgLeader] = useState('Sunita Vinay Joshi');
   const [memberCount, setMemberCount] = useState(12);
   const [shgDistrict, setShgDistrict] = useState('Nashik');
-
   // Activities array state
   const [activitiesText, setActivitiesText] = useState('Agarbatti packing, turmeric packing');
-
   // Showcase catalogue physical products list
   const [showcase, setShowcase] = useState<{ id: string; name: string; description: string; price: number }[]>([
     {
@@ -3352,38 +3058,30 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
       price: 150
     }
   ]);
-
   // Product submission fields
   const [prodName, setProdName] = useState('');
   const [prodPrice, setProdPrice] = useState('');
   const [prodDesc, setProdDesc] = useState('');
-
   const [updateSHG] = useUpdateSHGProfileMutation();
-
   const handleEnrollTraining = (courseTitle: string) => {
     setToastMsg(`प्रशिक्षण नोंदणी यशस्वी: \"${courseTitle}\"! Admissions desk will verify.`);
   };
-
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prodName || !prodPrice) return;
-
     const freshProd = {
       id: `prod-${Date.now()}`,
       name: prodName,
       price: Number(prodPrice),
       description: prodDesc
     };
-
     const updatedCatalog = [...showcase, freshProd];
     setShowcase(updatedCatalog);
-
     setToastMsg('उत्पादन कॅटलॉगमध्ये जोडले/ Handicraft Product added to showcase katalog!');
     setProdName('');
     setProdPrice('');
     setProdDesc('');
   };
-
   const handleSaveSHGDetails = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -3396,13 +3094,11 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
         activities: activitiesText.split(',').map(a => a.trim()).filter(Boolean),
         productShowcase: showcase
       }).unwrap();
-
       setToastMsg('बचतगट माहिती सुरक्षित केली/ SHG details updated securely!');
     } catch (_) {
       setToastMsg('Failed profiles updaters');
     }
   };
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start text-left font-sans">
       <DashboardMenu>
@@ -3440,18 +3136,15 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
           <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
         </button>
       </DashboardMenu>
-
       <div className="lg:col-span-9 space-y-6">
         {/* Live Dashboard API statistics */}
         <LiveDashboardStats />
-
         {/* Trainings listed tab */}
         {activeTab === 'trainings' && (
           <Card title="उपलब्ध व्यावसायिक तंत्र शिक्षण वर्ग / Active Vocations Training classes">
             <p className="text-xs text-slate-500 mb-6 font-semibold">
               महिला गृहउद्योगांचे कौशल्य आणि उत्पादन दर्जा वाढवण्यासाठी खालीलपैकी कोणत्याही मोफत सरकारी व सेवा मार्ग पुरस्कृत कोर्सला नाव नोंदवा.
             </p>
-
             <div className="space-y-4">
               {trainings.map((c) => (
                 <div key={c.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -3475,7 +3168,6 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
             </div>
           </Card>
         )}
-
         {/* Product showcase catalog upload tab */}
         {activeTab === 'products' && (
           <div className="space-y-6 text-left">
@@ -3498,14 +3190,12 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
                     required
                   />
                 </div>
-
                 <TextArea
                   label="उत्पादन माहिती / Brief Product Description"
                   placeholder="पारंपारिक मसाला किंवा बनवण्याची पद्धत सांगा..."
                   value={prodDesc}
                   onChange={(e) => setProdDesc(e.target.value)}
                 />
-
                 <div className="flex justify-end">
                   <PrimaryButton type="submit">
                     कॅटलॉगमध्ये सामील करा / Publish Item
@@ -3513,7 +3203,6 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
                 </div>
               </form>
             </Card>
-
             <Card title="तुमच्या बचतगटाचे चालू बाजार माहिती / Published Catalogue items">
               {showcase.length === 0 ? (
                 <EmptyState title="No Products items listed" desc="Add self-employment products above." />
@@ -3537,7 +3226,6 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
             </Card>
           </div>
         )}
-
         {/* Group Profile Settings */}
         {activeTab === 'profile' && (
           <Card title="बचतगट मूळ माहिती संपादन / Self Help Group Info">
@@ -3556,7 +3244,6 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
                   required
                 />
               </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <TextBox
                   label="एकूण सभासद संख्या / Total Members Count"
@@ -3572,13 +3259,11 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
                   required
                 />
               </div>
-
               <TextBox
                 label="बचतगटाचे व्यावसायिक उपक्रम / Vocation Core Activities (separated by , comma)"
                 value={activitiesText}
                 onChange={(e) => setActivitiesText(e.target.value)}
               />
-
               <div className="flex justify-end pt-3">
                 <PrimaryButton type="submit">
                   बदला जतन करा / Save Group Info

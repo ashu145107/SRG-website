@@ -24,6 +24,8 @@ import {
   CalendarDays,
   Loader2,
   Send,
+  List as ListIcon,
+  Table2,
 } from 'lucide-react';
 import { Alert } from '../ui/FeedbackComponents';
 import { Job } from '../../types';
@@ -55,15 +57,24 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
   const { i18n } = useTranslation();
 
   const user = useSelector((state: any) => state.auth?.user);
-  const userRole = user?.role;
+  const userRole = String(user?.role || '').toUpperCase();
 
-  const isEmployerOrStaff =
-    userRole === 'ADMIN' || userRole === 'HANDLER' || userRole === 'EMPLOYER';
+  const isEmployerOrStaff = [
+    'ADMIN',
+    'SUPER_ADMIN',
+    'HANDLER',
+    'COMPANY',
+    'EMPLOYER',
+    'STAFF',
+  ].includes(userRole);
 
   // Search & Filter state
   const [searchPhrase, setSearchPhrase] = useState('');
   const [filterSkill, setFilterSkill] = useState('');
   const [filterWorkPlace, setFilterWorkPlace] = useState('');
+
+  // Layout toggle: Naukri-style list vs compact table
+  const [viewMode, setViewMode] = useState<'list' | 'table'>('list');
 
   // Sort state (recent is default — matches Naukri.com "most recent first")
   const [sortKey, setSortKey] = useState('recent');
@@ -178,6 +189,42 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
     return result;
   }, [jobs, searchPhrase, filterSkill, filterWorkPlace, sortKey]);
 
+  // Derived display rows shared by the list and table layouts
+  const mappedJobs = React.useMemo(() => {
+    const fmt = (v: any) => {
+      const n = Number(v);
+      if (!n) return '';
+      return n >= 100000 ? `${n / 100000} L` : `${n}`;
+    };
+    return filteredAndSortedJobs.map((job: any, index: number) => {
+      const jobIdNum = Number(job.id || index);
+      const salaryFrom = fmt(job.salary);
+      const salaryTo = fmt(job.salaryTo);
+      const salaryText = salaryFrom && salaryTo
+        ? `₹${salaryFrom} - ₹${salaryTo}`
+        : salaryFrom
+          ? `₹${salaryFrom}`
+          : 'Salary Negotiable';
+      const expiry = job.expiryDate
+        ? (() => {
+            const d = new Date(job.expiryDate);
+            return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-IN');
+          })()
+        : '';
+      return {
+        job,
+        jobIdNum,
+        isApplied: appliedJobIds.includes(jobIdNum),
+        isApplying: applyingIds.has(jobIdNum),
+        designation: job.profileHeader || job.jobDesignation || 'N/A',
+        workPlace: job.workPlace || job.jobLocation || 'N/A',
+        experience: `${job.experiance ?? 0} - ${job.experianceTo ?? 2} yrs`,
+        salaryText,
+        expiry,
+      };
+    });
+  }, [filteredAndSortedJobs, appliedJobIds, applyingIds]);
+
   return (
     <div className="space-y-6 animate-fade-in text-left">
       {/* Header */}
@@ -195,6 +242,28 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-2.5 py-2 flex items-center gap-1 text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'list' ? 'bg-orange-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+              }`}
+              title="List view"
+            >
+              <ListIcon className="w-4 h-4" />
+              <span className="hidden md:inline">List</span>
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-2.5 py-2 flex items-center gap-1 text-xs font-bold transition-all cursor-pointer border-l border-slate-200 ${
+                viewMode === 'table' ? 'bg-orange-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+              }`}
+              title="Table view"
+            >
+              <Table2 className="w-4 h-4" />
+              <span className="hidden md:inline">Table</span>
+            </button>
+          </div>
           <button
             onClick={handleRefresh}
             disabled={isFetching}
@@ -323,34 +392,100 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
             Showing {filteredAndSortedJobs.length} of {totalCount} vacancies
           </div>
 
-          {/* NAUKRI-STYLE JOB LIST */}
+          {/* JOB ROWS — table or Naukri-style list */}
+          {viewMode === 'table' ? (
+            <div className="bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold">
+                    <tr>
+                      <th className="px-4 py-3 whitespace-nowrap">Job Code</th>
+                      <th className="px-4 py-3">Designation</th>
+                      <th className="px-4 py-3">Company</th>
+                      <th className="px-4 py-3">Location</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Experience</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Salary</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Last Date</th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {mappedJobs.map((row) => (
+                      <tr key={row.jobIdNum} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="px-4 py-3 font-mono text-[10px] text-slate-400 font-bold whitespace-nowrap">
+                          {row.job.jobCode || `JOB-${row.jobIdNum}`}
+                        </td>
+                        <td className="px-4 py-3 font-bold text-slate-900">
+                          <button
+                            onClick={() => onViewDetails(row.jobIdNum, row.job.jobCode)}
+                            className="hover:text-orange-600 transition-colors text-left cursor-pointer"
+                            title="View job details"
+                          >
+                            {row.designation}
+                          </button>
+                          {row.job.skill && (
+                            <span className="block text-[10px] font-medium italic text-slate-400 line-clamp-1">{row.job.skill}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-slate-700">{row.job.companyName || 'N/A'}</td>
+                        <td className="px-4 py-3 text-slate-600">{row.workPlace}</td>
+                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.experience}</td>
+                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.salaryText}</td>
+                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.expiry || '—'}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            {isEmployerOrStaff && onEditJob ? (
+                              <>
+                                <button
+                                  onClick={() => onViewDetails(row.jobIdNum, row.job.jobCode)}
+                                  className="py-1.5 px-3 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-lg text-[11px] font-bold transition-all inline-flex items-center gap-1 cursor-pointer text-slate-700 whitespace-nowrap"
+                                >
+                                  <Eye className="w-3.5 h-3.5" /><span>View</span>
+                                </button>
+                                <button
+                                  onClick={() => onEditJob(Number(row.job.id))}
+                                  className="py-1.5 px-3 bg-orange-50 border border-orange-100 text-orange-900 hover:bg-orange-100 hover:text-orange-950 rounded-lg text-[11px] font-bold transition-all inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                                >
+                                  <Edit className="w-3.5 h-3.5" /><span>Edit</span>
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                {row.isApplied ? (
+                                  <span className="inline-flex items-center justify-center gap-1 py-1.5 px-3 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-lg text-[11px] font-bold whitespace-nowrap">
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" /><span>Applied</span>
+                                  </span>
+                                ) : (
+                                  <button
+                                    onClick={() => handleQuickApply(row.jobIdNum)}
+                                    disabled={row.isApplying}
+                                    className="py-1.5 px-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[11px] font-bold shadow-xs transition-all inline-flex items-center gap-1 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+                                  >
+                                    {row.isApplying
+                                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      : <Send className="w-3.5 h-3.5" />}
+                                    <span>{row.isApplying ? 'Applying...' : 'Apply'}</span>
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => onViewDetails(row.jobIdNum, row.job.jobCode)}
+                                  className="py-1.5 px-3 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-lg text-[11px] font-bold transition-all inline-flex items-center gap-1 cursor-pointer text-slate-700 whitespace-nowrap"
+                                >
+                                  <Eye className="w-3.5 h-3.5" /><span>View</span>
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
           <div className="bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-xs divide-y divide-slate-100">
-            {filteredAndSortedJobs.map((job: any, index: number) => {
-              const jobIdNum = Number(job.id || index);
-              const isApplied = appliedJobIds.includes(jobIdNum);
-              const isApplying = applyingIds.has(jobIdNum);
-              const designation = job.profileHeader || job.jobDesignation || 'N/A';
-              const workPlace = job.workPlace || job.jobLocation || 'N/A';
-              const experience = `${job.experiance ?? 0} - ${job.experianceTo ?? 2} yrs`;
-              const fmt = (v: any) => {
-                const n = Number(v);
-                if (!n) return '';
-                return n >= 100000 ? `${n / 100000} L` : `${n}`;
-              };
-              const salaryFrom = fmt(job.salary);
-              const salaryTo = fmt(job.salaryTo);
-              const salaryText = salaryFrom && salaryTo
-                ? `₹${salaryFrom} - ₹${salaryTo}`
-                : salaryFrom
-                  ? `₹${salaryFrom}`
-                  : 'Salary Negotiable';
-              const expiry = job.expiryDate
-                ? (() => {
-                    const d = new Date(job.expiryDate);
-                    return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-IN');
-                  })()
-                : '';
-
+            {mappedJobs.map(({ job, jobIdNum, isApplied, isApplying, designation, workPlace, experience, salaryText, expiry }) => {
               return (
                 <div
                   key={jobIdNum}
@@ -430,7 +565,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                             {isApplying
                               ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               : <Send className="w-3.5 h-3.5" />}
-                            <span>{isApplying ? 'Applying...' : 'Apply Now'}</span>
+                            <span>{isApplying ? 'Applying...' : 'Apply'}</span>
                           </button>
                         )}
                         <button
@@ -447,6 +582,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
               );
             })}
           </div>
+          )}
         </>
       )}
 

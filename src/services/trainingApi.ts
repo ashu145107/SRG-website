@@ -4,20 +4,22 @@
  */
 
 import { baseApi } from './baseApi';
-import { MockDb } from './mockDb';
+
 import { Training, SHGProfile } from '../types';
+
+const shgStore: SHGProfile[] = [];
 
 export const trainingApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getTrainings: builder.query<Training[], void>({
       queryFn: async () => {
-        return { data: MockDb.getTrainings() };
+        return { data: [] };
       },
       providesTags: ['Training']
     }),
     createTraining: builder.mutation<Training, Omit<Training, 'id'>>({
       queryFn: async (payload) => {
-        const list = MockDb.getTrainings();
+        const list = [];
         const fresh: Training = {
           ...payload,
           id: `t-${Date.now()}`
@@ -30,13 +32,13 @@ export const trainingApi = baseApi.injectEndpoints({
     }),
     getSHGProfiles: builder.query<SHGProfile[], void>({
       queryFn: async () => {
-        return { data: MockDb.getSHGs() };
+        return { data: [...shgStore] };
       },
       providesTags: ['SHG']
     }),
     getSHGById: builder.query<SHGProfile, string>({
       queryFn: async (id) => {
-        const shgs = MockDb.getSHGs();
+        const shgs = shgStore;
         const found = shgs.find(s => s.id === id);
         if (!found) return { error: { status: 404, data: 'SHG profile not found' } };
         return { data: found };
@@ -45,7 +47,7 @@ export const trainingApi = baseApi.injectEndpoints({
     }),
     updateSHGProfile: builder.mutation<SHGProfile, Partial<SHGProfile> & { id: string }>({
       queryFn: async (updated) => {
-        const shgs = MockDb.getSHGs();
+        const shgs = shgStore;
         const index = shgs.findIndex(s => s.id === updated.id);
         if (index === -1) {
           const fresh: SHGProfile = {
@@ -59,11 +61,9 @@ export const trainingApi = baseApi.injectEndpoints({
             productShowcase: updated.productShowcase || []
           };
           shgs.push(fresh);
-          MockDb.setSHGs(shgs);
           return { data: fresh };
         }
         shgs[index] = { ...shgs[index], ...updated } as SHGProfile;
-        MockDb.setSHGs(shgs);
         return { data: shgs[index] };
       },
       invalidatesTags: (result, error, arg) => ['SHG', { type: 'SHG', id: arg.id }]

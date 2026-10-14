@@ -4,9 +4,11 @@
  */
 
 import { baseApi } from './baseApi';
-import { MockDb } from './mockDb';
 import axiosInstance from './axiosInstance';
 import { CandidateProfile, JobApplication } from '../types';
+
+const candidateStore: CandidateProfile[] = [];
+const applicationStore: JobApplication[] = [];
 
 const DEFAULT_STATUS_NAMES: Record<number, string> = {
   1: 'Applied',
@@ -105,13 +107,13 @@ export const candidateApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getCandidates: builder.query<CandidateProfile[], void>({
       queryFn: async () => {
-        return { data: MockDb.getCandidates() };
+        return { data: [...candidateStore] };
       },
       providesTags: ['Candidate']
     }),
     getCandidateById: builder.query<CandidateProfile, string>({
       queryFn: async (id) => {
-        const list = MockDb.getCandidates();
+        const list = candidateStore;
         const found = list.find(c => c.id === id);
         if (!found) return { error: { status: 404, data: 'Candidate profile not found' } };
         return { data: found };
@@ -120,7 +122,7 @@ export const candidateApi = baseApi.injectEndpoints({
     }),
     updateCandidate: builder.mutation<CandidateProfile, Partial<CandidateProfile> & { id: string }>({
       queryFn: async (updated) => {
-        const list = MockDb.getCandidates();
+        const list = candidateStore;
         const index = list.findIndex(c => c.id === updated.id);
         if (index === -1) {
           const fresh: CandidateProfile = {
@@ -134,11 +136,9 @@ export const candidateApi = baseApi.injectEndpoints({
             skills: updated.skills || []
           };
           list.push(fresh);
-          MockDb.setCandidates(list);
           return { data: fresh };
         }
         list[index] = { ...list[index], ...updated } as CandidateProfile;
-        MockDb.setCandidates(list);
         return { data: list[index] };
       },
       invalidatesTags: (result, error, arg) => ['Candidate', { type: 'Candidate', id: arg.id }]
@@ -209,7 +209,7 @@ export const candidateApi = baseApi.injectEndpoints({
           console.warn('Failed to fetch job applications from API, falling back to mock DB:', err);
         }
 
-        let apps = MockDb.getApplications();
+        let apps = [...applicationStore];
         if (f?.candidateId) {
           const target = String(f.candidateId).replace(/\D/g, '');
           const matches = target ? apps.filter(a => String(a.candidateId).replace(/\D/g, '') === target) : [];
@@ -225,7 +225,7 @@ export const candidateApi = baseApi.injectEndpoints({
     }),
     applyToJob: builder.mutation<JobApplication, Omit<JobApplication, 'id' | 'status' | 'appliedAt'>>({
       queryFn: async (payload) => {
-        const apps = MockDb.getApplications();
+        const apps = applicationStore;
         // Check duplication
         if (apps.some(a => a.jobId === payload.jobId && a.candidateId === payload.candidateId)) {
           return { error: { status: 400, data: 'You have already applied for this job opportunity!' } };
@@ -237,7 +237,6 @@ export const candidateApi = baseApi.injectEndpoints({
           appliedAt: new Date().toISOString().split('T')[0]
         };
         apps.push(newApp);
-        MockDb.setApplications(apps);
         return { data: newApp };
       },
       invalidatesTags: ['Application']
@@ -247,7 +246,7 @@ export const candidateApi = baseApi.injectEndpoints({
       { id: string; status: JobApplication['status']; interviewDate?: string }
     >({
       queryFn: async (payload) => {
-        const apps = MockDb.getApplications();
+        const apps = applicationStore;
         const index = apps.findIndex(a => a.id === payload.id);
         if (index === -1) return { error: { status: 404, data: 'Application not found' } };
         
@@ -255,7 +254,6 @@ export const candidateApi = baseApi.injectEndpoints({
         if (payload.interviewDate) {
           apps[index].interviewDate = payload.interviewDate;
         }
-        MockDb.setApplications(apps);
         return { data: apps[index] };
       },
       invalidatesTags: ['Application']

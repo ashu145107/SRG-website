@@ -10,7 +10,8 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { useGetDashboardStatsQuery } from '../services/dashboardApi';
 import { useGetInitiativesQuery } from '../services/initiativeApi';
-import { MockDb } from '../services/mockDb';
+import { SuccessStory } from '../types';
+
 import { Navbar } from '../components/Navbar';
 import { SiteFooter } from '../components/SiteFooter';
 import { readSectionTarget } from '../utils/sectionNav';
@@ -81,6 +82,28 @@ const PRODUCTS = [
   { name: 'Portable Steel Glass', nameMr: 'पोर्टेबल स्टीलचा ग्लास', desc: 'Collapsible, plastic-free, travel ready' },
   { name: 'Pickles & Masala', nameMr: 'लोणचे व मसाले', desc: 'Traditional recipes, small batches' },
   { name: 'Patravali (Leaf Plate) / Trencher', nameMr: 'पत्रावळ', desc: 'Pressed leaf, fully compostable' }
+];
+
+/** Community success stories shown in the home-page carousel (English + Marathi). */
+const SUCCESS_STORIES: SuccessStory[] = [
+  {
+    id: 's-1',
+    nameEn: 'Vandana Santosh Patil',
+    nameMr: 'वंदना संतोष पाटील',
+    roleEn: 'Founder, Swami Krupa Food Products',
+    roleMr: 'संस्थापक, स्वामी कृपा गृहोद्योग',
+    storyEn: 'Started with just preparing pickles from a small home kitchen. Under Gurumauli mentoring, our group now distributes organic foodstuffs to 15 cities with a thriving 20-woman team!',
+    storyMr: 'अवघ्या ३ महिलांसह घरगुती लोणचे बनवण्यापासून सुरुवात केली. गुरुमाऊलींच्या मार्गदर्शनामुळे आज आमचा बचत गट १५ शहरांमध्ये उत्पादने पाठवतो आणि २० महिलांना रोजगार मिळाला आहे!'
+  },
+  {
+    id: 's-2',
+    nameEn: 'Aniket Devram Mor',
+    nameMr: 'अनिकेत सुदाम मोरे',
+    roleEn: 'Web Developer / Placed Seeker',
+    roleMr: 'वेब डेव्हलपर (नोकरी प्राप्त)',
+    storyEn: 'Coming from a rural farming household, getting access to technical coaching at Dindori Seva Marg completely revolutionized my path. Placed in Hinjawadi IT hub!',
+    storyMr: 'ग्रामीण भागातून शिक्षणासाठी खूप धडपड सुरू होती. दिंडोरी दरबारच्या स्वयंरोजगार केंद्राद्वारे तांत्रिक प्रशिक्षण आणि प्लेसमेंट मिळाल्यामुळे आज मी पुण्यात नामांकित आयटी कंपनीत कार्यरत आहे.'
+  }
 ];
 
 /** Wraps content in a scroll-reveal that adds `.on` once visible. */
@@ -193,7 +216,7 @@ export default function Home() {
 
   const [activeInitiativeTab, setActiveInitiativeTab] = useState<'upcoming' | 'past'>('upcoming');
   const [storyIndex, setStoryIndex] = useState(0);
-  const stories = MockDb.getStories();
+  const stories = SUCCESS_STORIES;
   const currentStory = stories[storyIndex];
 
   // Hero rotating keyword + the carousel slide it selects

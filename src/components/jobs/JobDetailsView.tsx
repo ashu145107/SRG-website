@@ -233,7 +233,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
                     className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {isApplying && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                    <span>{isApplying ? 'अर्ज सबमिट करत आहे... / Submitting...' : 'अर्ज करा / Apply Now'}</span>
+                    <span>{isApplying ? 'अर्ज सबमिट करत आहे... / Submitting...' : 'अर्ज करा / Apply'}</span>
                   </button>
                 )}
               </div>

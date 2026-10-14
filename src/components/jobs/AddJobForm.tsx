@@ -23,6 +23,8 @@ import {
 } from '../../services/jobMasterApi';
 import { Alert, Toast } from '../ui/FeedbackComponents';
 
+const MAX_JOB_DESCRIPTION_LENGTH = 4000;
+
 interface AddJobFormProps {
   onSuccess?: (newJob: JobRequirement) => void;
   onCancel?: () => void;
@@ -84,7 +86,6 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
     salaryPeriodId: 1,
     benefits: '',
     weeklyOffId: 1,
-    jobCode: `JOB-${Math.floor(1000 + Math.random() * 9000)}`,
     companyTypeId: 0,
     industryTypeId: 0,
     jobTypeId: 0,
@@ -134,6 +135,11 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
 
     if (!form.jobDiscription.trim() || form.jobDiscription.length < 10) {
       setValidationError('कृपया कमीत कमी १० अक्षरांचे नोकरीचे वर्णन / Description प्रविष्ट करा.');
+      return;
+    }
+
+    if (form.jobDiscription.length > MAX_JOB_DESCRIPTION_LENGTH) {
+      setValidationError(`नोकरीचे वर्णन ${MAX_JOB_DESCRIPTION_LENGTH} अक्षरांपेक्षा जास्त असू शकत नाही / Description cannot exceed ${MAX_JOB_DESCRIPTION_LENGTH} characters.`);
       return;
     }
 
@@ -244,30 +250,17 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Core Info Row */}
-        <div className="bg-slate-50/55 p-4 rounded-xl border border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे कोड / Job Code</label>
-            <input
-              type="text"
-              name="jobCode"
-              value={form.jobCode}
-              onChange={handleChange}
-              className="w-full text-xs font-mono font-bold bg-slate-100 p-2.5 rounded-lg border border-slate-200 text-slate-600 focus:outline-none"
-              readOnly
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे शीर्षक (हेडर) / Profile Header *</label>
-            <input
-              type="text"
-              name="profileHeader"
-              placeholder="e.g. Hiring experienced web programmers / Urgent Need of Drivers"
-              value={form.profileHeader}
-              onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
-              required
-            />
-          </div>
+        <div className="bg-slate-50/55 p-4 rounded-xl border border-slate-100">
+          <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे शीर्षक (हेडर) / Profile Header *</label>
+          <input
+            type="text"
+            name="profileHeader"
+            placeholder="e.g. Hiring experienced web programmers / Urgent Need of Drivers"
+            value={form.profileHeader}
+            onChange={handleChange}
+            className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+            required
+          />
         </div>
 
         {/* Designation, Vacancies & Role Type */}
@@ -671,12 +664,16 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
           <textarea
             name="jobDiscription"
             rows={5}
+            maxLength={MAX_JOB_DESCRIPTION_LENGTH}
             placeholder="नोकरीचे मुख्य काम, कामाच्या वेळा आणि जबाबदाऱ्या सविस्तर लिहा..."
             value={form.jobDiscription}
             onChange={handleChange}
             className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all resize-none"
             required
           />
+          <div className={`mt-1 text-[10px] font-semibold text-right ${form.jobDiscription.length >= MAX_JOB_DESCRIPTION_LENGTH ? 'text-rose-600' : 'text-slate-400'}`}>
+            {MAX_JOB_DESCRIPTION_LENGTH - form.jobDiscription.length} अक्षरे शिल्लक / {MAX_JOB_DESCRIPTION_LENGTH - form.jobDiscription.length} characters left ({form.jobDiscription.length}/{MAX_JOB_DESCRIPTION_LENGTH})
+          </div>
         </div>
 
         <div>
