@@ -7,15 +7,14 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { useSectionNav } from '../utils/sectionNav';
-import { ShieldCheck, CircleHelp, MessageCircle, Phone, Mail, Linkedin, Play } from 'lucide-react';
+import { Phone, Mail, MessageCircle, Play } from 'lucide-react';
 
 export interface SiteFooterHandlers {
   scrollTo?: (section: string) => void;
-  openModal?: (modal: 'query' | 'feedback') => void;
   enterGateway?: (role: string) => void;
 }
 
-export function SiteFooter({ scrollTo, openModal, enterGateway }: SiteFooterHandlers) {
+export function SiteFooter({ scrollTo, enterGateway }: SiteFooterHandlers) {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -25,26 +24,10 @@ export function SiteFooter({ scrollTo, openModal, enterGateway }: SiteFooterHand
   // and letting Home scroll to the target.
   const section = (id: string) => () => (scrollTo ? scrollTo(id) : goSection(id));
   const gateway = (role: string) => () => (enterGateway ? enterGateway(role) : goHome());
-  const modal = (which: 'query' | 'feedback') => () => (openModal ? openModal(which) : goHome());
 
   return (
     <footer className="bg-white border-t border-theme-lightViolet pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        <div className="bg-theme-lightViolet/70 rounded-2xl p-6 mb-10 flex flex-col md:flex-row items-center justify-between gap-5 border border-theme-lavender/10">
-          <p className="text-theme-darkViolet font-bold text-center md:text-left">
-            <ShieldCheck className="inline w-4 h-4 text-theme-lavender mr-2 -mt-0.5" />
-            {t('footer.noFeeNotice')}
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3 shrink-0">
-            <button onClick={modal('query')} className="btn-gloss inline-flex items-center gap-2 bg-theme-lavender text-white px-6 py-3 rounded-full font-bold text-sm hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30 cursor-pointer">
-              <CircleHelp className="w-4 h-4" /> {t('footer.askQuestion')}
-            </button>
-            <button onClick={modal('feedback')} className="inline-flex items-center gap-2 bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold text-sm hover:border-theme-deepTeal hover:text-theme-deepTeal transition-all cursor-pointer">
-              <MessageCircle className="w-4 h-4" /> {t('footer.giveFeedback')}
-            </button>
-          </div>
-        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[4fr_2.5fr_2.5fr_3fr] gap-8 lg:gap-10 mb-12 items-start">
           <div>
@@ -75,8 +58,8 @@ export function SiteFooter({ scrollTo, openModal, enterGateway }: SiteFooterHand
             <a href="https://play.google.com/store/apps/details?id=dindori.pranit.swayamrojgarapp" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-2 text-sm font-bold text-theme-lavender hover:underline">
               <Play className="w-4 h-4 fill-current" /> {t('footer.getApp')}
             </a>
-            <a href="https://in.linkedin.com/showcase/dpsm-swayamrojgar/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-2 text-sm font-bold text-theme-lavender hover:underline">
-              <Linkedin className="w-4 h-4" /> {t('footer.followLinkedIn')}
+            <a href="https://wa.me/917755941753" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-2 text-sm font-bold text-emerald-600 hover:underline">
+              <MessageCircle className="w-4 h-4" /> {t('footer.followWhatsApp')}
             </a>
           </div>
 
@@ -103,8 +86,6 @@ export function SiteFooter({ scrollTo, openModal, enterGateway }: SiteFooterHand
             <ul className="space-y-3 text-sm text-theme-darkViolet/60 font-medium">
               <li><button onClick={section('offices')} className="hover:text-theme-lavender transition cursor-pointer text-left">{t('footer.aboutUs')}</button></li>
               <li><button onClick={section('contact')} className="hover:text-theme-lavender transition cursor-pointer text-left">{t('footer.contactUs')}</button></li>
-              <li><button onClick={modal('query')} className="hover:text-theme-lavender transition cursor-pointer text-left">{t('footer.askQuestionLink')}</button></li>
-              <li><button onClick={modal('feedback')} className="hover:text-theme-lavender transition cursor-pointer text-left">{t('footer.giveFeedbackLink')}</button></li>
               <li><button onClick={section('contact')} className="hover:text-theme-lavender transition cursor-pointer text-left">{t('footer.faqHelp')}</button></li>
             </ul>
           </div>

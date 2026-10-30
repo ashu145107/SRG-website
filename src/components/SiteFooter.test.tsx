@@ -40,7 +40,7 @@ describe('SiteFooter', () => {
     expect(screen.getByText('Information')).toBeInTheDocument();
     expect(
       screen.getByText(
-        '© 2026 Shri Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag. All Rights Reserved.'
+        '© 2026 Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag. All Rights Reserved.'
       )
     ).toBeInTheDocument();
     expect(screen.getByText('admin@dindoripranit.org')).toHaveAttribute(
@@ -63,17 +63,6 @@ describe('SiteFooter', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Our products' }));
     expect(scrollTo).toHaveBeenCalledWith('products');
-  });
-
-  it('invokes the modal handler for query and feedback', async () => {
-    const openModal = jest.fn();
-    renderWithProviders(<SiteFooter openModal={openModal} />);
-
-    await userEvent.click(screen.getByRole('button', { name: 'Ask a Question' }));
-    expect(openModal).toHaveBeenCalledWith('query');
-
-    await userEvent.click(screen.getByRole('button', { name: 'Give Feedback' }));
-    expect(openModal).toHaveBeenCalledWith('feedback');
   });
 
   it('invokes the gateway handler with the clicked role', async () => {

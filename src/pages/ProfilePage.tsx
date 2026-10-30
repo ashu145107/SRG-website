@@ -174,17 +174,36 @@ const processProfileImage = (file: File): Promise<File> =>
 /** Convert an ISO/date string into the yyyy-mm-dd value a date input expects. */
 const toInputDate = (value?: string): string => {
   if (!value) return '';
+  // Preserve date-only values verbatim so a UTC conversion can never shift
+  // the day (e.g. "1990-05-15T00:00:00+05:30").
+  const dateOnly = String(value).match(/^(\d{4}-\d{2}-\d{2})/);
+  if (dateOnly) return dateOnly[1];
   const date = new Date(value);
   if (isNaN(date.getTime())) return '';
-  return date.toISOString().slice(0, 10);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+};
+
+/** Canonical gender values understood by the profile API. */
+type GenderValue = 'Male' | 'Female' | 'Other' | '';
+
+/** Accept legacy short codes and Marathi labels, returning a canonical value. */
+export const normalizeGender = (value?: string): GenderValue => {
+  const v = String(value || '').trim().toLowerCase();
+  if (!v) return '';
+  if (['m', 'male', 'पुरुष'].includes(v)) return 'Male';
+  if (['f', 'female', 'स्त्री', 'महिला'].includes(v)) return 'Female';
+  if (['o', 'other', 'इतर'].includes(v)) return 'Other';
+  return '';
 };
 
 /** Render an ISO/date string as a human-readable date. */
-const formatDisplayDate = (value?: string): string => {
+const formatDisplayDate = (value?: string, locale = 'en-IN'): string => {
   if (!value) return '';
   const date = new Date(value);
   if (isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return date.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 interface DetailsFormState {
@@ -258,7 +277,8 @@ const emptyEducationForm: EducationFormState = {
 };
 
 export default function ProfilePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language === 'mr' ? 'mr-IN' : 'en-IN';
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -336,12 +356,19 @@ export default function ProfilePage() {
   // Older profiles stored free-text location names with id 0. The lists load one
   // level at a time, so keep matching names to ids as each level arrives until
   // the saved location shows as selected in the edit form.
+  const matchesMasterName = (item: GenericMasterItem, name?: string) => {
+    const target = String(name || '').trim().toLowerCase();
+    if (!target) return false;
+    return (
+      String(item.name || '').trim().toLowerCase() === target ||
+      String(item.enName || '').trim().toLowerCase() === target
+    );
+  };
+
   useEffect(() => {
     if (!detailsEditing) return;
-    const matchesName = (item: GenericMasterItem, name: string) =>
-      item.name === name || item.enName === name;
     const resolveId = (savedId: number, name: string, list: GenericMasterItem[]) =>
-      savedId || list.find((item) => matchesName(item, name))?.id || 0;
+      savedId || list.find((item) => matchesMasterName(item, name))?.id || 0;
     setDetailsStateId((prev) => resolveId(prev, detailsForm.state, detailStates));
     setDetailsDistrictId((prev) => resolveId(prev, detailsForm.district, detailDistricts));
     setDetailsTalukaId((prev) => resolveId(prev, detailsForm.taluka, detailTalukas));
@@ -354,6 +381,17 @@ export default function ProfilePage() {
     detailDistricts,
     detailTalukas,
   ]);
+
+  // Resolve the saved profile location ids (or legacy free-text names) even in
+  // view mode, so the read-only fields can be localised from the master lists.
+  useEffect(() => {
+    if (!profile || detailsEditing) return;
+    const resolveId = (savedId: number, name: string, list: GenericMasterItem[]) =>
+      savedId || list.find((item) => matchesMasterName(item, name))?.id || 0;
+    setDetailsStateId((prev) => prev || resolveId(profile.stateId || 0, profile.state || '', detailStates));
+    setDetailsDistrictId((prev) => prev || resolveId(profile.districtId || 0, profile.district || '', detailDistricts));
+    setDetailsTalukaId((prev) => prev || resolveId(profile.talukaId || 0, profile.taluka || '', detailTalukas));
+  }, [profile, detailsEditing, detailStates, detailDistricts, detailTalukas]);
 
   // Older profiles stored free-text education/specialization names with id 0, or
   // the id alone. Resolve matching names to ids as the cascading lists arrive so
@@ -445,6 +483,34 @@ export default function ProfilePage() {
   const canEditPersonalInfo =
     user.role === UserRole.CANDIDATE || isRoleAllowedForTab(user.role, 'admin');
 
+  const genderLabel = (value?: string) => {
+    const normalized = normalizeGender(value);
+    if (!normalized) return '-';
+    const key = normalized === 'Male' ? 'male' : normalized === 'Female' ? 'female' : 'otherGender';
+    return t(`profile.personal.${key}`);
+  };
+
+  const maritalLabel = (value?: string) => {
+    const key = (value || '').trim().toLowerCase();
+    if (['single', 'unmarried', 'अविवाहित'].includes(key)) return t('profileView.marital.single');
+    if (['married', 'विवाहित'].includes(key)) return t('profileView.marital.married');
+    if (['divorced', 'घटस्फोटित'].includes(key)) return t('profileView.marital.divorced');
+    if (['widowed', 'विधवा', 'विधुर', 'विधवा/विधुर'].includes(key)) return t('profileView.marital.widowed');
+    return value || '-';
+  };
+
+  // Read-only location names are resolved from the master lists so they follow
+  // the active UI language instead of staying frozen in the saved language.
+  const displayState =
+    getLocalizedName(detailStates.find((s) => s.id === (profile?.stateId || detailsStateId))) ||
+    profile?.state || '-';
+  const displayDistrict =
+    getLocalizedName(detailDistricts.find((d) => d.id === (profile?.districtId || detailsDistrictId))) ||
+    profile?.district || '-';
+  const displayTaluka =
+    getLocalizedName(detailTalukas.find((tk) => tk.id === (profile?.talukaId || detailsTalukaId))) ||
+    profile?.taluka || '-';
+
   const handleDetailsChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
@@ -459,7 +525,7 @@ export default function ProfilePage() {
       mobile: profile?.phone || user.phone || '',
       email: profile?.email || user.email || '',
       dob: toInputDate(profile?.dob),
-      gender: profile?.gender || '',
+      gender: normalizeGender(profile?.gender),
       maritalStatus: profile?.maritalStatus || '',
       state: profile?.state || '',
       district: profile?.district || '',
@@ -705,11 +771,11 @@ export default function ProfilePage() {
   };
 
   const tabs = [
-    { key: 'details' as const, label: 'Basic Details', icon: <UserCircle className="w-4 h-4" /> },
-    { key: 'education' as const, label: 'Education Details', icon: <GraduationCap className="w-4 h-4" /> },
-    { key: 'employment' as const, label: 'Employment History', icon: <Briefcase className="w-4 h-4" /> },
-    { key: 'pic' as const, label: 'Profile Picture', icon: <Camera className="w-4 h-4" /> },
-    { key: 'resume' as const, label: 'Resume', icon: <FileUp className="w-4 h-4" /> },
+    { key: 'details' as const, label: t('profileView.tabs.details'), icon: <UserCircle className="w-4 h-4" /> },
+    { key: 'education' as const, label: t('profileView.tabs.education'), icon: <GraduationCap className="w-4 h-4" /> },
+    { key: 'employment' as const, label: t('profileView.tabs.employment'), icon: <Briefcase className="w-4 h-4" /> },
+    { key: 'pic' as const, label: t('profileView.tabs.pic'), icon: <Camera className="w-4 h-4" /> },
+    { key: 'resume' as const, label: t('profileView.tabs.resume'), icon: <FileUp className="w-4 h-4" /> },
   ].filter((tab) => {
     if (tab.key === 'education' && !canEditPersonalInfo) return false;
     if (user?.role === UserRole.COMPANY && (tab.key === 'resume' || tab.key === 'employment')) return false;
@@ -858,11 +924,11 @@ export default function ProfilePage() {
         {/* Page header */}
         <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-2xl font-black text-blue-950">My Profile</h1>
+            <h1 className="text-2xl font-black text-blue-950">{t('profileView.pageTitle')}</h1>
             <p className="text-xs text-slate-500 font-medium mt-1">
               {user.role === UserRole.COMPANY
-                ? 'View and update your company details and profile picture.'
-                : 'View and update your personal details, profile picture, resume, and employment history.'}
+                ? t('profileView.subtitleCompany')
+                : t('profileView.subtitleCandidate')}
             </p>
           </div>
           {user.role === UserRole.COMPANY && (
@@ -905,8 +971,8 @@ export default function ProfilePage() {
                   {/* Header with Edit / Save actions */}
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div>
-                      <p className="text-sm font-extrabold text-slate-800">Personal Information</p>
-                      <p className="text-[10px] text-slate-400 font-semibold">Keep your personal details up to date.</p>
+                      <p className="text-sm font-extrabold text-slate-800">{t('profileView.personal.sectionTitle')}</p>
+                      <p className="text-[10px] text-slate-400 font-semibold">{t('profileView.personal.sectionHint')}</p>
                     </div>
                     {!detailsEditing ? (
                       canEditPersonalInfo && (
@@ -914,7 +980,7 @@ export default function ProfilePage() {
                           onClick={startEditDetails}
                           className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-sm transition-all cursor-pointer"
                         >
-                          <Pencil className="w-4 h-4" /> Edit
+                          <Pencil className="w-4 h-4" /> {t('profileView.actions.edit')}
                         </button>
                       )
                     ) : (
@@ -924,7 +990,7 @@ export default function ProfilePage() {
                           disabled={detailsSaving}
                           className="px-4 py-2.5 text-xs font-semibold hover:bg-gray-100 rounded-xl text-slate-600 transition-colors cursor-pointer disabled:opacity-50"
                         >
-                          Cancel
+                          {t('profileView.actions.cancel')}
                         </button>
                         <button
                           onClick={handleSaveDetails}
@@ -936,7 +1002,7 @@ export default function ProfilePage() {
                           ) : (
                             <Save className="w-4 h-4" />
                           )}
-                          {detailsSaving ? 'Saving...' : 'Save'}
+                          {detailsSaving ? t('profileView.actions.saving') : t('profileView.actions.save')}
                         </button>
                       </div>
                     )}
@@ -965,20 +1031,20 @@ export default function ProfilePage() {
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.gender')}</label>
                           <select name="gender" value={detailsForm.gender} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white">
-                            <option value="">-- Select --</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
+                            <option value="">{t('profileView.employment.selectPlaceholder')}</option>
+                            <option value="Male">{t('profile.personal.male')}</option>
+                            <option value="Female">{t('profile.personal.female')}</option>
+                            <option value="Other">{t('profile.personal.otherGender')}</option>
                           </select>
                         </div>
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.maritalStatus')}</label>
                           <select name="maritalStatus" value={detailsForm.maritalStatus} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white">
-                            <option value="">-- Select --</option>
-                            <option value="Single">Single</option>
-                            <option value="Married">Married</option>
-                            <option value="Divorced">Divorced</option>
-                            <option value="Widowed">Widowed</option>
+                            <option value="">{t('profileView.employment.selectPlaceholder')}</option>
+                            <option value="Single">{t('profileView.marital.single')}</option>
+                            <option value="Married">{t('profileView.marital.married')}</option>
+                            <option value="Divorced">{t('profileView.marital.divorced')}</option>
+                            <option value="Widowed">{t('profileView.marital.widowed')}</option>
                           </select>
                         </div>
                         <div>
@@ -1045,7 +1111,7 @@ export default function ProfilePage() {
                           disabled={detailsSaving}
                           className="px-4 py-2.5 text-xs font-semibold hover:bg-gray-100 rounded-xl text-slate-600 transition-colors cursor-pointer disabled:opacity-50"
                         >
-                          Cancel
+                          {t('profileView.actions.cancel')}
                         </button>
                         <button
                           onClick={handleSaveDetails}
@@ -1057,7 +1123,7 @@ export default function ProfilePage() {
                           ) : (
                             <Save className="w-4 h-4" />
                           )}
-                          {detailsSaving ? 'Saving...' : 'Save'}
+                          {detailsSaving ? t('profileView.actions.saving') : t('profileView.actions.save')}
                         </button>
                       </div>
                     </div>
@@ -1065,18 +1131,18 @@ export default function ProfilePage() {
                     /* ---- Read-only details ---- */
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {[
-                        { label: 'Full Name', value: profile.fullName || user.name || '-' },
-                        { label: 'Email', value: profile.email || user.email || '-' },
-                        { label: 'Phone', value: profile.phone || user.phone || '-' },
-                        { label: 'Role', value: user.role },
-                        { label: 'Date of Birth', value: formatDisplayDate(profile.dob) || '-' },
-                        { label: 'Gender', value: profile.gender || '-' },
-                        { label: 'Marital Status', value: profile.maritalStatus || '-' },
-                        { label: 'State', value: profile.state || '-' },
-                        { label: 'District', value: profile.district || '-' },
-                        { label: 'Taluka', value: profile.taluka || '-' },
-                        { label: 'Pincode', value: profile.pincode || '-' },
-                        { label: 'Address', value: profile.address || '-', full: true },
+                        { label: t('profileView.personal.fullName'), value: profile.fullName || user.name || '-' },
+                        { label: t('profileView.personal.email'), value: profile.email || user.email || '-' },
+                        { label: t('profileView.personal.phone'), value: profile.phone || user.phone || '-' },
+                        { label: t('profileView.personal.role'), value: t(`profileView.roles.${user.role}`, { defaultValue: user.role }) },
+                        { label: t('profileView.personal.dob'), value: formatDisplayDate(profile.dob, dateLocale) || '-' },
+                        { label: t('profileView.personal.gender'), value: genderLabel(profile.gender) },
+                        { label: t('profileView.personal.maritalStatus'), value: maritalLabel(profile.maritalStatus) },
+                        { label: t('profileView.personal.state'), value: displayState },
+                        { label: t('profileView.personal.district'), value: displayDistrict },
+                        { label: t('profileView.personal.taluka'), value: displayTaluka },
+                        { label: t('profileView.personal.pincode'), value: profile.pincode || '-' },
+                        { label: t('profileView.personal.address'), value: profile.address || '-', full: true },
                       ].map((item, i) => (
                         <div key={i} className={`bg-slate-50 rounded-xl p-4 ${item.full ? 'sm:col-span-2' : ''}`}>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{item.label}</p>
@@ -1087,7 +1153,7 @@ export default function ProfilePage() {
                   )}
                 </>
               ) : (
-                <p className="text-xs text-gray-500 text-center py-12">No profile data found.</p>
+                <p className="text-xs text-gray-500 text-center py-12">{t('profileView.personal.noData')}</p>
               )}
             </div>
           )}
@@ -1102,8 +1168,8 @@ export default function ProfilePage() {
                   {/* Header with Edit / Save actions */}
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div>
-                      <p className="text-sm font-extrabold text-slate-800">Education Details</p>
-                      <p className="text-[10px] text-slate-400 font-semibold">Your educational and professional summary.</p>
+                      <p className="text-sm font-extrabold text-slate-800">{t('profileView.education.sectionTitle')}</p>
+                      <p className="text-[10px] text-slate-400 font-semibold">{t('profileView.education.sectionHint')}</p>
                     </div>
                     {!educationEditing ? (
                       canEditPersonalInfo && (
@@ -1111,7 +1177,7 @@ export default function ProfilePage() {
                           onClick={startEditEducation}
                           className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-sm transition-all cursor-pointer"
                         >
-                          <Pencil className="w-4 h-4" /> Edit
+                          <Pencil className="w-4 h-4" /> {t('profileView.actions.edit')}
                         </button>
                       )
                     ) : (
@@ -1121,7 +1187,7 @@ export default function ProfilePage() {
                           disabled={educationSaving}
                           className="px-4 py-2.5 text-xs font-semibold hover:bg-gray-100 rounded-xl text-slate-600 transition-colors cursor-pointer disabled:opacity-50"
                         >
-                          Cancel
+                          {t('profileView.actions.cancel')}
                         </button>
                         <button
                           onClick={handleSaveEducation}
@@ -1133,7 +1199,7 @@ export default function ProfilePage() {
                           ) : (
                             <Save className="w-4 h-4" />
                           )}
-                          {educationSaving ? 'Saving...' : 'Save'}
+                          {educationSaving ? t('profileView.actions.saving') : t('profileView.actions.save')}
                         </button>
                       </div>
                     )}
@@ -1144,7 +1210,7 @@ export default function ProfilePage() {
                     <div className="border border-orange-200 bg-orange-50/40 rounded-2xl p-4 sm:p-6 space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Education</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.education')}</label>
                           <select name="education" value={educationForm.educationId} onChange={handleEducationSelect} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white">
                             <option value={0}>{t('reg.option.selectEducation')}</option>
                             {educations.map((ed) => (
@@ -1156,7 +1222,7 @@ export default function ProfilePage() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Specialization</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.specialization')}</label>
                           <select name="specialization" value={educationForm.specializationId} onChange={handleSpecializationSelect} disabled={!educationForm.educationId} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white disabled:opacity-60">
                             <option value={0}>{t('reg.option.selectSpecialization')}</option>
                             {subEducations.map((se) => (
@@ -1168,37 +1234,37 @@ export default function ProfilePage() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Skills (comma separated)</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.skillsComma')}</label>
                           <input type="text" name="skill" value={educationForm.skill} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Courses</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.courses')}</label>
                           <input type="text" name="courses" value={educationForm.courses} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Experience (Years)</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.experience')}</label>
                           <input type="number" min={0} name="experience" value={educationForm.experience} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Current Salary (₹)</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.currentSalaryRs')}</label>
                           <input type="number" min={0} name="currentSalary" value={educationForm.currentSalary} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Expected / Salary Expectation (₹)</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.expectationRs')}</label>
                           <input type="number" min={0} name="expectation" value={educationForm.expectation} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Notice Period</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.noticePeriod')}</label>
                           <input type="number" min={0} name="noticePeriod" value={educationForm.noticePeriod} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Preferred Job Locations</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.preferredJobLocations')}</label>
                           <input type="text" name="preferredJobLocations" value={educationForm.preferredJobLocations} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Job Type</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.jobType')}</label>
                           <select name="preferredJobTypeId" value={educationForm.preferredJobTypeId} onChange={handleJobTypeChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white">
-                            <option value="">-- Select Job Type --</option>
+                            <option value="">{t('profileView.education.selectJobType')}</option>
                             {jobTypes.map((jt) => (
                               <option key={jt.id} value={jt.id}>{jt.label}</option>
                             ))}
@@ -1208,9 +1274,9 @@ export default function ProfilePage() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Shift Type</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.shiftType')}</label>
                           <select name="preferredShiftId" value={educationForm.preferredShiftId} onChange={handleShiftTypeChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white">
-                            <option value="">-- Select Shift Type --</option>
+                            <option value="">{t('profileView.education.selectShiftType')}</option>
                             {shiftTypes.map((st) => (
                               <option key={st.id} value={st.id}>{st.label}</option>
                             ))}
@@ -1220,9 +1286,9 @@ export default function ProfilePage() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Work Status</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.workStatus')}</label>
                           <select name="workStatus" value={educationForm.workStatus} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white">
-                            <option value="">-- Select Work Status --</option>
+                            <option value="">{t('profileView.education.selectWorkStatus')}</option>
                             {workModes.map((wm) => (
                               <option key={wm.id} value={wm.label}>{wm.label}</option>
                             ))}
@@ -1232,12 +1298,12 @@ export default function ProfilePage() {
                           </select>
                         </div>
                         <div className="sm:col-span-2">
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Resume Headline</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.resumeHeadline')}</label>
                           <input type="text" name="resumeHeadline" value={educationForm.resumeHeadline} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Profile Summary</label>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profileView.education.profileSummary')}</label>
                         <textarea name="profileSummary" rows={3} value={educationForm.profileSummary} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white resize-none" />
                       </div>
 
@@ -1253,7 +1319,7 @@ export default function ProfilePage() {
                           disabled={educationSaving}
                           className="px-4 py-2.5 text-xs font-semibold hover:bg-gray-100 rounded-xl text-slate-600 transition-colors cursor-pointer disabled:opacity-50"
                         >
-                          Cancel
+                          {t('profileView.actions.cancel')}
                         </button>
                         <button
                           onClick={handleSaveEducation}
@@ -1265,7 +1331,7 @@ export default function ProfilePage() {
                           ) : (
                             <Save className="w-4 h-4" />
                           )}
-                          {educationSaving ? 'Saving...' : 'Save'}
+                          {educationSaving ? t('profileView.actions.saving') : t('profileView.actions.save')}
                         </button>
                       </div>
                     </div>
@@ -1274,19 +1340,19 @@ export default function ProfilePage() {
                     <>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {[
-                          { label: 'Education', value: profile.education || profile.qualification || '-' },
-                          { label: 'Specialization', value: profile.specialization || '-' },
-                          { label: 'Courses', value: profile.courses || '-' },
-                          { label: 'Experience (Years)', value: String(profile.experienceYears ?? (profile.experienceYears === 0 ? 0 : '-')) },
-                          { label: 'Preferred Job Locations', value: profile.preferredJobLocations || '-', full: true },
-                          { label: 'Job Type', value: profile.jobType || '-' },
-                          { label: 'Shift Type', value: profile.shiftType || '-' },
-                          { label: 'Work Status', value: profile.workStatus || '-' },
-                          { label: 'Current Salary', value: typeof profile.currentSalary === 'number' ? `₹${profile.currentSalary}` : (profile.currentSalary || '-') },
-                          { label: 'Expected / Salary Expectation', value: profile.expectation || '-' },
-                          { label: 'Notice Period', value: profile.noticePeriod || '-' },
-                          { label: 'Resume Headline', value: profile.resumeHeadline || '-', full: true },
-                          { label: 'Profile Summary', value: profile.profileSummary || '-', full: true },
+                          { label: t('profileView.education.education'), value: profile.education || profile.qualification || '-' },
+                          { label: t('profileView.education.specialization'), value: profile.specialization || '-' },
+                          { label: t('profileView.education.courses'), value: profile.courses || '-' },
+                          { label: t('profileView.education.experience'), value: String(profile.experienceYears ?? (profile.experienceYears === 0 ? 0 : '-')) },
+                          { label: t('profileView.education.preferredJobLocations'), value: profile.preferredJobLocations || '-', full: true },
+                          { label: t('profileView.education.jobType'), value: profile.jobType || '-' },
+                          { label: t('profileView.education.shiftType'), value: profile.shiftType || '-' },
+                          { label: t('profileView.education.workStatus'), value: profile.workStatus || '-' },
+                          { label: t('profileView.education.currentSalary'), value: typeof profile.currentSalary === 'number' ? `₹${profile.currentSalary}` : (profile.currentSalary || '-') },
+                          { label: t('profileView.education.expectation'), value: profile.expectation || '-' },
+                          { label: t('profileView.education.noticePeriod'), value: profile.noticePeriod || '-' },
+                          { label: t('profileView.education.resumeHeadline'), value: profile.resumeHeadline || '-', full: true },
+                          { label: t('profileView.education.profileSummary'), value: profile.profileSummary || '-', full: true },
                         ].map((item, i) => (
                           <div key={i} className={`bg-slate-50 rounded-xl p-4 ${item.full ? 'sm:col-span-2' : ''}`}>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{item.label}</p>
@@ -1297,7 +1363,7 @@ export default function ProfilePage() {
 
                       {profile.skills && profile.skills.length > 0 && (
                         <div className="bg-slate-50 rounded-xl p-4">
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Skills</p>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('profileView.education.skills')}</p>
                           <div className="flex flex-wrap gap-2">
                             {profile.skills.map((skill, i) => (
                               <span key={i} className="px-3 py-1 bg-orange-100 text-orange-700 text-[11px] font-bold rounded-full">
@@ -1311,7 +1377,7 @@ export default function ProfilePage() {
                   )}
                 </>
               ) : (
-                <p className="text-xs text-gray-500 text-center py-12">No education data found.</p>
+                <p className="text-xs text-gray-500 text-center py-12">{t('profileView.education.noData')}</p>
               )}
             </div>
           )}

@@ -253,6 +253,8 @@ export interface SuccessStory {
   id: string;
   nameEn: string;
   nameMr: string;
+  titleEn?: string;
+  titleMr?: string;
   storyEn: string;
   storyMr: string;
   roleEn: string;

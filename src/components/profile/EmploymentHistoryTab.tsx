@@ -74,11 +74,11 @@ const toInputDate = (value?: string): string => {
   return date.toISOString().slice(0, 10);
 };
 
-const formatDisplayDate = (value?: string): string => {
+const formatDisplayDate = (value?: string, locale = 'en-IN'): string => {
   if (!value) return '';
   const date = new Date(value);
   if (isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return date.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 const todayInputDate = (): string => {
@@ -91,7 +91,8 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
   loading = false,
   onRefresh,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language === 'mr' ? 'mr-IN' : 'en-IN';
   const user = useSelector((state: RootState) => state.auth.user);
   const { data: industryTypes = [] } = useGetIndustryTypesQuery();
   const { data: jobTypes = [] } = useGetJobTypesQuery();
@@ -164,28 +165,28 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
   const handleSubmit = async () => {
     setValidationError('');
     if (!form.companyName.trim()) {
-      setValidationError('Please enter the company name.');
+      setValidationError(t('profileView.employment.validation.companyRequired'));
       return;
     }
     if (!form.designation.trim()) {
-      setValidationError('Please enter the designation.');
+      setValidationError(t('profileView.employment.validation.designationRequired'));
       return;
     }
     if (!form.startDate) {
-      setValidationError('Please select the start date.');
+      setValidationError(t('profileView.employment.validation.startRequired'));
       return;
     }
     const today = todayInputDate();
     if (form.startDate > today) {
-      setValidationError('Start date cannot be in the future.');
+      setValidationError(t('profileView.employment.validation.startFuture'));
       return;
     }
     if (!form.isCurrentJob && form.endDate && form.endDate < form.startDate) {
-      setValidationError('End date cannot be before the start date.');
+      setValidationError(t('profileView.employment.validation.endBeforeStart'));
       return;
     }
     if (!form.isCurrentJob && form.endDate && form.endDate > today) {
-      setValidationError('End date cannot be in the future.');
+      setValidationError(t('profileView.employment.validation.endFuture'));
       return;
     }
 
@@ -215,7 +216,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
       if (result.success) {
         closeForm();
         setSuccessPopup({
-          title: editingId ? 'Employment Updated' : 'Employment Added',
+          title: editingId ? t('profileView.employment.updatedTitle') : t('profileView.employment.addedTitle'),
           message: result.message,
         });
         onRefresh();
@@ -223,7 +224,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
         showToast(result.message, 'error');
       }
     } catch (err: any) {
-      showToast(err.message || 'Unexpected error while saving employment history.', 'error');
+      showToast(err.message || t('profileView.employment.saveError'), 'error');
     }
     setSubmitting(false);
   };
@@ -239,7 +240,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
       const result = await deleteEmploymentHistory({ employmentHistoryId: id, userId: userIdNum });
       if (result.success) {
         setSuccessPopup({
-          title: 'Employment Deleted',
+          title: t('profileView.employment.deletedTitle'),
           message: result.message,
         });
         onRefresh();
@@ -247,7 +248,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
         showToast(result.message, 'error');
       }
     } catch (err: any) {
-      showToast(err.message || 'Unexpected error while deleting employment history.', 'error');
+      showToast(err.message || t('profileView.employment.deleteError'), 'error');
     }
     setSubmitting(false);
   };
@@ -256,7 +257,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
     'w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white';
   const labelClass = 'block text-xs font-bold text-slate-700 mb-1.5';
 
-  const formTitle = editingId ? 'Edit Employment History' : 'Add Previous Employment';
+  const formTitle = editingId ? t('profileView.employment.editTitle') : t('profileView.employment.addTitle');
 
   return (
     <div className="space-y-5 text-left">
@@ -271,9 +272,13 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                 <Briefcase className="w-4 h-4 text-orange-600" />
               </div>
               <div>
-                <p className="text-xs font-extrabold text-slate-800">Previous Employment</p>
+                <p className="text-xs font-extrabold text-slate-800">{t('profileView.employment.previousEmployment')}</p>
                 <p className="text-[10px] text-slate-400 font-semibold">
-                  {history.length > 0 ? `${history.length} record${history.length > 1 ? 's' : ''} added` : 'No entries yet'}
+                  {history.length > 0
+                    ? history.length > 1
+                      ? t('profileView.employment.recordsAdded', { count: history.length })
+                      : t('profileView.employment.recordAdded', { count: history.length })
+                    : t('profileView.employment.noEntries')}
                 </p>
               </div>
             </div>
@@ -282,7 +287,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                 onClick={openAddForm}
                 className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-sm transition-all cursor-pointer"
               >
-                <Plus className="w-4 h-4" /> Add Previous Employment
+                <Plus className="w-4 h-4" /> {t('profileView.employment.addPrevious')}
               </button>
             )}
           </div>
@@ -294,7 +299,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                 <h3 className="text-sm font-extrabold text-slate-800">{formTitle}</h3>
                 <button
                   onClick={closeForm}
-                  aria-label="Close form"
+                  aria-label={t('profileView.employment.closeForm')}
                   className="p-1.5 hover:bg-orange-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
@@ -307,7 +312,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                   <input
                     type="text"
                     name="companyName"
-                    placeholder="e.g. Infosys, TCS, Local Store"
+                    placeholder={t('profileView.employment.companyPlaceholder')}
                     value={form.companyName}
                     onChange={handleChange}
                     className={inputClass}
@@ -319,7 +324,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                   <input
                     type="text"
                     name="designation"
-                    placeholder="e.g. Sales Executive"
+                    placeholder={t('profileView.employment.designationPlaceholder')}
                     value={form.designation}
                     onChange={handleChange}
                     className={inputClass}
@@ -331,7 +336,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                   <input
                     type="text"
                     name="department"
-                    placeholder="e.g. Marketing, Accounts"
+                    placeholder={t('profileView.employment.departmentPlaceholder')}
                     value={form.department}
                     onChange={handleChange}
                     className={inputClass}
@@ -346,7 +351,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                     onChange={handleChange}
                     className={inputClass}
                   >
-                    <option value={0}>-- Select --</option>
+                    <option value={0}>{t('profileView.employment.selectPlaceholder')}</option>
                     {industryTypes.map((it) => (
                       <option key={it.id} value={it.id}>
                         {it.label}
@@ -363,7 +368,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                     onChange={handleChange}
                     className={inputClass}
                   >
-                    <option value={0}>-- Select --</option>
+                    <option value={0}>{t('profileView.employment.selectPlaceholder')}</option>
                     {jobTypes.map((jt) => (
                       <option key={jt.id} value={jt.id}>
                         {jt.label}
@@ -377,7 +382,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                   <input
                     type="text"
                     name="jobLocation"
-                    placeholder="e.g. Nashik, Mumbai, Pune"
+                    placeholder={t('profileView.employment.locationPlaceholder')}
                     value={form.jobLocation}
                     onChange={handleChange}
                     className={inputClass}
@@ -409,7 +414,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                     className={`${inputClass} cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed`}
                   />
                   {form.isCurrentJob && (
-                    <span className="block text-[10px] text-orange-600 font-semibold mt-1">Currently working here</span>
+                    <span className="block text-[10px] text-orange-600 font-semibold mt-1">{t('profileView.employment.currentlyWorking')}</span>
                   )}
                 </div>
 
@@ -439,7 +444,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                   disabled={submitting}
                   className="px-4 py-2.5 text-xs font-semibold hover:bg-gray-100 rounded-xl text-slate-600 transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  Cancel
+                  {t('profileView.actions.cancel')}
                 </button>
                 <button
                   onClick={handleSubmit}
@@ -451,7 +456,11 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                   ) : (
                     <Plus className="w-4 h-4" />
                   )}
-                  {submitting ? 'Saving...' : editingId ? 'Update' : 'Add'}
+                  {submitting
+                    ? t('profileView.actions.saving')
+                    : editingId
+                      ? t('profileView.actions.update')
+                      : t('profileView.actions.add')}
                 </button>
               </div>
             </div>
@@ -463,15 +472,15 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
               <div className="w-14 h-14 mx-auto rounded-2xl bg-orange-100 flex items-center justify-center mb-4">
                 <Briefcase className="w-7 h-7 text-orange-500" />
               </div>
-              <p className="text-sm font-bold text-slate-700">No employment history added yet</p>
+              <p className="text-sm font-bold text-slate-700">{t('profileView.employment.noHistoryTitle')}</p>
               <p className="text-xs text-slate-400 font-medium mt-1 max-w-xs mx-auto">
-                Add your previous work experience to make your profile stronger.
+                {t('profileView.employment.noHistoryHint')}
               </p>
               <button
                 onClick={openAddForm}
                 className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-sm transition-all cursor-pointer"
               >
-                <Plus className="w-4 h-4" /> Add Previous Employment
+                <Plus className="w-4 h-4" /> {t('profileView.employment.addPrevious')}
               </button>
             </div>
           )}
@@ -491,10 +500,10 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                       </div>
                       <div className="min-w-0">
                         <h4 className="text-sm font-extrabold text-slate-800 truncate">
-                          {entry.companyName || 'Unknown Company'}
+                          {entry.companyName || t('profileView.employment.unknownCompany')}
                         </h4>
                         <p className="text-xs text-slate-500 font-semibold truncate">
-                          {entry.designation || 'Designation not set'}
+                          {entry.designation || t('profileView.employment.designationNotSet')}
                           {entry.department ? ` · ${entry.department}` : ''}
                         </p>
                       </div>
@@ -503,19 +512,19 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                     <div className="flex items-center gap-1.5 shrink-0">
                       {entry.isCurrentJob && (
                         <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full">
-                          <BadgeCheck className="w-3 h-3" /> Current
+                          <BadgeCheck className="w-3 h-3" /> {t('profileView.employment.current')}
                         </span>
                       )}
                       <button
                         onClick={() => openEditForm(entry)}
-                        aria-label="Edit employment history"
+                        aria-label={t('profileView.employment.editAria')}
                         className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors cursor-pointer"
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setDeleteTarget(entry)}
-                        aria-label="Delete employment history"
+                        aria-label={t('profileView.employment.deleteAria')}
                         className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -545,8 +554,8 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                     <div className="flex items-center gap-2">
                       <CalendarDays className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span className="text-[11px] text-slate-600 font-medium truncate">
-                        {formatDisplayDate(entry.startDate)}
-                        {entry.isCurrentJob ? ' — Present' : entry.endDate ? ` — ${formatDisplayDate(entry.endDate)}` : ''}
+                        {formatDisplayDate(entry.startDate, dateLocale)}
+                        {entry.isCurrentJob ? ` — ${t('profileView.employment.present')}` : entry.endDate ? ` — ${formatDisplayDate(entry.endDate, dateLocale)}` : ''}
                       </span>
                     </div>
                   </div>
@@ -569,7 +578,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
               onClick={() => setSuccessPopup(null)}
               className="mt-2 px-5 py-2.5 text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-sm transition-all cursor-pointer"
             >
-              OK
+              {t('profileView.actions.ok')}
             </button>
           </div>
         </Modal>
@@ -580,10 +589,12 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Delete Employment History"
-        message={`Are you sure you want to delete the employment record for "${deleteTarget?.companyName || 'this company'}"? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
+        title={t('profileView.employment.deleteTitle')}
+        message={t('profileView.employment.deleteMessage', {
+          company: deleteTarget?.companyName || t('profileView.employment.thisCompany'),
+        })}
+        confirmText={t('profileView.actions.delete')}
+        cancelText={t('profileView.actions.cancel')}
       />
 
       {/* Error toast */}

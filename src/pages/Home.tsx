@@ -9,11 +9,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { useGetDashboardStatsQuery } from '../services/dashboardApi';
-import { useGetInitiativesQuery } from '../services/initiativeApi';
 import { SuccessStory } from '../types';
 
 import { Navbar } from '../components/Navbar';
 import { SiteFooter } from '../components/SiteFooter';
+import { ComingSoonModal } from '../components/ComingSoonModal';
 import { readSectionTarget } from '../utils/sectionNav';
 import {
   Briefcase,
@@ -87,22 +87,48 @@ const PRODUCTS = [
 /** Community success stories shown in the home-page carousel (English + Marathi). */
 const SUCCESS_STORIES: SuccessStory[] = [
   {
-    id: 's-1',
-    nameEn: 'Vandana Santosh Patil',
-    nameMr: 'वंदना संतोष पाटील',
-    roleEn: 'Founder, Swami Krupa Food Products',
-    roleMr: 'संस्थापक, स्वामी कृपा गृहोद्योग',
-    storyEn: 'Started with just preparing pickles from a small home kitchen. Under Gurumauli mentoring, our group now distributes organic foodstuffs to 15 cities with a thriving 20-woman team!',
-    storyMr: 'अवघ्या ३ महिलांसह घरगुती लोणचे बनवण्यापासून सुरुवात केली. गुरुमाऊलींच्या मार्गदर्शनामुळे आज आमचा बचत गट १५ शहरांमध्ये उत्पादने पाठवतो आणि २० महिलांना रोजगार मिळाला आहे!'
+    id: 's-3',
+    nameEn: 'Vishal Wable',
+    nameMr: 'विशाल वाबळे',
+    titleEn: 'Finding the Right People Makes Business Easier!',
+    titleMr: 'योग्य माणसं मिळणं, हीच व्यवसायासाठी मोठी मदत!',
+    roleEn: 'Employer | ShreeRaj Consultants & Contractors',
+    roleMr: 'नियोक्ता | ShreeRaj Consultants & Contractors',
+    storyEn: "As a business, finding suitable employees at the right time is always an important part of managing operations. We had a similar requirement at ShreeRaj Consultants & Contractors. Through the Self-Employment Department, we were able to connect with and recruit employees who helped fulfil our staffing requirements. This support made the hiring process easier and reduced the effort involved in finding suitable candidates. I appreciate the department's initiative in understanding employers' requirements and helping businesses connect with potential employees.",
+    storyMr: 'व्यवसायाच्या कामकाजात योग्य कर्मचारी मिळणे ही नेहमीच एक महत्त्वाची गरज असते. आमच्या ShreeRaj Consultants & Contractors या फर्मसाठीही आम्हाला काही कर्मचाऱ्यांची आवश्यकता होती. त्यावेळी स्वयंरोजगार विभागाच्या माध्यमातून आम्हाला आवश्यक कर्मचारी उपलब्ध झाले. विशेष म्हणजे, कर्मचारी शोधण्यासाठी करावा लागणारा वेळ आणि प्रयत्न यामध्ये बचत झाली. आमच्या गरजेनुसार कर्मचारी उपलब्ध करून दिल्यामुळे कामकाजातही मदत झाली. नियोक्त्यांच्या गरजा समजून घेऊन त्यांना योग्य मनुष्यबळ उपलब्ध करून देण्याचा हा उपक्रम निश्चितच उपयुक्त आहे. यासाठी स्वयंरोजगार विभागाच्या संपूर्ण टीमचे आभार.'
   },
   {
-    id: 's-2',
-    nameEn: 'Aniket Devram Mor',
-    nameMr: 'अनिकेत सुदाम मोरे',
-    roleEn: 'Web Developer / Placed Seeker',
-    roleMr: 'वेब डेव्हलपर (नोकरी प्राप्त)',
-    storyEn: 'Coming from a rural farming household, getting access to technical coaching at Dindori Seva Marg completely revolutionized my path. Placed in Hinjawadi IT hub!',
-    storyMr: 'ग्रामीण भागातून शिक्षणासाठी खूप धडपड सुरू होती. दिंडोरी दरबारच्या स्वयंरोजगार केंद्राद्वारे तांत्रिक प्रशिक्षण आणि प्लेसमेंट मिळाल्यामुळे आज मी पुण्यात नामांकित आयटी कंपनीत कार्यरत आहे.'
+    id: 's-4',
+    nameEn: 'Pratik Londhe',
+    nameMr: 'प्रतीक लोंढे',
+    titleEn: 'Skilled People, Stronger Teams!',
+    titleMr: 'योग्य कौशल्य, योग्य उमेदवार आणि व्यवसायाच्या प्रगतीला चालना!',
+    roleEn: 'Employer | Samarth MEP Consultant',
+    roleMr: 'नियोक्ता | समर्थ MEP कन्सल्टंट',
+    storyEn: "In the technical consulting field, having people with the right skills and practical knowledge is essential. At Samarth MEP Consultant, we were looking for employees with specific technical skills to support our work requirements. Through the Self-Employment Department, we were able to find suitable candidates for our team. Getting access to relevant talent through this initiative helped us address our manpower requirements. I appreciate the department's efforts in connecting skilled individuals with businesses that need their expertise.",
+    storyMr: 'श्री स्वामी समर्थ सेवा व आध्यात्मिक विकास मार्ग यांच्या १८ विभागांपैकी एक असलेल्या स्वयंरोजगार विभागामार्फत राबविण्यात येणारा रोजगार उपक्रम आमच्या कंपनीसाठी अत्यंत उपयुक्त ठरला. आमची कंपनी समर्थ MEP कन्सल्टंट यांच्यासाठी आवश्यक तांत्रिक कौशल्ये आणि पात्रता असलेले कर्मचारी या विभागाच्या माध्यमातून उपलब्ध करून देण्यात आले. त्यामुळे योग्य कौशल्य असलेले मनुष्यबळ शोधण्याची प्रक्रिया सुलभ झाली आणि कंपनीच्या कामकाजासाठी आवश्यक मनुष्यबळ मिळण्यास मदत झाली. नियोक्त्यांच्या गरजा समजून घेऊन योग्य उमेदवार उपलब्ध करून देणाऱ्या स्वयंरोजगार विभागाचे मी मनःपूर्वक आभार मानतो.'
+  },
+  {
+    id: 's-5',
+    nameEn: 'Kartik Lipane & Mayur Patil',
+    nameMr: 'कार्तिक लीपने आणि मयूर पाटील',
+    titleEn: 'Building the Right Team for a Growing Digital Business!',
+    titleMr: 'योग्य टीममुळे डिजिटल व्यवसायाला मिळाली नवी गती!',
+    roleEn: 'Founders / Owners | Smart Makers, Chhatrapati Sambhajinagar',
+    roleMr: 'संस्थापक | Smart Makers, संभाजीनगर',
+    storyEn: "In the digital industry, every project requires people with different skills and the ability to adapt to changing requirements. At Smart Makers, Chhatrapati Sambhajinagar, we work in application development, website development and digital marketing. Finding suitable people for our growing business requirements was an important need. The Self-Employment Department helped us connect with candidates who could fulfil our manpower requirements. This support made it easier for us to find the people we needed and continue our work with greater confidence. We appreciate the department's efforts in bridging the gap between employment seekers and businesses.",
+    storyMr: 'एप्लीकेशन डेव्हलपमेंट, वेबसाइट डेव्हलपमेंट आणि डिजिटल मार्केटिंग या क्षेत्रांत काम करताना कुशल आणि योग्य कौशल्य असलेले मनुष्यबळ मिळणे अत्यंत महत्त्वाचे असते. आमच्या Smart Makers या संभाजीनगरस्थित कंपनीच्या विस्तारासाठी आवश्यक असलेले मनुष्यबळ उपलब्ध करून देण्यात स्वयंरोजगार विभागाची महत्त्वपूर्ण मदत झाली. आमच्या व्यवसायाच्या गरजेनुसार कर्मचारी उपलब्ध झाल्यामुळे नवीन कामे हाताळणे आणि कामकाज पुढे नेणे अधिक सोयीचे झाले. रोजगार इच्छुकांना संधी देतानाच उद्योगांच्या मनुष्यबळाच्या गरजाही पूर्ण करणारा स्वयंरोजगार विभागाचा हा उपक्रम कौतुकास्पद आहे.'
+  },
+  {
+    id: 's-6',
+    nameEn: 'Kiran Sonawane',
+    nameMr: 'किरण सोनवणे',
+    titleEn: 'From Searching for the Right Opportunity to Finding My Place!',
+    titleMr: 'प्रयत्नांना मिळाली योग्य संधी, स्वप्नांना मिळाली नवी दिशा!',
+    roleEn: 'Job Beneficiary | Designer | Employed in Chhatrapati Sambhajinagar',
+    roleMr: 'लाभार्थी | डिझायनर | संभाजीनगर येथे रोजगार प्राप्त',
+    storyEn: 'As a designer, I was looking for a job that matched my skills and professional interests. However, despite several attempts, finding the right opportunity was not easy. During this journey, the Self-Employment Department came forward with guidance and support. With their assistance, I was able to secure a job in Chhatrapati Sambhajinagar that gave me an opportunity to move forward in my career. This experience has been an important milestone in my professional journey. I am sincerely thankful to the Self-Employment Department for helping me find the right opportunity.',
+    storyMr: 'मी एक डिझायनर म्हणून माझ्या कौशल्याला साजेशी नोकरी शोधत होतो. अनेक प्रयत्न करूनही माझ्या अपेक्षेनुसार आणि कौशल्यानुसार योग्य संधी मिळत नव्हती. अशा वेळी स्वयंरोजगार विभागाच्या माध्यमातून मला मार्गदर्शन आणि सहकार्य मिळाले. त्यांच्या मदतीमुळे माझ्या कौशल्याला अनुरूप नोकरीची संधी मिळाली आणि आज मी संभाजीनगर येथे कार्यरत आहे. योग्य संधीच्या शोधात असलेल्या माझ्यासारख्या तरुणांना रोजगार मिळवून देण्यासाठी स्वयंरोजगार विभाग करत असलेले काम माझ्यासाठी महत्त्वपूर्ण ठरले. या सहकार्याबद्दल मी स्वयंरोजगार विभागाचा मनःपूर्वक आभारी आहे.'
   }
 ];
 
@@ -212,9 +238,7 @@ export default function Home() {
 
   // States for dynamic data
   const { data: stats } = useGetDashboardStatsQuery();
-  const { data: initiatives } = useGetInitiativesQuery();
 
-  const [activeInitiativeTab, setActiveInitiativeTab] = useState<'upcoming' | 'past'>('upcoming');
   const [storyIndex, setStoryIndex] = useState(0);
   const stories = SUCCESS_STORIES;
   const currentStory = stories[storyIndex];
@@ -254,10 +278,9 @@ export default function Home() {
 
   // Modals
   const [queryOpen, setQueryOpen] = useState(false);
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [shgComingSoonOpen, setShgComingSoonOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
   const [querySent, setQuerySent] = useState(false);
-  const [feedbackSent, setFeedbackSent] = useState(false);
-  const [rating, setRating] = useState(-1);
   const [queryMobile, setQueryMobile] = useState('');
 
   useEffect(() => {
@@ -276,7 +299,7 @@ export default function Home() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       setQueryOpen(false);
-      setFeedbackOpen(false);
+      setContactOpen(false);
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -293,11 +316,11 @@ export default function Home() {
   }, [location.state]);
 
   useEffect(() => {
-    document.body.style.overflow = queryOpen || feedbackOpen ? 'hidden' : '';
+    document.body.style.overflow = queryOpen || contactOpen ? 'hidden' : '';
     return () => {
       document.body.style.overflow = '';
     };
-  }, [queryOpen, feedbackOpen]);
+  }, [queryOpen, contactOpen]);
 
   const scrollToId = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -319,37 +342,30 @@ export default function Home() {
     navigate('/login');
   };
 
-  const getLocalizedInitiative = (init: any) => ({
-    title: isMr ? init.titleMr : init.titleEn,
-    desc: isMr ? init.descriptionMr : init.descriptionEn,
-    location: isMr ? init.locationMr : init.locationEn,
-    date: init.date
-  });
+  const shgComingSoonContent = {
+    labelEn: 'Register Your Group',
+    labelMr: 'गट नोंदणी करा',
+    titleEn: 'Online group registration is coming soon',
+    titleMr: 'ऑनलाइन गट नोंदणी लवकरच सुरू होईल',
+    bodyEn: 'Online self-help group registration will open shortly. Please check back soon.',
+    bodyMr: 'बचतगटाची ऑनलाइन नोंदणी लवकरच सुरू होईल. कृपया थोड्या वेळाने पुन्हा भेट द्या.',
+    icon: Network,
+  };
 
   // Hero action cards: rendered as floating badges on desktop, as a responsive
   // grid on mobile/tablet so they never overlap the hero image.
   const heroCards = [
     { en: 'Find a Job', mr: 'नोकरी शोधा', subEn: '', subMr: '', icon: Briefcase, chipBg: 'bg-theme-lavender text-white', big: false, pos: 'left-0 top-6', from: 'from-left', go: () => handleEnterGateway('CANDIDATE') },
-    { en: 'Hire Talent', mr: 'उमेदवार निवडा', subEn: '', subMr: '', icon: UserPlus, chipBg: 'bg-theme-terracotta text-white', big: false, pos: 'right-0 top-0', from: 'from-top', go: () => handleEnterGateway('COMPANY') },
+    { en: 'Hire Talent', mr: 'उमेदवार निवडा', subEn: '', subMr: '', icon: UserPlus, chipBg: 'bg-theme-terracotta text-white', big: false, pos: 'right-0 top-0', from: 'from-top', go: () => setContactOpen(true) },
     { en: 'Skill Training', mr: 'कौशल्य प्रशिक्षण', subEn: 'MPSC / UPSC & trades', subMr: 'MPSC / UPSC आणि व्यवसाय', icon: GraduationCap, chipBg: 'bg-theme-deepTeal/15 text-theme-deepTeal', big: true, pos: '-left-3 top-[40%]', from: 'from-left', go: () => scrollToId('services') },
     { en: 'Start a Business', mr: 'व्यवसाय सुरू करा', subEn: 'Udyojakta Manch', subMr: 'उद्योजकता मंच', icon: Store, chipBg: 'bg-theme-lavender/15 text-theme-lavender', big: true, pos: '-right-3 top-[36%]', from: 'from-right', go: () => scrollToId('services') },
     { en: 'SHG / Bachat Gat', mr: 'बचत गट', subEn: 'Register, train and sell', subMr: 'नोंदणी, प्रशिक्षण आणि विक्री', icon: HandCoins, chipBg: 'bg-theme-mint/25 text-theme-deepTeal', big: true, pos: 'left-0 bottom-10', from: 'from-bottom', go: () => handleEnterGateway('SHG') },
     { en: 'Employment Fairs', mr: 'रोजगार मेळावे', subEn: 'Meet companies directly', subMr: 'कंपन्यांना थेट भेटा', icon: Users, chipBg: 'bg-theme-gold/20 text-theme-gold', big: true, pos: 'right-0 bottom-2', from: 'from-right', go: () => handleEnterGateway('CANDIDATE') },
   ];
 
-  const openModal = (which: 'query' | 'feedback') => {
-    if (which === 'query') setQueryOpen(true);
-    else setFeedbackOpen(true);
-  };
-
   const submitQuery = (e: React.FormEvent) => {
     e.preventDefault();
     setQuerySent(true);
-  };
-
-  const submitFeedback = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFeedbackSent(true);
   };
 
   const hiredCount = stats?.totalCandidates ? `${stats.totalCandidates}+` : '1,500+';
@@ -407,11 +423,11 @@ export default function Home() {
               {/* Chips */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mt-6">
                 <span className="text-sm font-bold text-theme-darkViolet/70 mr-1">{t('home.hero.goStraight')}</span>
-                <button onClick={() => handleEnterGateway('CANDIDATE')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{t('home.hero.chipJobs')}</button>
-                <button onClick={() => handleEnterGateway('COMPANY')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{t('home.hero.chipHire')}</button>
-                <button onClick={() => scrollToId('services')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{t('home.hero.chipServices')}</button>
-                <button onClick={() => handleEnterGateway('SHG')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{t('home.hero.chipShg')}</button>
-                <button onClick={() => scrollToId('products')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{t('home.hero.chipProducts')}</button>
+                <span className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet">{t('home.hero.chipJobs')}</span>
+                <span className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet">{t('home.hero.chipHire')}</span>
+                <span className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet">{t('home.hero.chipServices')}</span>
+                <span className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet">{t('home.hero.chipShg')}</span>
+                <span className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet">{t('home.hero.chipProducts')}</span>
               </div>
             </div>
 
@@ -550,7 +566,7 @@ export default function Home() {
                 </p>
                 <div className="relative z-10 w-full space-y-2.5">
                   <button onClick={() => handleEnterGateway('CANDIDATE')} className="btn-gloss block w-full bg-theme-lavender text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30 text-sm cursor-pointer">{t('home.careers.findWork')}</button>
-                  <button onClick={() => handleEnterGateway('COMPANY')} className="block w-full bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold hover:border-theme-lavender hover:text-theme-lavender transition-all text-sm cursor-pointer">{t('home.careers.hireTalent')}</button>
+                  <button onClick={() => setContactOpen(true)} className="block w-full bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold hover:border-theme-lavender hover:text-theme-lavender transition-all text-sm cursor-pointer">{t('home.careers.hireTalent')}</button>
                 </div>
               </div>
             </div>
@@ -575,7 +591,7 @@ export default function Home() {
                 </p>
                 <div className="relative z-10 w-full space-y-2.5">
                   <button onClick={() => scrollToId('about')} className="btn-gloss block w-full bg-theme-deepTeal text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md text-sm cursor-pointer">{t('home.services.explore')}</button>
-                  <button onClick={() => openModal('query')} className="block w-full bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold hover:border-theme-deepTeal hover:text-theme-deepTeal transition-all text-sm cursor-pointer">{t('home.services.bookGuidance')}</button>
+                  <button onClick={() => setContactOpen(true)} className="block w-full bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold hover:border-theme-deepTeal hover:text-theme-deepTeal transition-all text-sm cursor-pointer">{t('home.services.bookGuidance')}</button>
                 </div>
               </div>
             </div>
@@ -603,7 +619,7 @@ export default function Home() {
                   {t('home.shg.descSuffix')}
                 </p>
                 <div className="relative z-10 w-full space-y-2.5">
-                  <button onClick={() => handleEnterGateway('SHG')} className="btn-gloss block w-full bg-theme-terracotta text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md text-sm cursor-pointer">{t('home.shg.register')}</button>
+                  <button onClick={() => setShgComingSoonOpen(true)} className="btn-gloss block w-full bg-theme-terracotta text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md text-sm cursor-pointer">{t('home.shg.register')}</button>
                   <button onClick={() => scrollToId('products')} className="block w-full bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold hover:border-theme-terracotta hover:text-theme-terracotta transition-all text-sm cursor-pointer">{t('home.shg.ourProducts')}</button>
                 </div>
               </div>
@@ -652,79 +668,25 @@ export default function Home() {
                 {PRODUCTS.map((p, i) => (
                   <React.Fragment key={p.name}>
                     <Reveal direction="r" delay={`dly${i + 1}`}>
-                      <a className="prod-row group block px-5 py-5 rounded-xl cursor-pointer" onClick={() => openModal('query')}>
+                      <div className="prod-row group block px-5 py-5 rounded-xl">
                         <div className="relative z-10 flex items-center gap-5">
                           <span className="num text-lg font-extrabold text-theme-darkViolet/25 w-8 shrink-0">0{i + 1}</span>
                           <div className="min-w-0 flex-1">
                             <div className="font-extrabold text-theme-darkViolet leading-tight">{isMr ? p.nameMr : p.name}</div>
                             <div className="text-xs text-theme-darkViolet/55 mt-1">{isMr ? L(p.desc, p.desc) : L(p.desc, p.desc)} &middot; <span className="text-theme-deepTeal font-bold">{t('home.products.ourGats')}</span></div>
                           </div>
-                          <span className="go text-theme-lavender shrink-0"><ArrowRight className="w-4 h-4" /></span>
                         </div>
                         <span className="line block h-px bg-theme-lavender/40 mt-4 relative z-10"></span>
-                      </a>
+                      </div>
                     </Reveal>
                   </React.Fragment>
                 ))}
               </div>
 
-              <button onClick={() => openModal('query')} className="btn-gloss inline-flex items-center gap-2 mt-7 ml-5 bg-theme-deepTeal text-white px-8 py-3.5 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-lg text-sm cursor-pointer">
-                {t('home.products.visitShop')} <ArrowRight className="text-xs w-3.5 h-3.5" />
+              <button onClick={() => setContactOpen(true)} className="btn-gloss inline-flex items-center gap-2 mt-7 ml-5 bg-theme-deepTeal text-white px-8 py-3.5 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-lg text-sm cursor-pointer">
+                {t('home.contact.contactUsBtn')} <ArrowRight className="text-xs w-3.5 h-3.5" />
               </button>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* INITIATIVES */}
-      <section id="initiatives" className="scroll-mt-20 sm:scroll-mt-24 py-20 bg-theme-lightViolet/40 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <span className="inline-flex items-center gap-2 bg-theme-gold/15 text-theme-gold px-4 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-widest mb-4">
-              <Compass className="w-3.5 h-3.5" /> {t('nav.initiatives')}
-            </span>
-            <h2 className="text-3xl lg:text-4xl font-extrabold text-theme-darkViolet leading-tight">{t('initiatives.title')}</h2>
-          </div>
-
-          <div className="flex justify-center gap-3 mb-10">
-            <button
-              onClick={() => setActiveInitiativeTab('upcoming')}
-              className={`px-6 py-2.5 text-xs font-bold rounded-full transition-all cursor-pointer ${activeInitiativeTab === 'upcoming' ? 'bg-theme-lavender text-white shadow-lg shadow-theme-lavender/30' : 'bg-white border border-theme-lightViolet text-theme-darkViolet/70 hover:text-theme-lavender hover:border-theme-lavender'}`}
-            >
-              {t('initiatives.upcoming')}
-            </button>
-            <button
-              onClick={() => setActiveInitiativeTab('past')}
-              className={`px-6 py-2.5 text-xs font-bold rounded-full transition-all cursor-pointer ${activeInitiativeTab === 'past' ? 'bg-theme-lavender text-white shadow-lg shadow-theme-lavender/30' : 'bg-white border border-theme-lightViolet text-theme-darkViolet/70 hover:text-theme-lavender hover:border-theme-lavender'}`}
-            >
-              {t('initiatives.past')}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {initiatives
-              ?.filter((init) => init.type === activeInitiativeTab)
-              .map((init) => {
-                const localized = getLocalizedInitiative(init);
-                return (
-                  <React.Fragment key={init.id}>
-                    <Reveal>
-                      <div className="h-full bg-white rounded-2xl border border-theme-lightViolet p-6 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col">
-                        <div className="flex items-center gap-2 mb-3.5">
-                          <span className={`w-2 h-2 rounded-full animate-pulse ${activeInitiativeTab === 'upcoming' ? 'bg-theme-mint' : 'bg-theme-gold'}`}></span>
-                          <span className="text-xs font-bold text-theme-darkViolet/70 bg-theme-lightViolet px-2.5 py-1 rounded-full">{localized.date}</span>
-                        </div>
-                        <h4 className="text-base font-extrabold text-theme-darkViolet leading-snug">{localized.title}</h4>
-                        <p className="text-[13px] text-theme-darkViolet/65 mt-2 leading-relaxed flex-grow">{localized.desc}</p>
-                        <div className="mt-5 pt-3 border-t border-theme-lightViolet flex items-center gap-2 text-theme-darkViolet/60">
-                          <MapPin className="w-4 h-4 text-theme-lavender shrink-0" />
-                          <span className="text-xs font-bold leading-none truncate">{localized.location}</span>
-                        </div>
-                      </div>
-                    </Reveal>
-                  </React.Fragment>
-                );
-              })}
           </div>
         </div>
       </section>
@@ -765,6 +727,11 @@ export default function Home() {
                     {t('home.stories.counter', { current: storyIndex + 1, total: stories.length })}
                   </span>
                 </div>
+                {(currentStory.titleEn || currentStory.titleMr) && (
+                  <h3 className="text-base sm:text-lg font-extrabold text-theme-darkViolet leading-snug mb-2">
+                    {isMr ? currentStory.titleMr : currentStory.titleEn}
+                  </h3>
+                )}
                 <p className="text-sm sm:text-base text-theme-darkViolet/70 italic leading-relaxed mb-4">
                   &ldquo;{isMr ? currentStory.storyMr : currentStory.storyEn}&rdquo;
                 </p>
@@ -832,12 +799,9 @@ export default function Home() {
                   <div className="text-[10px] font-extrabold text-theme-darkViolet leading-tight">{t('home.franchise.brandSatvikMart')}</div>
                 </div>
               </div>
-              <button
-                onClick={() => openModal('query')}
-                className="btn-gloss inline-flex items-center gap-2 bg-theme-lavender text-white px-6 py-2.5 rounded-full font-bold text-sm hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30 whitespace-nowrap cursor-pointer"
-              >
+              <span className="btn-gloss inline-flex items-center gap-2 bg-theme-lavender text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md shadow-theme-lavender/30 whitespace-nowrap cursor-default select-none">
                 {t('home.franchise.beBoss')} <ArrowRight className="text-[10px] w-3.5 h-3" />
-              </button>
+              </span>
             </Reveal>
           </div>
         </div>
@@ -915,6 +879,20 @@ export default function Home() {
                 </div>
                 <ArrowRight className="w-4 h-4 ml-auto relative z-10 group-hover:translate-x-1 transition-transform" />
               </a>
+
+              <a
+                href="https://wa.me/917755941753"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="tile bg-emerald-600 text-white rounded-2xl p-6 flex items-center gap-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group btn-gloss"
+              >
+                <span className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 ico-hop"><MessageCircle className="text-lg w-5 h-5" /></span>
+                <div className="relative z-10">
+                  <h4 className="font-extrabold mb-0.5">{t('home.contact.whatsapp')}</h4>
+                  <p className="text-sm text-white/80">+91 7755941753</p>
+                </div>
+                <ArrowRight className="w-4 h-4 ml-auto relative z-10 group-hover:translate-x-1 transition-transform" />
+              </a>
             </div>
 
             <div className="lg:col-span-3 space-y-5">
@@ -930,7 +908,7 @@ export default function Home() {
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <a
-                  href="https://www.openstreetmap.org/?mlat=20.2047&mlon=73.8375#map=13/20.2047/73.8375"
+                  href="https://www.google.com/maps/place/Sri+Swami+Samarth+Pradhan+Seva+Kendra/@20.2040375,73.8286094,706m/data=!3m2!1e3!4b1!4m6!3m5!1s0x3bdde7163a41ff99:0x64edb44c90abbccc!8m2!3d20.2040375!4d73.8286094!16s%2Fg%2F11hdng9mzf?entry=ttu&g_ep=EgoyMDI2MTAyNy4wIKXMDSoASAFQAw%3D%3D"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="tile group bg-white rounded-2xl border border-theme-lightViolet p-5 hover:shadow-lg hover:-translate-y-1 transition-all block"
@@ -945,7 +923,7 @@ export default function Home() {
                 </a>
 
                 <a
-                  href="https://www.openstreetmap.org/?mlat=19.9333&mlon=73.5333#map=13/19.9333/73.5333"
+                  href="https://www.google.com/maps/place/Akhil+Bhartiya+Shree+Swami+Samarth+Gurupeeth,+Trimbakeshwar/@19.9326,73.5291,14z/data=!4m6!3m5!1s0x3bddf4b167cecc65:0x3b8e4b5e1a81d285!8m2!3d19.9378105!4d73.5438269!16s%2Fg%2F1x5qr7gs?entry=tts&g_ep=EgoyMDI1MTAxNC4wIPu8ASoASAFQAw%3D%3D&skid=57fd4707-4154-4cea-b436-fe035d061ba2"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="tile group bg-white rounded-2xl border border-theme-lightViolet p-5 hover:shadow-lg hover:-translate-y-1 transition-all block"
@@ -974,16 +952,31 @@ export default function Home() {
                   <div>
                     <div className="text-sm font-extrabold text-theme-darkViolet leading-tight mb-2">{t('home.contact.elsewhereIndia')}</div>
                     <div className="flex flex-wrap gap-1.5">
-                      {['Madhya Pradesh', 'Uttar Pradesh', 'Gujarat', 'Karnataka', 'Goa'].map((s) => (
-                        <span key={s} className="bg-theme-lightViolet text-theme-darkViolet/75 text-[11px] font-bold px-2.5 py-1 rounded-full">{s}</span>
+                      {[
+                        { en: 'Madhya Pradesh', mr: 'मध्य प्रदेश' },
+                        { en: 'Uttar Pradesh', mr: 'उत्तर प्रदेश' },
+                        { en: 'Gujarat', mr: 'गुजरात' },
+                        { en: 'Karnataka', mr: 'कर्नाटक' },
+                        { en: 'Goa', mr: 'गोवा' },
+                        { en: 'Delhi', mr: 'दिल्ली' },
+                        { en: 'Diu Daman', mr: 'दीव दमण' },
+                      ].map((s) => (
+                        <span key={s.en} className="bg-theme-lightViolet text-theme-darkViolet/75 text-[11px] font-bold px-2.5 py-1 rounded-full">{isMr ? s.mr : s.en}</span>
                       ))}
                     </div>
                   </div>
                   <div>
                     <div className="text-sm font-extrabold text-theme-darkViolet leading-tight mb-2">{t('home.contact.outsideIndia')}</div>
                     <div className="flex flex-wrap gap-1.5">
-                      {['United States', 'United Kingdom', 'Canada'].map((s) => (
-                        <span key={s} className="bg-theme-mint/15 text-theme-deepTeal text-[11px] font-bold px-2.5 py-1 rounded-full">{s}</span>
+                      {[
+                        { en: 'United States', mr: 'अमेरिका' },
+                        { en: 'United Kingdom', mr: 'युनायटेड किंग्डम' },
+                        { en: 'Canada', mr: 'कॅनडा' },
+                        { en: 'Singapore', mr: 'सिंगापूर' },
+                        { en: 'Nepal', mr: 'नेपाळ' },
+                        { en: 'UAE', mr: 'संयुक्त अरब अमिरात' },
+                      ].map((s) => (
+                        <span key={s.en} className="bg-theme-mint/15 text-theme-deepTeal text-[11px] font-bold px-2.5 py-1 rounded-full">{isMr ? s.mr : s.en}</span>
                       ))}
                     </div>
                   </div>
@@ -1032,68 +1025,44 @@ export default function Home() {
         </div>
       </div>
 
-      {/* FEEDBACK MODAL */}
-      <div className={feedbackOpen ? 'fmodal show' : 'fmodal'} role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) setFeedbackOpen(false); }}>
-        <div className="sheet relative bg-white rounded-[1.5rem] shadow-2xl w-full max-w-lg p-8">
-          <button onClick={() => setFeedbackOpen(false)} aria-label="Close" className="absolute top-4 right-4 w-9 h-9 rounded-full hover:bg-theme-lightViolet text-theme-darkViolet flex items-center justify-center transition cursor-pointer"><X className="text-lg w-5 h-5" /></button>
+      {/* CONTACT US MODAL */}
+      <div className={contactOpen ? 'fmodal show' : 'fmodal'} role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) setContactOpen(false); }}>
+        <div className="sheet relative bg-white rounded-[1.5rem] shadow-2xl w-full max-w-md sm:max-w-lg p-5 sm:p-8">
+          <button onClick={() => setContactOpen(false)} aria-label="Close" className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 rounded-full hover:bg-theme-lightViolet text-theme-darkViolet flex items-center justify-center transition cursor-pointer"><X className="text-lg w-5 h-5" /></button>
 
-          <div className="flex items-center gap-3 mb-6">
-            <span className="w-12 h-12 rounded-2xl bg-theme-mint/15 text-theme-deepTeal flex items-center justify-center"><MessageCircle className="text-lg w-6 h-6" /></span>
-            <div>
-              <h3 className="text-xl font-extrabold text-theme-darkViolet leading-tight">{t('home.feedback.title')}</h3>
-              <p className="text-xs text-theme-darkViolet/55 mt-0.5">{t('home.feedback.subtitle')}</p>
+          <div className="flex items-start gap-3 mb-5 sm:mb-6 pr-8">
+            <span className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-2xl bg-theme-deepTeal/10 text-theme-deepTeal flex items-center justify-center"><Phone className="w-5 h-5 sm:w-6 sm:h-6" /></span>
+            <div className="min-w-0">
+              <h3 className="text-lg sm:text-xl font-extrabold text-theme-darkViolet leading-tight">{t('home.contact.contactUsTitle')}</h3>
+              <p className="text-[11px] sm:text-xs text-theme-darkViolet/55 mt-0.5">{t('home.contact.contactUsSubtitle')}</p>
             </div>
           </div>
 
-          <form className="space-y-3.5" onSubmit={submitFeedback}>
-            <div className="grid sm:grid-cols-2 gap-3.5">
-              <input type="text" required placeholder={t('home.form.fullName')} className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-deepTeal transition" />
-              <select required className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet outline-none focus:border-theme-deepTeal transition cursor-pointer">
-                <option value="">{t('home.feedback.rolePlaceholder')}</option>
-                <option>{t('home.feedback.roleCandidate')}</option>
-                <option>{t('home.feedback.roleEmployer')}</option>
-                <option>{t('home.feedback.roleShg')}</option>
-                <option>{t('home.feedback.roleTrainee')}</option>
-                <option>{t('home.feedback.roleFranchise')}</option>
-                <option>{t('home.feedback.roleVisitor')}</option>
-              </select>
-            </div>
+          <div className="space-y-2.5 sm:space-y-3">
+            <a href="tel:+917755941753" className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 bg-slate-50 hover:bg-theme-lightViolet/60 rounded-xl px-3.5 sm:px-4 py-3 sm:py-3.5 transition-colors">
+              <span className="flex min-w-0 items-center gap-2 sm:gap-2.5 text-[13px] sm:text-sm font-extrabold text-theme-darkViolet"><Phone className="w-4 h-4 shrink-0 text-theme-deepTeal" /> <span className="truncate">+91 7755941753</span></span>
+              <span className="text-[10px] sm:text-[11px] font-bold text-theme-deepTeal">{t('home.contact.callNow')}</span>
+            </a>
+            <a href="tel:+918956741109" className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 bg-slate-50 hover:bg-theme-lightViolet/60 rounded-xl px-3.5 sm:px-4 py-3 sm:py-3.5 transition-colors">
+              <span className="flex min-w-0 items-center gap-2 sm:gap-2.5 text-[13px] sm:text-sm font-extrabold text-theme-darkViolet"><Phone className="w-4 h-4 shrink-0 text-theme-deepTeal" /> <span className="truncate">+91 8956741109</span></span>
+              <span className="text-[10px] sm:text-[11px] font-bold text-theme-deepTeal">{t('home.contact.callNow')}</span>
+            </a>
+          </div>
 
-            <div className="border border-theme-lightViolet rounded-xl px-4 py-3.5">
-              <div className="text-xs font-bold text-theme-darkViolet/55 uppercase tracking-wider mb-2.5">{t('home.feedback.ratingLabel')}</div>
-              <div className="flex gap-1.5 text-2xl text-theme-darkViolet/20">
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setRating(i)}
-                    className="hover:scale-110 transition cursor-pointer"
-                    style={{ color: i <= rating ? '#FFB020' : '' }}
-                    aria-label={`${i + 1} star`}
-                  >
-                    <Star className="w-6 h-6 fill-current" />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <textarea required rows={4} placeholder={t('home.feedback.experiencePlaceholder')} className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-deepTeal transition resize-none"></textarea>
-
-            <label className="flex items-start gap-2.5 cursor-pointer select-none">
-              <input type="checkbox" className="w-4 h-4 mt-0.5 accent-theme-deepTeal" />
-              <span className="text-xs font-semibold text-theme-darkViolet/60">{t('home.feedback.publishConsent')}</span>
-            </label>
-
-            <button type="submit" className="btn-gloss w-full bg-theme-deepTeal text-white px-6 py-3.5 rounded-xl font-bold hover:bg-theme-darkViolet transition-all shadow-lg cursor-pointer">{t('home.feedback.submit')}</button>
-            <p className={`${feedbackSent ? '' : 'hidden'} text-sm font-bold text-theme-deepTeal text-center pt-1`}>
-              <Check className="inline w-4 h-4 mr-1.5 -mt-0.5" /> {t('home.feedback.thanks')}
-            </p>
-          </form>
+          <p className="mt-4 text-[11px] sm:text-xs font-semibold text-theme-darkViolet/55 text-center">
+            {t('home.contact.hours')}
+          </p>
         </div>
       </div>
 
+      <ComingSoonModal
+        isOpen={shgComingSoonOpen}
+        onClose={() => setShgComingSoonOpen(false)}
+        content={shgComingSoonContent}
+      />
+
       {/* FOOTER */}
-      <SiteFooter scrollTo={scrollToId} openModal={openModal} enterGateway={handleEnterGateway} />
+      <SiteFooter scrollTo={scrollToId} enterGateway={handleEnterGateway} />
     </div>
   );
 }

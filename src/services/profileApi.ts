@@ -512,3 +512,35 @@ export const updateUserEducationInfo = (payload: UpdateUserEducationInfoPayload)
     'Education information updated successfully.',
     'Failed to update education information.',
   );
+
+/**
+ * Record that an employer/admin downloaded a candidate's resume.
+ * This is fire-and-forget: the endpoint may not be deployed yet, so every
+ * failure (network, 404, non-JSON error page) is swallowed so the browser
+ * download is never blocked.
+ */
+export const logProfileDownload = async (payload: {
+  candidateId: string;
+  role?: UserRole | string;
+}): Promise<void> => {
+  try {
+    const { cleanToken } = readAuth();
+    const numericId = Number(payload.candidateId);
+    await fetch(apiV1('logprofiledownload'), {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${cleanToken}`,
+        'token': cleanToken || '',
+      },
+      body: JSON.stringify({
+        candidateId: Number.isNaN(numericId) ? payload.candidateId : numericId,
+        role: payload.role || '',
+      }),
+    });
+  } catch (err) {
+    // Intentionally silent — logging must never interrupt the download flow.
+    console.debug('[profileApi] logProfileDownload skipped:', err);
+  }
+};

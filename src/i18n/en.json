@@ -11,7 +11,7 @@
     "jobs": "Jobs",
     "shgProducts": "SHG & Products",
     "notifications": "Notifications",
-    "orgName": "Shri Swami Samarth Seva va Adhyatmik Vikas Marg (Dindori Pranit)",
+    "orgName": "Shree Swami Samarth Seva va Adhyatmik Vikas Marg (Dindori Pranit)",
     "department": "Swayamrojgar Vibhag",
     "postRequirement": "Post a Requirement",
     "candidateRegistration": "Candidate Registration",
@@ -22,7 +22,7 @@
   },
   "hero": {
     "headline": "Spritual foundation paired with paths to self-employment!",
-    "subHeadline": "Shri Swami Samarth Seva & Adhyatmik Vikas Marg (Dindori Pranit) - Self Employment Department",
+    "subHeadline": "Shree Swami Samarth Seva & Adhyatmik Vikas Marg (Dindori Pranit) - Self Employment Department",
     "candidate": {
       "title": "Candidate / Job Seeker",
       "desc": "Jobs, placements, and spiritual career counseling",
@@ -79,13 +79,13 @@
     "button": "Register Now"
   },
   "footer": {
-    "aboutText": "Shri Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag Dedicated to elevated social economic welfare.",
+    "aboutText": "Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag Dedicated to elevated social economic welfare.",
     "quickLinks": "Quick Links",
     "contact": "Contact Info",
     "address": "Dindori Darbar, Nashik, Maharashtra",
     "phone": "0253-253XXXX",
     "email": "info@dindoripranit.org",
-    "rights": "© 2026 Shri Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag. All Rights Reserved.",
+    "rights": "© 2026 Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag. All Rights Reserved.",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "noFeeNotice": "The Swayamrojgar Vibhag never charges any fee from a candidate or a self-help group.",
@@ -96,6 +96,7 @@
     "brand": "Swayamrojgar",
     "tagline": "Work, income and self-reliance for every family we reach.",
     "followLinkedIn": "Follow us on LinkedIn",
+    "followWhatsApp": "Follow us on WhatsApp",
     "getApp": "Get the app on Google Play",
     "forGroups": "For Groups",
     "aboutShgs": "About self-help groups",
@@ -109,7 +110,7 @@
     "aboutUs": "About us",
     "contactUs": "Contact us",
     "faqHelp": "FAQ & Help",
-    "copyright": "© 2026 Shri Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag. All Rights Reserved.",
+    "copyright": "© 2026 Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag. All Rights Reserved.",
     "termsOfUse": "Terms of Use"
   },
   "auth": {
@@ -164,7 +165,7 @@
     "loginFailed": "Invalid login details. Please check your credentials.",
     "mismatch": "This is a {{role}} account. Please use the {{correct}} tab to log in.",
     "accountLoginTitle": "Account Login",
-    "brandSevaMarg": "Shri Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag",
+    "brandSevaMarg": "Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag",
     "usernameEmailMobile": "Username / Email / Mobile",
     "usernameEmailMobilePlaceholder": "Enter username, email or mobile",
     "loggingIn": "Logging in...",
@@ -288,9 +289,9 @@
     "loginBtn": "Log In",
     "errorDetails": "Error Details:",
     "home": "Home",
-    "brandName": "Shri Gurupith Rojgar Manch",
+    "brandName": "Shree Gurupith Rojgar Manch",
     "activatingTitle": "Activating your account...",
-    "copyright": "© {{year}} Shri Gurupith Rojgar Manch. All rights reserved."
+    "copyright": "© {{year}} Shree Gurupith Rojgar Manch. All rights reserved."
   },
   "common": {
     "emptyTitle": "No data available",
@@ -299,7 +300,7 @@
   "dash": {
     "header": {
       "dashboard": "Dashboard",
-      "brandName": "Shri Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag"
+      "brandName": "Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag"
     },
     "menu": {
       "sevaOverview": "Seva (Overview)",
@@ -643,6 +644,9 @@
       "email": "Email",
       "dob": "Date of Birth",
       "gender": "Gender",
+      "male": "Male",
+      "female": "Female",
+      "otherGender": "Other",
       "maritalStatus": "Marital Status",
       "state": "State *",
       "selectState": "-- Select State --",
@@ -660,7 +664,125 @@
       "invalidType": "{{name}} is not an accepted file type."
     },
     "brand": {
-      "name": "Shri Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag"
+      "name": "Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag"
+    }
+  },
+  "profileView": {
+    "pageTitle": "My Profile",
+    "subtitleCandidate": "View and update your personal details, profile picture, resume, and employment history.",
+    "subtitleCompany": "View and update your company details and profile picture.",
+    "tabs": {
+      "details": "Basic Details",
+      "education": "Education Details",
+      "employment": "Employment History",
+      "pic": "Profile Picture",
+      "resume": "Resume"
+    },
+    "actions": {
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving...",
+      "add": "Add",
+      "update": "Update",
+      "delete": "Delete",
+      "ok": "OK"
+    },
+    "personal": {
+      "sectionTitle": "Personal Information",
+      "sectionHint": "Keep your personal details up to date.",
+      "fullName": "Full Name",
+      "email": "Email",
+      "phone": "Phone",
+      "role": "Role",
+      "dob": "Date of Birth",
+      "gender": "Gender",
+      "maritalStatus": "Marital Status",
+      "state": "State",
+      "district": "District",
+      "taluka": "Taluka",
+      "pincode": "Pincode",
+      "address": "Address",
+      "noData": "No profile data found."
+    },
+    "education": {
+      "sectionTitle": "Education Details",
+      "sectionHint": "Your educational and professional summary.",
+      "education": "Education",
+      "specialization": "Specialization",
+      "skills": "Skills",
+      "skillsComma": "Skills (comma separated)",
+      "courses": "Courses",
+      "experience": "Experience (Years)",
+      "currentSalary": "Current Salary",
+      "currentSalaryRs": "Current Salary (₹)",
+      "expectation": "Expected / Salary Expectation",
+      "expectationRs": "Expected / Salary Expectation (₹)",
+      "noticePeriod": "Notice Period",
+      "preferredJobLocations": "Preferred Job Locations",
+      "jobType": "Job Type",
+      "selectJobType": "-- Select Job Type --",
+      "shiftType": "Shift Type",
+      "selectShiftType": "-- Select Shift Type --",
+      "workStatus": "Work Status",
+      "selectWorkStatus": "-- Select Work Status --",
+      "resumeHeadline": "Resume Headline",
+      "profileSummary": "Profile Summary",
+      "noData": "No education data found."
+    },
+    "employment": {
+      "previousEmployment": "Previous Employment",
+      "recordAdded": "{{count}} record added",
+      "recordsAdded": "{{count}} records added",
+      "noEntries": "No entries yet",
+      "addPrevious": "Add Previous Employment",
+      "editTitle": "Edit Employment History",
+      "addTitle": "Add Previous Employment",
+      "current": "Current",
+      "present": "Present",
+      "unknownCompany": "Unknown Company",
+      "designationNotSet": "Designation not set",
+      "noHistoryTitle": "No employment history added yet",
+      "noHistoryHint": "Add your previous work experience to make your profile stronger.",
+      "deleteTitle": "Delete Employment History",
+      "deleteMessage": "Are you sure you want to delete the employment record for \"{{company}}\"? This action cannot be undone.",
+      "thisCompany": "this company",
+      "updatedTitle": "Employment Updated",
+      "addedTitle": "Employment Added",
+      "deletedTitle": "Employment Deleted",
+      "saveError": "Unexpected error while saving employment history.",
+      "deleteError": "Unexpected error while deleting employment history.",
+      "currentlyWorking": "Currently working here",
+      "companyPlaceholder": "e.g. Infosys, TCS, Local Store",
+      "designationPlaceholder": "e.g. Sales Executive",
+      "departmentPlaceholder": "e.g. Marketing, Accounts",
+      "locationPlaceholder": "e.g. Nashik, Mumbai, Pune",
+      "selectPlaceholder": "-- Select --",
+      "closeForm": "Close form",
+      "editAria": "Edit employment history",
+      "deleteAria": "Delete employment history",
+      "validation": {
+        "companyRequired": "Please enter the company name.",
+        "designationRequired": "Please enter the designation.",
+        "startRequired": "Please select the start date.",
+        "startFuture": "Start date cannot be in the future.",
+        "endBeforeStart": "End date cannot be before the start date.",
+        "endFuture": "End date cannot be in the future."
+      }
+    },
+    "marital": {
+      "single": "Single",
+      "married": "Married",
+      "divorced": "Divorced",
+      "widowed": "Widowed"
+    },
+    "roles": {
+      "CANDIDATE": "Candidate",
+      "COMPANY": "Employer",
+      "ADMIN": "Admin",
+      "SUPER_ADMIN": "Super Admin",
+      "HANDLER": "Handler",
+      "SHG": "SHG"
     }
   },
   "reg": {
@@ -820,7 +942,7 @@
       "employerRegistered": "Employer Registration completed successfully!"
     },
     "brand": {
-      "tagline": "Shri Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag"
+      "tagline": "Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag"
     },
     "haveAccount": "Already have an account? Login here",
     "consent": {
@@ -945,11 +1067,16 @@
       "titleGloss": "Kendras",
       "subtitle": "Our offices are at Dindori and Trimbak. Everywhere else, sevekaris are served through our kendras.",
       "headOfficeAddress": "Head Office Address",
-      "headOfficeText": "Swayamrojgar Vibhag, Shri Swami Seva Marg, Dindori, Dist. Nashik, Maharashtra",
+      "headOfficeText": "Swayamrojgar Vibhag, Shree Swami Seva Marg, Dindori, Dist. Nashik, Maharashtra",
       "phone": "Phone",
       "hours": "Mon to Sat, 10 am to 6 pm",
       "email": "Email",
       "linkedin": "Follow us on LinkedIn",
+      "whatsapp": "Follow us on WhatsApp",
+      "contactUsBtn": "Contact Us",
+      "contactUsTitle": "Contact Us",
+      "contactUsSubtitle": "Call our office for jobs, training, SHG or product enquiries.",
+      "callNow": "Call now",
       "headOffice": "Head Office",
       "dindori": "Dindori",
       "distNashik": "Dist. Nashik, Maharashtra",

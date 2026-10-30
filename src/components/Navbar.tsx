@@ -147,7 +147,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                     <div className="absolute left-0 top-full pt-1 z-50 animate-fade-in w-60">
                       <div className="glass rounded-2xl py-2 shadow-xl border border-white/90 bg-white/95 backdrop-blur-md">
                         <Link
-                          to="/register?type=employer"
+                          to="/login"
                           className="block px-4 py-2 text-xs font-bold text-theme-darkViolet/80 hover:text-theme-lavender hover:bg-theme-lightViolet/60 transition-colors"
                         >
                           {t('nav.postRequirement')}

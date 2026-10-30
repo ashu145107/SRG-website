@@ -12,7 +12,11 @@
  */
 
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useGetAdminCandidateDetailQuery } from '../services/adminApi';
+import { logProfileDownload } from '../services/profileApi';
+import { RootState } from '../store';
+import { EmploymentHistory, UserRole } from '../types';
 import {
   UserCircle,
   FileText,
@@ -30,7 +34,6 @@ import {
   BadgeCheck
 } from 'lucide-react';
 import { Loader } from './ui/FeedbackComponents';
-import { EmploymentHistory } from '../types';
 
 interface CandidateData {
   fullName: string;
@@ -84,10 +87,18 @@ interface AdminCandidateProfileViewProps {
 
 export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidateProfileViewProps) {
   const [activeTab, setActiveTab] = useState<'details' | 'education' | 'employment' | 'resume'>('details');
+  const { user } = useSelector((state: RootState) => state.auth);
 
   const { data: profile, isLoading, error } = useGetAdminCandidateDetailQuery(candidateId, {
     skip: !candidateId,
   });
+
+  const isCandidate = String(user?.role || '').toUpperCase() === UserRole.CANDIDATE;
+
+  const handleDownload = () => {
+    if (isCandidate) return;
+    void logProfileDownload({ candidateId, role: user?.role });
+  };
 
   // Map the normalized CandidateProfile → CandidateData for display
   const candidate: CandidateData | null = profile ? {
@@ -370,15 +381,18 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
                         >
                           <Eye className="w-3.5 h-3.5" /> Preview
                         </button>
-                        <a
-                          href={candidate.resumeUrl}
-                          download={candidate.resumeName || 'resume'}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-2 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5"
-                        >
-                          <Download className="w-3.5 h-3.5" /> Download
-                        </a>
+                        {!isCandidate && (
+                          <a
+                            href={candidate.resumeUrl}
+                            download={candidate.resumeName || 'resume'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={handleDownload}
+                            className="px-3 py-2 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Download
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>

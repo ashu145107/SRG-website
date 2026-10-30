@@ -25,6 +25,10 @@ jest.mock('../services/adminApi', () => ({
   useGetAdminCandidateDetailQuery: jest.fn(),
 }));
 
+jest.mock('../services/profileApi', () => ({
+  logProfileDownload: jest.fn(),
+}));
+
 import { useGetAdminCandidateDetailQuery } from '../services/adminApi';
 const mockUseGetAdminCandidateDetailQuery = useGetAdminCandidateDetailQuery as jest.Mock;
 

@@ -2006,11 +2006,11 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       }
       const res = await updateCompanyProfile({
         address: compAddress,
-        stateId: 0,
+        stateId: compStateId,
         state: compState,
-        districtId: 0,
+        districtId: compDistrictId,
         district: compDistrict,
-        talukaId: 0,
+        talukaId: compTalukaId,
         taluka: compTaluka,
         mobile: compMobile,
         email: compEmail,
@@ -2107,7 +2107,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
           <Alert
             type="warning"
             title={t('dash.employer.reviewPending')}
-            message="Your employer recruiter profile verification is actively pending review by Shri Swami Samarth self-employment staff handlers. Once verified, your posted vacancies will instantly receive high-priority visibility!"
+            message="Your employer recruiter profile verification is actively pending review by Shree Swami Samarth self-employment staff handlers. Once verified, your posted vacancies will instantly receive high-priority visibility!"
           />
         )}
         {/* 1. Job application Pipelines tab */}

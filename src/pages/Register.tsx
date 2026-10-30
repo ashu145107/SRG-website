@@ -1375,7 +1375,7 @@ export default function Register() {
                   {t('reg.consent.privacy')}
                 </p>
                 <p>
-                  All personal data including Contact information, Qualification details, and Placement history are governed by stringent confidentiality guidelines of Shri Swami Samarth Seva Marg recruitment portal.
+                  All personal data including Contact information, Qualification details, and Placement history are governed by stringent confidentiality guidelines of Shree Swami Samarth Seva Marg recruitment portal.
                 </p>
               </div>
             </div>
