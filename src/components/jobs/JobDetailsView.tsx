@@ -25,7 +25,7 @@ import {
   Users,
   Clock,
   BookOpen,
-  DollarSign,
+  IndianRupee,
   Award,
   ChevronLeft,
   CheckCircle,
@@ -92,7 +92,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
   const handleApplyClick = () => {
     if (!isAuthenticated) {
       setToastType('error');
-      setToastMsg('अर्ज करण्यासाठी कृपया प्रथम लॉगिन करा! / Please log in first to apply!');
+      setToastMsg(t('jobs.detail.loginRequired'));
       setShowToast(true);
       return;
     }
@@ -111,7 +111,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
 
       setHasApplied(true);
       setToastType('success');
-      setToastMsg(response?.message || 'अर्ज यशस्वीरीत्या सादर केला! / Application submitted successfully!');
+      setToastMsg(response?.message || t('jobs.detail.applySuccess'));
       setShowToast(true);
 
       if (onApplySuccess) {
@@ -125,7 +125,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
         err?.response?.data?.message ||
         err?.data?.message ||
         err?.data ||
-        'अर्ज सबमिट करताना त्रुटी आली. / Failed to submit application.';
+        t('jobs.detail.applyError');
       setToastMsg(typeof errorMsg === 'string' ? errorMsg : 'Duplicate application or server error.');
       setShowToast(true);
     }
@@ -158,7 +158,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
     return (
       <div className="bg-white rounded-2xl border border-slate-150 p-8 max-w-xl mx-auto text-center my-8">
         <div className="text-red-500 text-3xl mb-3">⚠️</div>
-        <h3 className="text-base font-bold text-slate-800">माहिती लोड करण्यात अयशस्वी / Failed to Load Job Details</h3>
+        <h3 className="text-base font-bold text-slate-800">{t('jobs.detail.loadFailed')}</h3>
         <p className="text-xs text-slate-500 mt-2 leading-relaxed">
           There was an issue fetching the details for Job ID #{jobId}. Please try again or go back.
         </p>
@@ -167,14 +167,14 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
             onClick={() => refetch()}
             className="py-2.5 px-5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
           >
-            पुन्हा प्रयत्न करा / Retry
+            {t('jobs.detail.retry')}
           </button>
           {onBack && (
             <button
               onClick={onBack}
               className="py-2.5 px-5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all cursor-pointer"
             >
-              मागे जा / Go Back
+              {t('jobs.detail.goBack')}
             </button>
           )}
         </div>
@@ -191,7 +191,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
           className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-orange-600 transition-colors cursor-pointer"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span>मागे जा / Back to Listings</span>
+          <span>{t('jobs.detail.backToListings')}</span>
         </button>
       )}
 
@@ -224,7 +224,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
                 {hasApplied ? (
                   <span className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 shadow-xs">
                     <CheckCircle className="w-4 h-4 text-emerald-500" />
-                    <span>अर्ज सादर / Applied</span>
+                    <span>{t('jobs.detail.applied')}</span>
                   </span>
                 ) : (
                   <button
@@ -233,7 +233,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
                     className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {isApplying && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                    <span>{isApplying ? 'अर्ज सबमिट करत आहे... / Submitting...' : 'अर्ज करा / Apply'}</span>
+                    <span>{isApplying ? t('jobs.detail.submitting') : t('jobs.detail.apply')}</span>
                   </button>
                 )}
               </div>
@@ -255,7 +255,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
 
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-slate-50 border border-slate-100 rounded-lg text-orange-600">
-                  <DollarSign className="w-4 h-4" />
+                  <IndianRupee className="w-4 h-4" />
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 block font-semibold leading-none mb-0.5">SALARY RANGE</span>
@@ -293,7 +293,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
           <div className="bg-white rounded-2xl border border-slate-150 p-6 space-y-4">
             <h3 className="text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
               <Briefcase className="w-4.5 h-4.5 text-orange-600" />
-              <span>नोकरीचे सविस्तर वर्णन / Job Description</span>
+              <span>{t('jobs.detail.descriptionTitle')}</span>
             </h3>
             <p className="text-xs text-slate-650 leading-relaxed whitespace-pre-line block">
               {job.jobDiscription || job.profileHeader || 'Detailed job requirement specifications.'}
@@ -305,7 +305,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
             <div>
               <h4 className="text-xs font-extrabold text-slate-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
                 <Award className="w-4 h-4 text-orange-600" />
-                <span>आवश्यक कौशल्ये / Required Skills</span>
+                <span>{t('jobs.detail.requiredSkills')}</span>
               </h4>
               <div className="flex flex-wrap gap-2">
                 {(job.skill || 'Relevant Skills').split(',').map((s, idx) => (
@@ -320,7 +320,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
               <div className="pt-4 border-t border-slate-100">
                 <h4 className="text-xs font-extrabold text-slate-900 mb-2 flex items-center gap-2 uppercase tracking-wider">
                   <BookOpen className="w-4 h-4 text-orange-600" />
-                  <span>आवश्यक प्रमाणपत्रे / Required Certifications</span>
+                  <span>{t('jobs.detail.requiredCertifications')}</span>
                 </h4>
                 <p className="text-xs text-slate-600 font-semibold block">{job.certificationsRequired}</p>
               </div>
@@ -331,7 +331,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
           {job.benefits && (
             <div className="bg-white rounded-2xl border border-slate-150 p-6 space-y-3">
               <h3 className="text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-2">
-                इतर फायदे / Key Perks & Benefits
+                {t('jobs.detail.benefitsTitle')}
               </h3>
               <p className="text-xs text-slate-650 leading-relaxed block">{job.benefits}</p>
             </div>
@@ -343,39 +343,39 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
           <div className="bg-white rounded-2xl border border-slate-150 p-6 space-y-5 relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1 bg-blue-900" />
             <h3 className="text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-2">
-              कामाची रूपरेषा / Job Specifications
+              {t('jobs.detail.specificationsTitle')}
             </h3>
 
             <div className="divide-y divide-slate-100">
-              <SpecRow label="कामाचे ठिकाण / Workplace:">
+              <SpecRow label={t('jobs.detail.workplace')}>
                 {job.workPlace || 'Office Office'}
               </SpecRow>
 
-              <SpecRow label="शिक्षण / Qualification:">
+              <SpecRow label={t('jobs.detail.qualification')}>
                 {getLabel(educations, job.educationId, lang)}
               </SpecRow>
 
-              <SpecRow label="क्षेत्र / Specialization:">
+              <SpecRow label={t('jobs.detail.specialization')}>
                 {job.industryTypeId || 'N/A'}
               </SpecRow>
 
-              <SpecRow label="वेतन कालावधी / Salary Period:">
+              <SpecRow label={t('jobs.detail.salaryPeriod')}>
                 {getLabel(salaryPeriods, job.salaryPeriodId, lang)}
               </SpecRow>
 
-              <SpecRow label="लिंग निवड / Gender Preference:">
-                {job.genderPreference === 'Any' ? 'दोन्ही / Any Gender' : job.genderPreference}
+              <SpecRow label={t('jobs.detail.genderPreference')}>
+                {job.genderPreference === 'Any' ? t('jobs.detail.anyGender') : job.genderPreference}
               </SpecRow>
 
-              <SpecRow label="वय मर्यादा / Age Range:">
+              <SpecRow label={t('jobs.detail.ageRange')}>
                 {job.ageRange || '18-45'}
               </SpecRow>
 
-              <SpecRow label="साप्ताहिक सुट्टी / Weekly Off:">
+              <SpecRow label={t('jobs.detail.weeklyOff')}>
                 {getLabel(weeklyOffs, job.weeklyOffId, lang)}
               </SpecRow>
 
-              <SpecRow label="कामाची पाळी / Shift:">
+              <SpecRow label={t('jobs.detail.shift')}>
                 {getLabel(shiftTypes, job.shiftTypeId, lang)}
               </SpecRow>
             </div>
@@ -385,7 +385,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
           <div className="bg-slate-50 rounded-2xl border border-slate-150 p-6 space-y-4">
             <h4 className="text-xs font-extrabold text-slate-900 border-b border-slate-200 pb-2 flex items-center gap-2 uppercase tracking-wider">
               <Clock className="w-4 h-4 text-orange-600" />
-              <span>मुलाखत तपशील / Interview Process</span>
+              <span>{t('jobs.detail.interviewProcess')}</span>
             </h4>
             <div className="space-y-3.5 text-xs text-slate-700">
               <div>
@@ -437,7 +437,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
 
         {hasApplied ? (
           <span className="px-4 py-2.5 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200">
-            ✓ अर्ज सादर / Applied
+            {t('jobs.detail.appliedMobile')}
           </span>
         ) : (
           <button
@@ -446,7 +446,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
             className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isApplying && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            <span>{isApplying ? 'Submitting...' : 'अर्ज करा / Apply'}</span>
+            <span>{isApplying ? t('jobs.detail.submitting') : t('jobs.detail.apply')}</span>
           </button>
         )}
       </div>
@@ -457,10 +457,10 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
         onConfirm={handleConfirmApply}
-        title="नोकरीसाठी अर्ज निश्चित करा / Confirm Job Application"
-        message={`तुम्ही या नोकरीसाठी (${job.jobDesignation}) अर्ज करू इच्छिता? / Are you sure you want to apply for this vacancy?`}
-        confirmText="होय, अर्ज करा / Yes, Apply"
-        cancelText="रद्द करा / Cancel"
+        title={t('jobs.detail.confirmTitle')}
+        message={t('jobs.detail.confirmMessage', { designation: job.jobDesignation })}
+        confirmText={t('jobs.detail.confirmYes')}
+        cancelText={t('jobs.detail.confirmCancel')}
       />
 
       {showToast && <Toast message={toastMsg} type={toastType} onClose={() => setShowToast(false)} />}

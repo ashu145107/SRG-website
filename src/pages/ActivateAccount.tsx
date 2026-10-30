@@ -1,21 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { useActivateAccountMutation } from '../services/authApi';
 import { Loader2, CheckCircle2, XCircle, ShieldAlert, ArrowRight, Home } from 'lucide-react';
 
 export default function ActivateAccount() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
-  // Robustly extract 'd' parameter from:
+  // Robustly extract activation token/code ('d', 'token', or 'code') from:
   // 1. Raw window.location.href (to preserve '+' characters and avoid URLSearchParams converting them to spaces)
   // 2. React Router searchParams (after the hash)
   // 3. Fallback: Parse manually from window.location.hash query portion
   const getActivationCode = (): string | null => {
     // 1. Raw extraction from entire href to avoid '+' being decoded to space
     const href = window.location.href;
-    const regex = /[?&]d=([^&#]*)/i;
+    const regex = /[?&](?:d|token|code)=([^&#\s]*)/i;
     const match = regex.exec(href);
     if (match) {
       const rawValue = match[1];
@@ -26,14 +28,14 @@ export default function ActivateAccount() {
       }
     }
 
-    const codeFromRouter = searchParams.get('d');
+    const codeFromRouter = searchParams.get('d') || searchParams.get('token') || searchParams.get('code');
     if (codeFromRouter) return codeFromRouter;
 
     const hash = window.location.hash;
     const qMarkIndex = hash.indexOf('?');
     if (qMarkIndex !== -1) {
       const hashParams = new URLSearchParams(hash.substring(qMarkIndex));
-      const codeFromHash = hashParams.get('d');
+      const codeFromHash = hashParams.get('d') || hashParams.get('token') || hashParams.get('code');
       if (codeFromHash) return codeFromHash;
     }
 
@@ -53,8 +55,8 @@ export default function ActivateAccount() {
     if (!code) {
       setActivationResult({
         success: false,
-        message: 'अवैध सक्रियकरण दुवा / Invalid Activation Link',
-        details: 'कृपया अचूक आणि पूर्ण सक्रियकरण दुवा वापरा. / Please make sure you are using a valid and complete activation link.',
+        message: t('activate.invalidLinkTitle'),
+        details: t('activate.invalidLinkDetails'),
       });
       return;
     }
@@ -71,24 +73,24 @@ export default function ActivateAccount() {
         if (isSuccess) {
           setActivationResult({
             success: true,
-            message: 'खाते यशस्वीरित्या सक्रिय झाले! / Account Activated Successfully!',
-            details: 'तुमचे खाते यशस्वीरित्या सक्रिय केले गेले आहे. आता आपण लॉगिन करून पुढील सेवांचा लाभ घेऊ शकता. / Your account has been activated successfully. You can now log in to use the services.',
+            message: t('activate.successTitle'),
+            details: t('activate.successDetails'),
           });
         } else {
           // Check for error in response body
-          const errorMsg = result?.error?.message || (result as any)?.message || 'दुवा अवैध आहे किंवा आधीच वापरला गेला आहे. / Link is invalid or has already been used.';
+          const errorMsg = result?.error?.message || (result as any)?.message || t('activate.linkInvalidOrUsed');
           setActivationResult({
             success: false,
-            message: 'सक्रियकरण अयशस्वी / Activation Failed',
+            message: t('activate.failedTitle'),
             details: errorMsg,
           });
         }
       } catch (err: any) {
         console.error('[ActivateAccount] Mutation failed:', err);
-        const errorMsg = err?.data || err?.message || 'सर्व्हरशी संपर्क साधताना त्रुटी आली. / An error occurred while communicating with the server.';
+        const errorMsg = err?.data || err?.message || t('activate.serverErrorMsg');
         setActivationResult({
           success: false,
-          message: 'सर्व्हर त्रुटी / Server Error',
+          message: t('activate.serverErrorTitle'),
           details: errorMsg,
         });
       }
@@ -114,7 +116,7 @@ export default function ActivateAccount() {
             (e.target as HTMLElement).style.display = 'none';
           }} />
           <h2 className="text-xl font-bold text-slate-800 tracking-tight">
-            श्री गुरुपीठ रोजगार मंच
+            {t('activate.brandName')}
           </h2>
           <p className="text-xs text-slate-500 font-medium">SRG Employment Portal</p>
         </div>
@@ -126,13 +128,13 @@ export default function ActivateAccount() {
           <div className="py-8 flex flex-col items-center justify-center">
             <Loader2 className="h-14 w-14 text-orange-500 animate-spin mb-4" />
             <h3 className="text-lg font-bold text-slate-800 mb-2">
-              खाते सक्रिय केले जात आहे...
+              {t('activate.activatingTitle')}
             </h3>
             <p className="text-sm text-slate-500 font-medium">
               Activating your account, please wait...
             </p>
             <p className="text-xs text-slate-400 mt-2">
-              आम्ही तुमचा सक्रियकरण दुवा तपासत आहोत / We are verifying your activation link
+              {t('activate.verifying')}
             </p>
           </div>
         )}
@@ -167,7 +169,7 @@ export default function ActivateAccount() {
                     to="/login"
                     className="flex-1 inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm px-6 py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-98"
                   >
-                    लॉगिन करा / Log In
+                    {t('activate.loginBtn')}
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
@@ -187,7 +189,7 @@ export default function ActivateAccount() {
                   <ShieldAlert className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs text-red-800 font-bold leading-normal mb-1">
-                      त्रुटी तपशील / Error Details:
+                      {t('activate.errorDetails')}
                     </p>
                     <p className="text-xs text-red-700 font-medium leading-relaxed">
                       {activationResult.details}
@@ -200,14 +202,14 @@ export default function ActivateAccount() {
                     to="/login"
                     className="flex-1 inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-3 rounded-xl transition-all active:scale-98"
                   >
-                    लॉगिनवर जा / Go to Login
+                    {t('auth.goToLogin')}
                   </Link>
                   <Link
                     to="/"
                     className="flex-1 inline-flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs px-4 py-3 rounded-xl transition-all active:scale-98"
                   >
                     <Home className="h-3.5 w-3.5" />
-                    मुख्यपृष्ठ / Home
+                    {t('activate.home')}
                   </Link>
                 </div>
               </div>
@@ -218,7 +220,7 @@ export default function ActivateAccount() {
 
       {/* Footer copyright */}
       <p className="text-[11px] text-slate-400 mt-6 relative z-10 font-medium text-center">
-        © {new Date().getFullYear()} श्री गुरुपीठ रोजगार मंच. सर्व हक्क राखीव.
+        {t('activate.copyright', { year: new Date().getFullYear() })}
       </p>
     </div>
   );

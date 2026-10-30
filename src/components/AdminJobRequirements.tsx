@@ -9,8 +9,10 @@ import { JobRequirement } from '../services/jobTypes';
 import { Briefcase, Eye, Edit, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
 import { Loader } from './ui/FeedbackComponents';
 import { EditJobForm } from './jobs/EditJobForm';
+import { useTranslation } from 'react-i18next';
 
 export function AdminJobRequirements() {
+  const { t } = useTranslation();
   const [pageSize, setPageSize] = useState(15);
   const [pageNumber, setPageNumber] = useState(1);
   const [searchPhrase, setSearchPhrase] = useState('');
@@ -85,10 +87,10 @@ export function AdminJobRequirements() {
       <div className="border-b border-gray-100 pb-4">
         <h2 className="text-lg font-extrabold text-blue-950 flex items-center gap-2">
           <Briefcase className="w-5 h-5 text-orange-600" />
-          कंपनी आवश्यकता प्रविष्टी / Company Requirement entry
+          {t('adm.requirements.title')}
         </h2>
         <p className="text-xs text-slate-500">
-          नियोक्त्यांद्वारे पोस्ट केलेल्या नोकऱ्या आणि आवश्यक पात्रता तपशील व्यवस्थापन
+          {t('adm.requirements.subtitle')}
         </p>
       </div>
 
@@ -96,11 +98,11 @@ export function AdminJobRequirements() {
       <div className="bg-white rounded-2xl border border-gray-150 shadow-xs p-6 space-y-4">
         <div className="flex justify-between items-center pb-2">
           <h3 className="font-extrabold text-blue-950 text-sm tracking-wide uppercase">
-            नोकरी आवश्यकता यादी / Job Requirement List
+            {t('adm.requirements.listTitle')}
           </h3>
           {isFetching && (
             <span className="flex items-center gap-1.5 text-[10px] text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded animate-pulse">
-              <Loader2 className="w-3 h-3 animate-spin" /> अद्ययावत करत आहे...
+              <Loader2 className="w-3 h-3 animate-spin" /> {t('adm.common.refreshing')}
             </span>
           )}
         </div>
@@ -206,15 +208,14 @@ export function AdminJobRequirements() {
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center">
                     <div className="inline-flex flex-col items-center gap-2 text-red-600 font-medium">
-                      <span className="text-sm">❌ API लोड करण्यात अयशस्वी</span>
-                      <span className="text-xs text-slate-500">Failed to load job requirements from API. Please check your connection and try again.</span>
+                      <span className="text-sm">{t('adm.requirements.loadError')}</span>
                     </div>
                   </td>
                 </tr>
               ) : filteredAndSortedList.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-slate-400 font-medium">
-                    कोणतेही रेकॉर्ड सापडले नाही / No job requirements found
+                    {t('adm.requirements.empty')}
                   </td>
                 </tr>
               ) : (
@@ -334,7 +335,7 @@ export function AdminJobRequirements() {
               <div className="flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-orange-400" />
                 <h3 className="font-extrabold text-sm sm:text-base">
-                  नोकरी आवश्यकता तपशील / Job Requirement Details
+                  {t('adm.requirements.detailTitle')}
                 </h3>
               </div>
               <button
@@ -405,7 +406,7 @@ export function AdminJobRequirements() {
                 onClick={() => setSelectedJob(null)}
                 className="px-4 py-2 bg-slate-200 hover:bg-slate-350 text-slate-700 font-bold text-xs rounded-lg transition-all cursor-pointer"
               >
-                बंद करा / Close
+                {t('adm.common.close')}
               </button>
             </div>
           </div>
@@ -420,7 +421,7 @@ export function AdminJobRequirements() {
               <div className="flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-orange-400" />
                 <h3 className="font-extrabold text-sm sm:text-base">
-                  नोकरी आवश्यकता संपादित करा / Edit Job Requirement
+                  {t('adm.requirements.editTitle')}
                 </h3>
               </div>
               <button

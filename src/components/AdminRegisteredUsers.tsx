@@ -7,8 +7,10 @@ import React, { useState } from 'react';
 import { useGetAdminUsersQuery } from '../services/adminApi';
 import { CandidateProfile } from '../types';
 import { Users, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2, ExternalLink } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export function AdminRegisteredUsers() {
+  const { t } = useTranslation();
   const [pageSize, setPageSize] = useState(15);
   const [pageNumber, setPageNumber] = useState(1);
   const [searchPhrase, setSearchPhrase] = useState('');
@@ -81,10 +83,10 @@ export function AdminRegisteredUsers() {
       <div className="border-b border-gray-100 pb-4">
         <h2 className="text-lg font-extrabold text-blue-950 flex items-center gap-2">
           <Users className="w-5 h-5 text-orange-600" />
-          नोंदणीकृत उमेदवार यादी / Registered Candidate List
+          {t('adm.users.title')}
         </h2>
         <p className="text-xs text-slate-500">
-          प्रणालीत नोंदणीकृत असलेल्या ग्रामीण उमेदवारांचा बायोडाटा व शिक्षण माहिती व्यवस्थापन
+          {t('adm.users.subtitle')}
         </p>
       </div>
 
@@ -92,11 +94,11 @@ export function AdminRegisteredUsers() {
       <div className="bg-white rounded-2xl border border-gray-150 shadow-xs p-6 space-y-4">
         <div className="flex justify-between items-center pb-2">
           <h3 className="font-extrabold text-blue-950 text-sm tracking-wide uppercase">
-            नोंदणीकृत उमेदवार / Registered Candidates
+            {t('adm.users.listTitle')}
           </h3>
           {isFetching && (
             <span className="flex items-center gap-1.5 text-[10px] text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded animate-pulse">
-              <Loader2 className="w-3 h-3 animate-spin" /> अद्ययावत करत आहे...
+              <Loader2 className="w-3 h-3 animate-spin" /> {t('adm.common.refreshing')}
             </span>
           )}
         </div>
@@ -223,22 +225,21 @@ export function AdminRegisteredUsers() {
                 <tr>
                   <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-orange-500" />
-                    माहिती लोड होत आहे / Loading candidates...
+                    {t('adm.users.loading')}
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-10 text-center">
                     <div className="inline-flex flex-col items-center gap-2 text-red-600 font-medium">
-                      <span className="text-sm">❌ API लोड करण्यात अयशस्वी</span>
-                      <span className="text-xs text-slate-500">Failed to load candidates from API. Please check your connection and try again.</span>
+                      <span className="text-sm">{t('adm.users.loadError')}</span>
                     </div>
                   </td>
                 </tr>
               ) : filteredAndSortedList.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-slate-400 font-medium">
-                    कोणतेही रेकॉर्ड सापडले नाही / No candidates found
+                    {t('adm.users.empty')}
                   </td>
                 </tr>
               ) : (
@@ -359,7 +360,7 @@ export function AdminRegisteredUsers() {
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-orange-400" />
                 <h3 className="font-extrabold text-sm sm:text-base">
-                  उमेदवार प्रोफाइल तपशील / Candidate Profile Details
+                  {t('adm.users.detailTitle')}
                 </h3>
               </div>
               <button
@@ -424,9 +425,8 @@ export function AdminRegisteredUsers() {
                 onClick={() => setSelectedCandidate(null)}
                 className="px-4 py-2 bg-slate-200 hover:bg-slate-350 text-slate-700 font-bold text-xs rounded-lg transition-all cursor-pointer"
               >
-                बंद करा / Close
-              </button>
-            </div>
+                {t('adm.common.close')}
+              </button>            </div>
           </div>
         </div>
       )}

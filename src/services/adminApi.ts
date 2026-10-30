@@ -6,6 +6,7 @@
 import { baseApi, getApiBaseUrl, getClientIp } from './baseApi';
 import { CompanyProfile, CandidateProfile, JobApplication } from '../types';
 import { JobRequirement } from './jobTypes';
+import i18n from '../i18n/config';
 
 export interface PaginatedResponse<T> {
   items: T[];
@@ -496,7 +497,7 @@ export const adminApi = baseApi.injectEndpoints({
             return {
               error: {
                 status: res.status,
-                data: `कंपनी नोंदणी सर्व्हर त्रुटी / Company registration failed. Status: ${res.status}`
+                data: i18n.t('adm.api.companyRegistrationServerError', { status: res.status })
               }
             };
           }
@@ -506,19 +507,19 @@ export const adminApi = baseApi.injectEndpoints({
             return {
               data: {
                 isSuccess: true,
-                message: data.message || data.resultMessage || 'कंपनी यशस्वीरित्या नोंदणी केली! / Company registered successfully!',
+                message: data.message || data.resultMessage || i18n.t('adm.api.companyRegistrationSuccess'),
                 companyId: String(data.companyId || data.id || data.companyRegistrationId || '')
               }
             };
           }
 
-          const errMsg = data?.error?.message || data?.message || 'कंपनी नोंदणी अयशस्वी. / Company registration failed.';
+          const errMsg = data?.error?.message || data?.message || i18n.t('adm.api.companyRegistrationFailed');
           return { error: { status: 400, data: String(errMsg) } };
         } catch (err: any) {
           return {
             error: {
               status: 500,
-              data: `कंपनी नोंदणी नेटवर्क त्रुटी / Company registration Network Error: ${err?.message || err}`
+              data: i18n.t('adm.api.companyRegistrationNetworkError', { message: err?.message || err })
             }
           };
         }

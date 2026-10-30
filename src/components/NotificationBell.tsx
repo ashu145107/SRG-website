@@ -70,9 +70,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
     queryKey: ['notifications'],
     queryFn: fetchNotifications,
     enabled: isAuthenticated,
-    staleTime: 1000 * 30,
-    refetchInterval: 1000 * 60,
-    retry: 2,
+    staleTime: 1000 * 60 * 3, // 3 minutes cache
+    refetchInterval: open ? 1000 * 60 : false, // only poll periodically if the notification panel is open
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
@@ -155,7 +156,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
         {unreadCount > 0 ? <BellRing className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
         {unreadCount > 0 && (
           <span
-            className={`absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-red-600 ring-2 ${ringClass} shadow-sm`}
+            className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-600 ring-2 ${ringClass} shadow-sm`}
           />
         )}
       </button>

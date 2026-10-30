@@ -258,6 +258,7 @@ export default function Home() {
   const [querySent, setQuerySent] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [rating, setRating] = useState(-1);
+  const [queryMobile, setQueryMobile] = useState('');
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -370,24 +371,21 @@ export default function Home() {
               <div className="inline-flex items-center space-x-3 mb-8">
                 <span className="w-8 h-8 rounded-lg bg-theme-terracotta text-white flex items-center justify-center shrink-0"><Check className="text-sm w-4 h-4" /></span>
                 <span className="text-sm font-semibold text-theme-darkViolet/80">
-                  {L('Employment, enterprise and self-reliance with', 'रोजगार, उद्योजकता आणि स्वावलंबन,')}{' '}
-                  <em className="not-italic font-extrabold text-theme-lavender">{L('Swayamrojgar Vibhag', 'स्वयंरोजगार विभाग')}</em>
+                  {t('home.hero.badgePrefix')}{' '}
+                  <em className="not-italic font-extrabold text-theme-lavender">{t('home.hero.badgeBrand')}</em>
                 </span>
               </div>
 
               <h1 className="text-4xl md:text-5xl xl:text-[3.75rem] font-extrabold text-theme-darkViolet leading-[1.12] mb-7">
-                <span className="text-theme-darkViolet">{L('Find', 'तुमचे')} </span>
-                <span className="gloss-teal">{L('Your', 'आदर्श')}</span>{' '}
-                <span className="gloss">{L('Perfect', '...')}</span>
+                <span className="text-theme-darkViolet">{t('home.hero.wordFind')} </span>
+                <span className="gloss-teal">{t('home.hero.wordYour')}</span>{' '}
+                <span className="gloss">{t('home.hero.wordPerfect')}</span>
                 <br className="hidden md:block" />
                 <span className={`kw-box ${kwSwap ? 'swap' : ''}`}>{L(KEYWORDS[kwIndex].en, KEYWORDS[kwIndex].mr)}</span>
               </h1>
 
               <p className="text-base md:text-lg text-theme-darkViolet/70 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                {L(
-                  'Search a job, hire local talent, book a service or register your self-help group. Create a free account to get started.',
-                  'नोकरी शोधा, स्थानिक उमेदवार निवडा, सेवा बुक करा किंवा तुमचा बचत गट नोंदवा. सुरुवात करण्यासाठी मोफत खाते तयार करा.'
-                )}
+                {t('home.hero.subtitle')}
               </p>
 
               {/* Primary CTA - job browsing lives behind an account */}
@@ -396,24 +394,24 @@ export default function Home() {
                   onClick={() => handleEnterGateway('CANDIDATE')}
                   className="btn-gloss bg-theme-lavender text-white px-8 py-3.5 rounded-xl font-bold hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30 whitespace-nowrap cursor-pointer"
                 >
-                  {L('Get Started Free', 'मोफत सुरुवात करा')} <ArrowRight className="inline w-4 h-4 -mt-0.5" />
+                  {t('home.hero.ctaStart')} <ArrowRight className="inline w-4 h-4 -mt-0.5" />
                 </button>
                 <button
                   onClick={goLogin}
                   className="bg-white border border-theme-lightViolet text-theme-darkViolet px-8 py-3.5 rounded-xl font-bold hover:border-theme-lavender hover:text-theme-lavender transition-all whitespace-nowrap cursor-pointer"
                 >
-                  {L('Login', 'लॉगिन')}
+                  {t('home.hero.ctaLogin')}
                 </button>
               </div>
 
               {/* Chips */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mt-6">
-                <span className="text-sm font-bold text-theme-darkViolet/70 mr-1">{L('Go straight to:', 'थेट जा:')}</span>
-                <button onClick={() => handleEnterGateway('CANDIDATE')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{L('Jobs', 'नोकऱ्या')}</button>
-                <button onClick={() => handleEnterGateway('COMPANY')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{L('Hire', 'भरती')}</button>
-                <button onClick={() => scrollToId('services')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{L('Services', 'सेवा')}</button>
-                <button onClick={() => handleEnterGateway('SHG')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{L('SHG', 'बचतगट')}</button>
-                <button onClick={() => scrollToId('products')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{L('Products', 'उत्पादने')}</button>
+                <span className="text-sm font-bold text-theme-darkViolet/70 mr-1">{t('home.hero.goStraight')}</span>
+                <button onClick={() => handleEnterGateway('CANDIDATE')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{t('home.hero.chipJobs')}</button>
+                <button onClick={() => handleEnterGateway('COMPANY')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{t('home.hero.chipHire')}</button>
+                <button onClick={() => scrollToId('services')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{t('home.hero.chipServices')}</button>
+                <button onClick={() => handleEnterGateway('SHG')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{t('home.hero.chipShg')}</button>
+                <button onClick={() => scrollToId('products')} className="bg-white border border-theme-lightViolet px-4 py-1.5 rounded-full text-sm font-bold text-theme-darkViolet hover:border-theme-lavender hover:text-theme-lavender transition cursor-pointer">{t('home.hero.chipProducts')}</button>
               </div>
             </div>
 
@@ -516,16 +514,13 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <span className="inline-flex items-center gap-2 bg-theme-mint/15 text-theme-deepTeal px-4 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-widest mb-4">
-              <Compass className="w-3.5 h-3.5" /> {L('Where do you begin', 'कुठून सुरुवात कराल')}
+              <Compass className="w-3.5 h-3.5" /> {t('home.platform.badge')}
             </span>
             <h2 className="text-3xl lg:text-5xl font-extrabold text-theme-darkViolet leading-tight">
-              {L('Three Doors,', 'तीन दरवाजे,')} <span className="gloss">{L('One Purpose', 'एकच ध्येय')}</span>
+              {t('home.platform.titleDoors')} <span className="gloss">{t('home.platform.titlePurpose')}</span>
             </h2>
             <p className="text-theme-darkViolet/60 mt-4 max-w-2xl mx-auto">
-              {L(
-                'Whether you need work, need guidance or need a market for what you make — walk through the door that is yours.',
-                'तुम्हाला काम हवे, मार्गदर्शन हवे किंवा तुमच्या उत्पादनाला बाजारपेठ हवी — तुमच्या दरवाजातून आत या.'
-              )}
+              {t('home.platform.subtitle')}
             </p>
           </div>
 
@@ -539,23 +534,23 @@ export default function Home() {
 
                 <div className="stat-badge absolute top-5 left-5 bg-white shadow-lg rounded-xl px-3 py-2 flex items-center gap-2 border border-theme-lightViolet z-20">
                   <span className="w-2 h-2 rounded-full bg-theme-mint animate-pulse"></span>
-                  <span className="text-[11px] font-extrabold text-theme-darkViolet">{L(`${hiredCount} hired`, `${hiredCount} नोकरी मिळालेले`)}</span>
+                  <span className="text-[11px] font-extrabold text-theme-darkViolet">{t('home.careers.hired', { count: hiredCount })}</span>
                 </div>
 
                 <div className="relative z-10 w-20 h-20 rounded-3xl bg-theme-lavender/10 text-theme-lavender flex items-center justify-center mt-10 mb-6 ico-hop group-hover:bg-theme-lavender group-hover:text-white transition-colors duration-300">
                   <Briefcase className="text-3xl w-8 h-8" />
                 </div>
-                <h3 className="relative z-10 text-2xl font-extrabold text-theme-darkViolet mb-3">{L('Careers', 'करिअर')}</h3>
+                <h3 className="relative z-10 text-2xl font-extrabold text-theme-darkViolet mb-3">{t('home.careers.title')}</h3>
                 <p className="relative z-10 text-theme-darkViolet/65 mb-7 flex-grow text-sm leading-relaxed">
-                  {L('For ', '')}
-                  <strong className="text-theme-darkViolet">{L('candidates', 'उमेदवारांसाठी')}</strong>
-                  {L(' seeking work and ', ' नोकरी शोधणारे आणि ')}
-                  <strong className="text-theme-darkViolet">{L('companies', 'कंपन्यांसाठी')}</strong>
-                  {L(' looking to hire reliable local talent.', ' स्थानिक विश्वासू उमेदवारांची भरती.')}
+                  {t('home.careers.descPrefix')}
+                  <strong className="text-theme-darkViolet">{t('home.careers.descCandidates')}</strong>
+                  {t('home.careers.descMid')}
+                  <strong className="text-theme-darkViolet">{t('home.careers.descCompanies')}</strong>
+                  {t('home.careers.descSuffix')}
                 </p>
                 <div className="relative z-10 w-full space-y-2.5">
-                  <button onClick={() => handleEnterGateway('CANDIDATE')} className="btn-gloss block w-full bg-theme-lavender text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30 text-sm cursor-pointer">{L('Find Work', 'नोकरी शोधा')}</button>
-                  <button onClick={() => handleEnterGateway('COMPANY')} className="block w-full bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold hover:border-theme-lavender hover:text-theme-lavender transition-all text-sm cursor-pointer">{L('Hire Talent', 'उमेदवार निवडा')}</button>
+                  <button onClick={() => handleEnterGateway('CANDIDATE')} className="btn-gloss block w-full bg-theme-lavender text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30 text-sm cursor-pointer">{t('home.careers.findWork')}</button>
+                  <button onClick={() => handleEnterGateway('COMPANY')} className="block w-full bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold hover:border-theme-lavender hover:text-theme-lavender transition-all text-sm cursor-pointer">{t('home.careers.hireTalent')}</button>
                 </div>
               </div>
             </div>
@@ -568,19 +563,19 @@ export default function Home() {
 
                 <div className="stat-badge absolute top-5 left-5 bg-white shadow-lg rounded-xl px-3 py-2 flex items-center gap-2 border border-theme-lightViolet z-20">
                   <span className="w-2 h-2 rounded-full bg-theme-gold animate-pulse"></span>
-                  <span className="text-[11px] font-extrabold text-theme-darkViolet">{L(`${trainingsCount} trainings`, `${trainingsCount} प्रशिक्षणे`)}</span>
+                  <span className="text-[11px] font-extrabold text-theme-darkViolet">{t('home.services.trainings', { count: trainingsCount })}</span>
                 </div>
 
                 <div className="relative z-10 w-20 h-20 rounded-3xl bg-theme-deepTeal/10 text-theme-deepTeal flex items-center justify-center mt-10 mb-6 ico-hop group-hover:bg-theme-deepTeal group-hover:text-white transition-colors duration-300">
                   <Landmark className="text-3xl w-8 h-8" />
                 </div>
-                <h3 className="relative z-10 text-2xl font-extrabold text-theme-darkViolet mb-3">{L('Our Services', 'आमच्या सेवा')}</h3>
+                <h3 className="relative z-10 text-2xl font-extrabold text-theme-darkViolet mb-3">{t('home.services.title')}</h3>
                 <p className="relative z-10 text-theme-darkViolet/65 mb-7 flex-grow text-sm leading-relaxed">
-                  {L('Career counselling, competitive examination guidance, business and licence help, machinery support and skill training.', 'करिअर समुपदेशन, स्पर्धा परीक्षा मार्गदर्शन, व्यवसाय व परवाना साहाय्य, यंत्रसाहाय्य आणि कौशल्य प्रशिक्षण.')}
+                  {t('home.services.desc')}
                 </p>
                 <div className="relative z-10 w-full space-y-2.5">
-                  <button onClick={() => scrollToId('about')} className="btn-gloss block w-full bg-theme-deepTeal text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md text-sm cursor-pointer">{L('Explore Services', 'सेवा पहा')}</button>
-                  <button onClick={() => openModal('query')} className="block w-full bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold hover:border-theme-deepTeal hover:text-theme-deepTeal transition-all text-sm cursor-pointer">{L('Book Guidance', 'मार्गदर्शन मिळवा')}</button>
+                  <button onClick={() => scrollToId('about')} className="btn-gloss block w-full bg-theme-deepTeal text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md text-sm cursor-pointer">{t('home.services.explore')}</button>
+                  <button onClick={() => openModal('query')} className="block w-full bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold hover:border-theme-deepTeal hover:text-theme-deepTeal transition-all text-sm cursor-pointer">{t('home.services.bookGuidance')}</button>
                 </div>
               </div>
             </div>
@@ -593,23 +588,23 @@ export default function Home() {
 
                 <div className="stat-badge absolute top-5 left-5 bg-white shadow-lg rounded-xl px-3 py-2 flex items-center gap-2 border border-theme-lightViolet z-20">
                   <span className="w-2 h-2 rounded-full bg-theme-terracotta animate-pulse"></span>
-                  <span className="text-[11px] font-extrabold text-theme-darkViolet">{L(`${shgCount} groups`, `${shgCount} गट`)}</span>
+                  <span className="text-[11px] font-extrabold text-theme-darkViolet">{t('home.shg.groups', { count: shgCount })}</span>
                 </div>
 
                 <div className="relative z-10 w-20 h-20 rounded-3xl bg-theme-terracotta/10 text-theme-terracotta flex items-center justify-center mt-10 mb-6 ico-hop group-hover:bg-theme-terracotta group-hover:text-white transition-colors duration-300">
                   <Network className="text-3xl w-8 h-8" />
                 </div>
-                <h3 className="relative z-10 text-2xl font-extrabold text-theme-darkViolet mb-3">{L('SHG Network', 'बचतगट नेटवर्क')}</h3>
+                <h3 className="relative z-10 text-2xl font-extrabold text-theme-darkViolet mb-3">{t('home.shg.title')}</h3>
                 <p className="relative z-10 text-theme-darkViolet/65 mb-7 flex-grow text-sm leading-relaxed">
-                  {L('Support for ', '')}
-                  <strong className="text-theme-darkViolet">{L('existing', 'विद्यमान')}</strong>
-                  {L(' self-help groups and registration for ', ' बचतगटांना पाठबळ आणि ')}
-                  <strong className="text-theme-darkViolet">{L('new', 'नवीन')}</strong>
-                  {L(' ones — training, quality and market access.', ' गटांची नोंदणी — प्रशिक्षण, गुणवत्ता आणि बाजारपेठ.')}
+                  {t('home.shg.descPrefix')}
+                  <strong className="text-theme-darkViolet">{t('home.shg.descExisting')}</strong>
+                  {t('home.shg.descMid')}
+                  <strong className="text-theme-darkViolet">{t('home.shg.descNew')}</strong>
+                  {t('home.shg.descSuffix')}
                 </p>
                 <div className="relative z-10 w-full space-y-2.5">
-                  <button onClick={() => handleEnterGateway('SHG')} className="btn-gloss block w-full bg-theme-terracotta text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md text-sm cursor-pointer">{L('Register Your Group', 'गट नोंदणी करा')}</button>
-                  <button onClick={() => scrollToId('products')} className="block w-full bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold hover:border-theme-terracotta hover:text-theme-terracotta transition-all text-sm cursor-pointer">{L('Our Products', 'आमची उत्पादने')}</button>
+                  <button onClick={() => handleEnterGateway('SHG')} className="btn-gloss block w-full bg-theme-terracotta text-white px-6 py-3 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-md text-sm cursor-pointer">{t('home.shg.register')}</button>
+                  <button onClick={() => scrollToId('products')} className="block w-full bg-white border-2 border-theme-lightViolet text-theme-darkViolet px-6 py-3 rounded-full font-bold hover:border-theme-terracotta hover:text-theme-terracotta transition-all text-sm cursor-pointer">{t('home.shg.ourProducts')}</button>
                 </div>
               </div>
             </div>
@@ -628,14 +623,14 @@ export default function Home() {
                   <span className="absolute -top-4 -left-4 w-20 h-20 rounded-2xl border-2 border-theme-mint/40"></span>
                   <span className="absolute -bottom-4 -right-4 w-24 h-24 rounded-2xl bg-theme-gold/15"></span>
                   <div className="relative rounded-2xl overflow-hidden shadow-xl">
-                    <img src="/home/products.jpg" alt={L('Community products', 'समुदाय उत्पादने')} className="w-full object-cover" />
+                    <img src="/home/products.jpg" alt={t('home.products.imgAlt')} className="w-full object-cover" />
                     <span className="shine"></span>
                   </div>
                   <div className="absolute -bottom-5 left-5 bg-white shadow-xl rounded-xl px-4 py-3 flex items-center gap-3 border border-theme-lightViolet">
                     <span className="w-9 h-9 rounded-lg bg-theme-mint/20 text-theme-deepTeal flex items-center justify-center"><Leaf className="text-sm w-4 h-4" /></span>
                     <div className="text-left leading-none">
-                      <div className="text-sm font-extrabold text-theme-darkViolet">{L('Handmade', 'हाताने बनवलेले')}</div>
-                      <div className="text-[10px] font-bold text-theme-darkViolet/50 uppercase tracking-wider mt-1">{L('By our bachat gats', 'आमच्या बचत गटांनी')}</div>
+                      <div className="text-sm font-extrabold text-theme-darkViolet">{t('home.products.handmade')}</div>
+                      <div className="text-[10px] font-bold text-theme-darkViolet/50 uppercase tracking-wider mt-1">{t('home.products.byGats')}</div>
                     </div>
                   </div>
                 </div>
@@ -644,13 +639,13 @@ export default function Home() {
 
             <div className="lg:col-span-7">
               <span className="inline-flex items-center gap-2 bg-theme-mint/15 text-theme-deepTeal px-4 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-widest mb-4">
-                <HeartHandshake className="w-3.5 h-3.5" /> {L('Made by our women', 'आमच्या महिलांनी बनवलेले')}
+                <HeartHandshake className="w-3.5 h-3.5" /> {t('home.products.badge')}
               </span>
               <h2 className="text-3xl lg:text-4xl font-extrabold text-theme-darkViolet mb-3">
-                <span className="gloss-teal">{L('Community', 'समुदाय')}</span> {L('Products', 'उत्पादने')}
+                <span className="gloss-teal">{t('home.products.titleCommunity')}</span> {t('home.products.titleProducts')}
               </h2>
               <p className="text-theme-darkViolet/60 mb-6 leading-relaxed max-w-xl">
-                {L('Handmade, sustainable and community made. Every purchase supports a family in our network.', 'हाताने बनवलेली, टिकाऊ आणि समुदायातर्फे बनवलेली उत्पादने. प्रत्येक खरेदीने आमच्या नेटवर्कमधील एक कुटुंब सक्षम होते.')}
+                {t('home.products.desc')}
               </p>
 
               <div className="-mx-5">
@@ -662,7 +657,7 @@ export default function Home() {
                           <span className="num text-lg font-extrabold text-theme-darkViolet/25 w-8 shrink-0">0{i + 1}</span>
                           <div className="min-w-0 flex-1">
                             <div className="font-extrabold text-theme-darkViolet leading-tight">{isMr ? p.nameMr : p.name}</div>
-                            <div className="text-xs text-theme-darkViolet/55 mt-1">{isMr ? L(p.desc, p.desc) : L(p.desc, p.desc)} &middot; <span className="text-theme-deepTeal font-bold">{L('Our Bachat Gats', 'आमचे बचत गट')}</span></div>
+                            <div className="text-xs text-theme-darkViolet/55 mt-1">{isMr ? L(p.desc, p.desc) : L(p.desc, p.desc)} &middot; <span className="text-theme-deepTeal font-bold">{t('home.products.ourGats')}</span></div>
                           </div>
                           <span className="go text-theme-lavender shrink-0"><ArrowRight className="w-4 h-4" /></span>
                         </div>
@@ -674,7 +669,7 @@ export default function Home() {
               </div>
 
               <button onClick={() => openModal('query')} className="btn-gloss inline-flex items-center gap-2 mt-7 ml-5 bg-theme-deepTeal text-white px-8 py-3.5 rounded-full font-bold hover:bg-theme-darkViolet transition-all shadow-lg text-sm cursor-pointer">
-                {L('Visit the Shop', 'दुकान पहा')} <ArrowRight className="text-xs w-3.5 h-3.5" />
+                {t('home.products.visitShop')} <ArrowRight className="text-xs w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -741,10 +736,10 @@ export default function Home() {
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
               <div>
                 <span className="inline-flex items-center gap-2 bg-theme-gold/15 text-theme-gold px-3.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-widest mb-3">
-                  <Quote className="w-3.5 h-3.5" /> {L('Real stories', 'खऱ्या यशोगाथा')}
+                  <Quote className="w-3.5 h-3.5" /> {t('home.stories.badge')}
                 </span>
                 <h2 className="text-2xl lg:text-3xl font-extrabold text-theme-darkViolet leading-tight">
-                  {L('Our Happy', 'आमचे समाधानी')} <span className="gloss">{L('Community', 'समुदाय')}</span> {L('Family', 'कुटुंब')}
+                  {t('home.stories.titlePrefix')} <span className="gloss">{t('home.stories.titleGloss')}</span> {t('home.stories.titleSuffix')}
                 </h2>
               </div>
               <div className="flex items-center gap-3">
@@ -767,7 +762,7 @@ export default function Home() {
                     {[0, 1, 2, 3, 4].map((s) => <Star key={s} className="inline w-3.5 h-3.5 fill-current" />)}
                   </div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-theme-darkViolet/45">
-                    {L('Success story', 'यशोगाथा')} {storyIndex + 1} / {stories.length}
+                    {t('home.stories.counter', { current: storyIndex + 1, total: stories.length })}
                   </span>
                 </div>
                 <p className="text-sm sm:text-base text-theme-darkViolet/70 italic leading-relaxed mb-4">
@@ -799,7 +794,7 @@ export default function Home() {
                 <span className="absolute -top-2 -left-2 w-10 h-10 rounded-xl bg-theme-gold/25"></span>
                 <span className="absolute -bottom-2 -right-2 w-12 h-12 rounded-full bg-theme-mint/25"></span>
                 <div className="relative rounded-2xl overflow-hidden shadow-lg">
-                  <img src="/home/franchise.jpg" alt={L('Partner with us', 'आमचे भागीदार व्हा')} className="w-full object-cover" />
+                  <img src="/home/franchise.jpg" alt={t('home.franchise.partnerWithUs')} className="w-full object-cover" />
                   <span className="shine"></span>
                 </div>
               </div>
@@ -807,18 +802,18 @@ export default function Home() {
 
             <Reveal direction="u" className="text-center lg:text-left flex-1 min-w-0">
               <span className="inline-flex items-center gap-1.5 bg-white text-theme-lavender px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest mb-2.5 shadow-sm">
-                <Handshake className="w-3.5 h-3.5" /> {L('Partner with us', 'आमचे भागीदार व्हा')}
+                <Handshake className="w-3.5 h-3.5" /> {t('home.franchise.partnerWithUs')}
               </span>
               <h2 className="text-2xl lg:text-[1.75rem] font-extrabold text-theme-darkViolet leading-tight mb-1.5">
-                {L('Build Your Own', 'तुमची स्वतःची')} <span className="gloss">{L('Success.', 'यशस्वी कथा घडवा.')}</span>
+                {t('home.franchise.titlePrefix')} <span className="gloss">{t('home.franchise.titleGloss')}</span>
               </h2>
               <p className="text-sm text-theme-darkViolet/65 mb-3 max-w-xl mx-auto lg:mx-0">
-                {L('Partner with us to bring trusted products to your community. Grow together, create opportunities.', 'तुमच्या समुदायापर्यंत विश्वासू उत्पादने पोहोचवण्यासाठी आमच्यासोबत जोडून घ्या. एकत्र वाढा, संधी निर्माण करा.')}
+                {t('home.franchise.desc')}
               </p>
               <div className="flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-1.5 text-xs font-bold text-theme-darkViolet/70">
-                <span><Check className="inline w-3.5 h-3.5 text-theme-mint mr-1.5 -mt-0.5" />{L('Trusted brands', 'विश्वासू ब्रँड्स')}</span>
-                <span><Check className="inline w-3.5 h-3.5 text-theme-mint mr-1.5 -mt-0.5" />{L('Growing demand', 'वाढती मागणी')}</span>
-                <span><Check className="inline w-3.5 h-3.5 text-theme-mint mr-1.5 -mt-0.5" />{L('Stronger communities', 'सक्षम समुदाय')}</span>
+                <span><Check className="inline w-3.5 h-3.5 text-theme-mint mr-1.5 -mt-0.5" />{t('home.franchise.perkBrands')}</span>
+                <span><Check className="inline w-3.5 h-3.5 text-theme-mint mr-1.5 -mt-0.5" />{t('home.franchise.perkDemand')}</span>
+                <span><Check className="inline w-3.5 h-3.5 text-theme-mint mr-1.5 -mt-0.5" />{t('home.franchise.perkCommunities')}</span>
               </div>
             </Reveal>
 
@@ -830,18 +825,18 @@ export default function Home() {
                 </div>
                 <div className="fr-card group bg-white rounded-xl border border-theme-lavender/10 shadow-sm px-3 py-2.5 text-center w-[86px] hover:-translate-y-1 hover:shadow-md transition-all cursor-pointer">
                   <Droplets className="text-theme-gold text-2xl w-6 h-6 block mx-auto mb-1.5 mt-1" />
-                  <div className="text-[10px] font-extrabold text-theme-darkViolet leading-tight">{L('Satvik Milk', 'सात्विक दूध')}</div>
+                  <div className="text-[10px] font-extrabold text-theme-darkViolet leading-tight">{t('home.franchise.brandSatvikMilk')}</div>
                 </div>
                 <div className="fr-card group bg-white rounded-xl border border-theme-lavender/10 shadow-sm px-3 py-2.5 text-center w-[86px] hover:-translate-y-1 hover:shadow-md transition-all cursor-pointer">
                   <img src="/home/brand-satvikmart.jpg" alt="Satvik Mart" className="w-full h-auto object-contain mb-1.5" />
-                  <div className="text-[10px] font-extrabold text-theme-darkViolet leading-tight">{L('Satvik Mart', 'सात्विक मार्ट')}</div>
+                  <div className="text-[10px] font-extrabold text-theme-darkViolet leading-tight">{t('home.franchise.brandSatvikMart')}</div>
                 </div>
               </div>
               <button
                 onClick={() => openModal('query')}
                 className="btn-gloss inline-flex items-center gap-2 bg-theme-lavender text-white px-6 py-2.5 rounded-full font-bold text-sm hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30 whitespace-nowrap cursor-pointer"
               >
-                {L('Be Your Own Boss!', 'स्वतःचे मालक व्हा!')} <ArrowRight className="text-[10px] w-3.5 h-3" />
+                {t('home.franchise.beBoss')} <ArrowRight className="text-[10px] w-3.5 h-3" />
               </button>
             </Reveal>
           </div>
@@ -853,13 +848,13 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <span className="inline-flex items-center gap-2 bg-theme-lightViolet text-theme-lavender px-4 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-widest mb-4">
-              <MapPin className="w-3.5 h-3.5" /> {L('Where to find us', 'आम्हाला कुठे भेटाल')}
+              <MapPin className="w-3.5 h-3.5" /> {t('home.contact.badge')}
             </span>
             <h2 className="text-3xl lg:text-4xl font-extrabold text-theme-darkViolet">
-              {L('Our Offices &', 'आमची कार्यालये व')} <span className="gloss">{L('Kendras', 'केंद्रे')}</span>
+              {t('home.contact.titlePrefix')} <span className="gloss">{t('home.contact.titleGloss')}</span>
             </h2>
             <p className="text-theme-darkViolet/60 mt-3 max-w-2xl mx-auto">
-              {L('Our offices are at Dindori and Trimbak. Everywhere else, sevekaris are served through our kendras.', 'आमची कार्यालये दिंडोरी व त्र्यंबकेश्वर येथे आहेत. इतर ठिकाणी सेवेकरींना आमच्या केंद्रांमार्फत सेवा दिली जाते.')}
+              {t('home.contact.subtitle')}
             </p>
           </div>
 
@@ -869,9 +864,9 @@ export default function Home() {
                 <div className="tile bg-white rounded-2xl border border-theme-lightViolet p-6 flex items-start gap-4 hover:shadow-xl transition-all duration-300 group">
                   <span className="w-12 h-12 rounded-2xl bg-theme-lavender/10 text-theme-lavender flex items-center justify-center shrink-0 ico-hop"><MapPin className="text-lg w-5 h-5" /></span>
                   <div>
-                    <h4 className="font-extrabold text-theme-darkViolet mb-1">{L('Head Office Address', 'मुख्य कार्यालयाचा पत्ता')}</h4>
+                    <h4 className="font-extrabold text-theme-darkViolet mb-1">{t('home.contact.headOfficeAddress')}</h4>
                     <p className="text-sm text-theme-darkViolet/65 leading-relaxed">
-                      {L('Swayamrojgar Vibhag, Shri Swami Seva Marg, Dindori, Dist. Nashik, Maharashtra', 'स्वयंरोजगार विभाग, श्री स्वामी सेवा मार्ग, दिंडोरी, जि. नाशिक, महाराष्ट्र')}
+                      {t('home.contact.headOfficeText')}
                     </p>
                   </div>
                 </div>
@@ -881,13 +876,13 @@ export default function Home() {
                 <div className="tile bg-white rounded-2xl border border-theme-lightViolet p-6 flex items-start gap-4 hover:shadow-xl transition-all duration-300 group">
                   <span className="w-12 h-12 rounded-2xl bg-theme-deepTeal/10 text-theme-deepTeal flex items-center justify-center shrink-0 ico-hop"><Phone className="text-lg w-5 h-5" /></span>
                   <div>
-                    <h4 className="font-extrabold text-theme-darkViolet mb-1">{L('Phone', 'दूरध्वनी')}</h4>
+                    <h4 className="font-extrabold text-theme-darkViolet mb-1">{t('home.contact.phone')}</h4>
                     <p className="text-sm text-theme-darkViolet/65 leading-relaxed">
                       <a href="tel:+917755941753" className="font-bold text-theme-darkViolet hover:text-theme-deepTeal transition">+91 7755941753</a>
                       <br />
                       <a href="tel:+918956741109" className="font-bold text-theme-darkViolet hover:text-theme-deepTeal transition">+91 8956741109</a>
                       <br />
-                      <span className="text-xs text-theme-darkViolet/50">{L('Mon to Sat, 10 am to 6 pm', 'सोम ते शनि, सकाळी १० ते संध्याकाळी ६')}</span>
+                      <span className="text-xs text-theme-darkViolet/50">{t('home.contact.hours')}</span>
                     </p>
                   </div>
                 </div>
@@ -897,11 +892,11 @@ export default function Home() {
                 <div className="tile bg-white rounded-2xl border border-theme-lightViolet p-6 flex items-start gap-4 hover:shadow-xl transition-all duration-300 group">
                   <span className="w-12 h-12 rounded-2xl bg-theme-terracotta/10 text-theme-terracotta flex items-center justify-center shrink-0 ico-hop"><Mail className="text-lg w-5 h-5" /></span>
                   <div>
-                    <h4 className="font-extrabold text-theme-darkViolet mb-1">{L('Email', 'ईमेल')}</h4>
+                    <h4 className="font-extrabold text-theme-darkViolet mb-1">{t('home.contact.email')}</h4>
                     <p className="text-sm text-theme-darkViolet/65 leading-relaxed break-all">
                       <a href="mailto:admin@dindoripranit.org" className="font-bold text-theme-darkViolet hover:text-theme-terracotta transition">admin@dindoripranit.org</a>
                       <br />
-                      <a href="mailto:srj.dindori@gmail.com" className="font-bold text-theme-darkViolet hover:text-theme-terracotta transition">srj.dindori@gmail.com</a>
+                      <a href="mailto:srg.dindori@gmail.com" className="font-bold text-theme-darkViolet hover:text-theme-terracotta transition">srg.dindori@gmail.com</a>
                     </p>
                   </div>
                 </div>
@@ -915,7 +910,7 @@ export default function Home() {
               >
                 <span className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 ico-hop"><Linkedin className="text-lg w-5 h-5" /></span>
                 <div className="relative z-10">
-                  <h4 className="font-extrabold mb-0.5">{L('Follow us on LinkedIn', 'आम्हाला LinkedIn वर फॉलो करा')}</h4>
+                  <h4 className="font-extrabold mb-0.5">{t('home.contact.linkedin')}</h4>
                   <p className="text-sm text-white/80">DPSM Swayamrojgar</p>
                 </div>
                 <ArrowRight className="w-4 h-4 ml-auto relative z-10 group-hover:translate-x-1 transition-transform" />
@@ -942,11 +937,11 @@ export default function Home() {
                 >
                   <div className="flex items-center gap-2.5 mb-2">
                     <span className="w-9 h-9 rounded-xl bg-theme-lavender/10 text-theme-lavender flex items-center justify-center shrink-0"><BuildingIcon /></span>
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-theme-lavender">{L('Head Office', 'मुख्य कार्यालय')}</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-theme-lavender">{t('home.contact.headOffice')}</span>
                   </div>
-                  <div className="font-extrabold text-theme-darkViolet leading-tight">{L('Dindori', 'दिंडोरी')}</div>
-                  <div className="text-xs text-theme-darkViolet/55 mt-1">{L('Dist. Nashik, Maharashtra', 'जि. नाशिक, महाराष्ट्र')}</div>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-theme-darkViolet/60 group-hover:text-theme-lavender transition mt-3">{L('Get directions', 'दिशा पहा')} <ArrowRight className="text-[10px] w-3 h-3 group-hover:translate-x-1 transition-transform" /></span>
+                  <div className="font-extrabold text-theme-darkViolet leading-tight">{t('home.contact.dindori')}</div>
+                  <div className="text-xs text-theme-darkViolet/55 mt-1">{t('home.contact.distNashik')}</div>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-theme-darkViolet/60 group-hover:text-theme-lavender transition mt-3">{t('home.contact.directions')} <ArrowRight className="text-[10px] w-3 h-3 group-hover:translate-x-1 transition-transform" /></span>
                 </a>
 
                 <a
@@ -957,38 +952,38 @@ export default function Home() {
                 >
                   <div className="flex items-center gap-2.5 mb-2">
                     <span className="w-9 h-9 rounded-xl bg-theme-gold/15 text-theme-gold flex items-center justify-center shrink-0"><Landmark className="text-sm w-4 h-4" /></span>
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-theme-gold">{L('Office & Gurupeeth', 'कार्यालय व गुरुपीठ')}</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-theme-gold">{t('home.contact.officeGurupeeth')}</span>
                   </div>
-                  <div className="font-extrabold text-theme-darkViolet leading-tight">{L('Trimbak', 'त्र्यंबकेश्वर')}</div>
-                  <div className="text-xs text-theme-darkViolet/55 mt-1">{L('Dist. Nashik, Maharashtra', 'जि. नाशिक, महाराष्ट्र')}</div>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-theme-darkViolet/60 group-hover:text-theme-gold transition mt-3">{L('Get directions', 'दिशा पहा')} <ArrowRight className="text-[10px] w-3 h-3 group-hover:translate-x-1 transition-transform" /></span>
+                  <div className="font-extrabold text-theme-darkViolet leading-tight">{t('home.contact.trimbak')}</div>
+                  <div className="text-xs text-theme-darkViolet/55 mt-1">{t('home.contact.distNashik')}</div>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-theme-darkViolet/60 group-hover:text-theme-gold transition mt-3">{t('home.contact.directions')} <ArrowRight className="text-[10px] w-3 h-3 group-hover:translate-x-1 transition-transform" /></span>
                 </a>
               </div>
 
-              <div className="bg-white rounded-2xl border border-theme-lightViolet p-6">
+              <div id="offices" className="scroll-mt-20 sm:scroll-mt-24 bg-white rounded-2xl border border-theme-lightViolet p-6">
                 <h4 className="font-extrabold text-theme-darkViolet mb-1 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-theme-deepTeal" /> {L('Our Kendras', 'आमची केंद्रे')}
+                  <MapPin className="w-4 h-4 text-theme-deepTeal" /> {t('home.contact.ourKendras')}
                 </h4>
-                <p className="text-xs text-theme-darkViolet/55 mb-5">{L('Beyond our two offices, sevekaris are served through kendras.', 'आमच्या दोन्ही कार्यालयांव्यतिरिक्त, सेवेकरींना केंद्रांमार्फत सेवा दिली जाते.')}</p>
+                <p className="text-xs text-theme-darkViolet/55 mb-5">{t('home.contact.kendrasNote')}</p>
 
                 <div className="space-y-4">
                   <div>
-                    <div className="text-sm font-extrabold text-theme-darkViolet leading-tight mb-1.5">{L('Maharashtra', 'महाराष्ट्र')}</div>
-                    <p className="text-xs text-theme-darkViolet/60">{L('Kendras in almost every district of the state.', 'राज्यातील जवळपास प्रत्येक जिल्ह्यात केंद्रे.')}</p>
+                    <div className="text-sm font-extrabold text-theme-darkViolet leading-tight mb-1.5">{t('home.contact.maharashtra')}</div>
+                    <p className="text-xs text-theme-darkViolet/60">{t('home.contact.kendrasState')}</p>
                   </div>
                   <div>
-                    <div className="text-sm font-extrabold text-theme-darkViolet leading-tight mb-2">{L('Elsewhere in India', 'भारतातील इतर ठिकाणे')}</div>
+                    <div className="text-sm font-extrabold text-theme-darkViolet leading-tight mb-2">{t('home.contact.elsewhereIndia')}</div>
                     <div className="flex flex-wrap gap-1.5">
                       {['Madhya Pradesh', 'Uttar Pradesh', 'Gujarat', 'Karnataka', 'Goa'].map((s) => (
-                        <span key={s} className="bg-theme-lightViolet text-theme-darkViolet/75 text-[11px] font-bold px-2.5 py-1 rounded-full">{L(s, L(s, s))}</span>
+                        <span key={s} className="bg-theme-lightViolet text-theme-darkViolet/75 text-[11px] font-bold px-2.5 py-1 rounded-full">{s}</span>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-extrabold text-theme-darkViolet leading-tight mb-2">{L('Outside India', 'भारताबाहेर')}</div>
+                    <div className="text-sm font-extrabold text-theme-darkViolet leading-tight mb-2">{t('home.contact.outsideIndia')}</div>
                     <div className="flex flex-wrap gap-1.5">
                       {['United States', 'United Kingdom', 'Canada'].map((s) => (
-                        <span key={s} className="bg-theme-mint/15 text-theme-deepTeal text-[11px] font-bold px-2.5 py-1 rounded-full">{L(s, L(s, s))}</span>
+                        <span key={s} className="bg-theme-mint/15 text-theme-deepTeal text-[11px] font-bold px-2.5 py-1 rounded-full">{s}</span>
                       ))}
                     </div>
                   </div>
@@ -1007,31 +1002,31 @@ export default function Home() {
           <div className="flex items-center gap-3 mb-6">
             <span className="w-12 h-12 rounded-2xl bg-theme-lavender/10 text-theme-lavender flex items-center justify-center"><CircleHelp className="text-lg w-6 h-6" /></span>
             <div>
-              <h3 className="text-xl font-extrabold text-theme-darkViolet leading-tight">{L('Send Us a Query', 'आम्हाला विचारा')}</h3>
-              <p className="text-xs text-theme-darkViolet/55 mt-0.5">{L('Jobs, training, SHG registration, franchise', 'नोकरी, प्रशिक्षण, बचतगट नोंदणी, फ्रँचायझी')}</p>
+              <h3 className="text-xl font-extrabold text-theme-darkViolet leading-tight">{t('home.query.title')}</h3>
+              <p className="text-xs text-theme-darkViolet/55 mt-0.5">{t('home.query.subtitle')}</p>
             </div>
           </div>
 
           <form className="space-y-3.5" onSubmit={submitQuery}>
             <div className="grid sm:grid-cols-2 gap-3.5">
-              <input type="text" required placeholder={L('Full name', 'पूर्ण नाव')} className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-lavender transition" />
-              <input type="tel" required placeholder={L('Mobile number', 'मोबाईल क्रमांक')} className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-lavender transition" />
+              <input type="text" required placeholder={t('home.form.fullName')} className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-lavender transition" />
+              <input type="tel" inputMode="numeric" required placeholder={t('home.form.mobile')} value={queryMobile} onChange={(e) => setQueryMobile(e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength={10} pattern="[0-9]{10}" className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-lavender transition" />
             </div>
-            <input type="email" placeholder={L('Email address (optional)', 'ईमेल पत्ता (ऐच्छिक)')} className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-lavender transition" />
+            <input type="email" placeholder={t('home.form.email')} className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-lavender transition" />
             <select required className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet outline-none focus:border-theme-lavender transition cursor-pointer">
-              <option value="">{L('My query is about…', 'माझा प्रश्न आहे…')}</option>
-              <option>{L('Finding a job', 'नोकरी शोधणे')}</option>
-              <option>{L('Hiring candidates', 'उमेदवार निवडणे')}</option>
-              <option>{L('Skill training / competitive exams', 'कौशल्य प्रशिक्षण / स्पर्धा परीक्षा')}</option>
-              <option>{L('Self-help group registration', 'बचतगट नोंदणी')}</option>
-              <option>{L('Community products', 'समुदाय उत्पादने')}</option>
-              <option>{L('Franchise or distributorship', 'फ्रँचायझी किंवा वितरण')}</option>
-              <option>{L('Something else', 'इतर')}</option>
+              <option value="">{t('home.query.topicPlaceholder')}</option>
+              <option>{t('home.query.topicFindJob')}</option>
+              <option>{t('home.query.topicHiring')}</option>
+              <option>{t('home.query.topicTraining')}</option>
+              <option>{t('home.query.topicShg')}</option>
+              <option>{t('home.query.topicProducts')}</option>
+              <option>{t('home.query.topicFranchise')}</option>
+              <option>{t('home.query.topicOther')}</option>
             </select>
-            <textarea required rows={4} placeholder={L('Write your question here', 'तुमचा प्रश्न येथे लिहा')} className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-lavender transition resize-none"></textarea>
-            <button type="submit" className="btn-gloss w-full bg-theme-lavender text-white px-6 py-3.5 rounded-xl font-bold hover:bg-theme-darkViolet transition-all shadow-lg shadow-theme-lavender/30 cursor-pointer">{L('Submit Query', 'प्रश्न पाठवा')}</button>
+            <textarea required rows={4} placeholder={t('home.query.textarea')} className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-lavender transition resize-none"></textarea>
+            <button type="submit" className="btn-gloss w-full bg-theme-lavender text-white px-6 py-3.5 rounded-xl font-bold hover:bg-theme-darkViolet transition-all shadow-lg shadow-theme-lavender/30 cursor-pointer">{t('home.query.submit')}</button>
             <p className={`${querySent ? '' : 'hidden'} text-sm font-bold text-theme-deepTeal text-center pt-1`}>
-              <Check className="inline w-4 h-4 mr-1.5 -mt-0.5" /> {L('Thank you. A coordinator will contact you.', 'धन्यवाद. समन्वयक तुम्हाला संपर्क करेल.')}
+              <Check className="inline w-4 h-4 mr-1.5 -mt-0.5" /> {t('home.query.thanks')}
             </p>
           </form>
         </div>
@@ -1045,27 +1040,27 @@ export default function Home() {
           <div className="flex items-center gap-3 mb-6">
             <span className="w-12 h-12 rounded-2xl bg-theme-mint/15 text-theme-deepTeal flex items-center justify-center"><MessageCircle className="text-lg w-6 h-6" /></span>
             <div>
-              <h3 className="text-xl font-extrabold text-theme-darkViolet leading-tight">{L('Share Your Feedback', 'तुमचा अभिप्राय द्या')}</h3>
-              <p className="text-xs text-theme-darkViolet/55 mt-0.5">{L('Tell us what worked and what did not', 'काय चांगले झाले आणि काय नाही, हे सांगा')}</p>
+              <h3 className="text-xl font-extrabold text-theme-darkViolet leading-tight">{t('home.feedback.title')}</h3>
+              <p className="text-xs text-theme-darkViolet/55 mt-0.5">{t('home.feedback.subtitle')}</p>
             </div>
           </div>
 
           <form className="space-y-3.5" onSubmit={submitFeedback}>
             <div className="grid sm:grid-cols-2 gap-3.5">
-              <input type="text" required placeholder={L('Full name', 'पूर्ण नाव')} className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-deepTeal transition" />
+              <input type="text" required placeholder={t('home.form.fullName')} className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-deepTeal transition" />
               <select required className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet outline-none focus:border-theme-deepTeal transition cursor-pointer">
-                <option value="">{L('I am a…', 'मी…')}</option>
-                <option>{L('Candidate', 'उमेदवार')}</option>
-                <option>{L('Employer', 'नियोक्ता')}</option>
-                <option>{L('Self-help group member', 'बचतगट सदस्य')}</option>
-                <option>{L('Trainee', 'प्रशिक्षणार्थी')}</option>
-                <option>{L('Franchise partner', 'फ्रँचायझी भागीदार')}</option>
-                <option>{L('Visitor', 'अभ्यागत')}</option>
+                <option value="">{t('home.feedback.rolePlaceholder')}</option>
+                <option>{t('home.feedback.roleCandidate')}</option>
+                <option>{t('home.feedback.roleEmployer')}</option>
+                <option>{t('home.feedback.roleShg')}</option>
+                <option>{t('home.feedback.roleTrainee')}</option>
+                <option>{t('home.feedback.roleFranchise')}</option>
+                <option>{t('home.feedback.roleVisitor')}</option>
               </select>
             </div>
 
             <div className="border border-theme-lightViolet rounded-xl px-4 py-3.5">
-              <div className="text-xs font-bold text-theme-darkViolet/55 uppercase tracking-wider mb-2.5">{L('How would you rate us?', 'तुम्ही आम्हाला किती गुण द्याल?')}</div>
+              <div className="text-xs font-bold text-theme-darkViolet/55 uppercase tracking-wider mb-2.5">{t('home.feedback.ratingLabel')}</div>
               <div className="flex gap-1.5 text-2xl text-theme-darkViolet/20">
                 {[0, 1, 2, 3, 4].map((i) => (
                   <button
@@ -1082,16 +1077,16 @@ export default function Home() {
               </div>
             </div>
 
-            <textarea required rows={4} placeholder={L('Your experience with the Swayamrojgar Vibhag', 'स्वयंरोजगार विभागासोबतचा तुमचा अनुभव')} className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-deepTeal transition resize-none"></textarea>
+            <textarea required rows={4} placeholder={t('home.feedback.experiencePlaceholder')} className="w-full border border-theme-lightViolet rounded-xl px-4 py-3 text-sm font-semibold text-theme-darkViolet placeholder-theme-darkViolet/40 outline-none focus:border-theme-deepTeal transition resize-none"></textarea>
 
             <label className="flex items-start gap-2.5 cursor-pointer select-none">
               <input type="checkbox" className="w-4 h-4 mt-0.5 accent-theme-deepTeal" />
-              <span className="text-xs font-semibold text-theme-darkViolet/60">{L('You may publish my feedback as a testimonial on this website.', 'तुम्ही माझा अभिप्राय या वेबसाइटवर प्रशंसापत्र म्हणून प्रकाशित करू शकता.')}</span>
+              <span className="text-xs font-semibold text-theme-darkViolet/60">{t('home.feedback.publishConsent')}</span>
             </label>
 
-            <button type="submit" className="btn-gloss w-full bg-theme-deepTeal text-white px-6 py-3.5 rounded-xl font-bold hover:bg-theme-darkViolet transition-all shadow-lg cursor-pointer">{L('Send Feedback', 'अभिप्राय पाठवा')}</button>
+            <button type="submit" className="btn-gloss w-full bg-theme-deepTeal text-white px-6 py-3.5 rounded-xl font-bold hover:bg-theme-darkViolet transition-all shadow-lg cursor-pointer">{t('home.feedback.submit')}</button>
             <p className={`${feedbackSent ? '' : 'hidden'} text-sm font-bold text-theme-deepTeal text-center pt-1`}>
-              <Check className="inline w-4 h-4 mr-1.5 -mt-0.5" /> {L('Thank you for taking the time.', 'वेळ दिल्याबद्दल धन्यवाद.')}
+              <Check className="inline w-4 h-4 mr-1.5 -mt-0.5" /> {t('home.feedback.thanks')}
             </p>
           </form>
         </div>

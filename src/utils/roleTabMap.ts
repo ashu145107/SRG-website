@@ -4,6 +4,7 @@
  */
 
 import { UserRole } from '../types';
+import i18n from '../i18n/config';
 
 export type LoginTab = 'candidate' | 'employer' | 'admin' | 'handler' | 'shg';
 
@@ -49,6 +50,10 @@ export function getMismatchMessage(userRole: UserRole, currentTab: LoginTab): st
   const roleLabel = ROLE_LABELS[userRole] || { mr: userRole, en: userRole };
   const correctTab = getCorrectTabForRole(userRole);
   const correctLabel = TAB_LABELS[correctTab];
+  const lang = i18n.language === 'mr' ? 'mr' : 'en';
 
-  return `ही ${roleLabel.mr} (${roleLabel.en}) लॉगिन आहे. कृपया ${correctLabel.mr} (${correctLabel.en}) टॅब वापरा. / This is a ${roleLabel.en} account. Please use the ${correctLabel.en} tab to log in.`;
+  return i18n.t('auth.mismatch', {
+    role: roleLabel[lang],
+    correct: correctLabel[lang],
+  });
 }

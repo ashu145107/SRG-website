@@ -34,7 +34,9 @@ export const getApiBaseUrl = (): string => {
   return 'https://srgapp.dindoripranit.org';
 };
 
+let cachedClientIp = '';
 export const getClientIp = async (): Promise<string> => {
+  if (cachedClientIp) return cachedClientIp;
   const ipEndpoints = [
     'https://api.ipify.org',
     'https://ipv4.icanhazip.com',
@@ -46,6 +48,7 @@ export const getClientIp = async (): Promise<string> => {
       if (res.ok) {
         const ip = (await res.text()).trim();
         if (ip && ip.length >= 7 && ip.length <= 45) {
+          cachedClientIp = ip;
           return ip;
         }
       }
@@ -58,6 +61,9 @@ export const getClientIp = async (): Promise<string> => {
 
 export const baseApi = createApi({
   reducerPath: 'srgApi',
+  keepUnusedDataFor: 300,
+  refetchOnFocus: false,
+  refetchOnReconnect: false,
   baseQuery: fetchBaseQuery({
     baseUrl: getApiBaseUrl(),
     prepareHeaders: (headers, { getState }) => {

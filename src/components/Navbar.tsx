@@ -92,22 +92,22 @@ export function Navbar({ activePage, compact }: NavbarProps) {
   return (
     <header className="bg-theme-cream/90 backdrop-blur-md border-b border-theme-sage/25 sticky top-0 z-50 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20 sm:h-24 gap-2">
+        <div className="flex items-center justify-between h-16 sm:h-20 lg:h-24 gap-2 sm:gap-3">
           {/* Logo & Branding */}
           <Link
             to="/"
             onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })}
-            className="flex items-center gap-2.5 sm:gap-3 group text-left min-w-0 flex-1 mr-1"
+            className="flex items-center gap-2 sm:gap-3 group text-left min-w-0 flex-1 py-2"
           >
-            <div className="w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-2xl shadow-md flex items-center justify-center border border-theme-lightViolet p-1 shrink-0 group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-2xl shadow-md flex items-center justify-center border border-theme-lightViolet p-1 shrink-0 self-center group-hover:scale-105 transition-transform">
               <img src="/home/logo.png" alt="SRG Logo" className="w-full h-full object-contain" />
             </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-[8px] sm:text-[10px] uppercase tracking-widest text-theme-darkViolet/70 font-extrabold truncate">
-                {isMr ? 'श्री स्वामी समर्थ सेवा मार्ग, दिंडोरी' : 'Shri Swami Seva Marg, Dindori'}
+            <div className="flex flex-col min-w-0 justify-center leading-tight">
+              <span className="text-[9px] sm:text-[10px] uppercase tracking-wide text-theme-darkViolet/70 font-extrabold truncate">
+                {t('nav.orgName')}
               </span>
               <span className="text-sm sm:text-base lg:text-lg font-black text-theme-darkViolet leading-tight truncate">
-                {isMr ? 'स्वयंरोजगार विभाग' : 'Swayamrojgar Vibhag'}
+                {t('nav.department')}
               </span>
             </div>
           </Link>
@@ -121,16 +121,16 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                 activePage === 'home' ? 'text-theme-lavender font-extrabold' : 'text-theme-darkViolet/80 hover:text-theme-lavender'
               }`}
             >
-              {isMr ? 'मुख्यपृष्ठ' : 'Home'}
+              {t('nav.home')}
             </Link>
 
             {!compact && (
               <>
                 <button
-                  onClick={() => goSection('about')}
+                  onClick={() => goSection('offices')}
                   className="text-theme-darkViolet/75 hover:text-theme-lavender font-semibold text-sm transition-colors cursor-pointer"
                 >
-                  {isMr ? 'आमच्याबद्दल' : 'About Us'}
+                  {t('nav.about')}
                 </button>
 
                 {/* Jobs Dropdown */}
@@ -140,7 +140,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                   onMouseLeave={() => setJobsDropdown(false)}
                 >
                   <button className="flex items-center gap-1.5 text-theme-darkViolet/75 hover:text-theme-lavender font-semibold text-sm transition-colors py-2 cursor-pointer">
-                    <span>{isMr ? 'नोकऱ्या' : 'Jobs'}</span>
+                    <span>{t('nav.jobs')}</span>
                     <ChevronDown className={`w-3.5 h-3.5 transition-transform ${jobsDropdown ? 'rotate-180' : ''}`} />
                   </button>
                   {jobsDropdown && (
@@ -150,13 +150,13 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                           to="/register?type=employer"
                           className="block px-4 py-2 text-xs font-bold text-theme-darkViolet/80 hover:text-theme-lavender hover:bg-theme-lightViolet/60 transition-colors"
                         >
-                          {isMr ? 'नोकरी आवश्यकता नोंदवा' : 'Post a Requirement'}
+                          {t('nav.postRequirement')}
                         </Link>
                         <Link
                           to="/register?type=candidate"
                           className="block px-4 py-2 text-xs font-bold text-theme-darkViolet/80 hover:text-theme-lavender hover:bg-theme-lightViolet/60 transition-colors"
                         >
-                          {isMr ? 'उमेदवार नोंदणी' : 'Candidate Registration'}
+                          {t('nav.candidateRegistration')}
                         </Link>
                       </div>
                     </div>
@@ -170,7 +170,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                   onMouseLeave={() => setShgDropdown(false)}
                 >
                   <button className="flex items-center gap-1.5 text-theme-darkViolet/75 hover:text-theme-lavender font-semibold text-sm transition-colors py-2 cursor-pointer whitespace-nowrap">
-                    <span>{isMr ? 'बचतगट व उपजीविका' : 'SHG & Livelihood'}</span>
+                    <span>{t('nav.shgLivelihood')}</span>
                     <ChevronDown className={`w-3.5 h-3.5 transition-transform ${shgDropdown ? 'rotate-180' : ''}`} />
                   </button>
                   {shgDropdown && (
@@ -185,7 +185,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                             <item.icon className="w-3.5 h-3.5 shrink-0 text-theme-lavender/70" />
                             <span className="flex-1">{isMr ? item.labelMr : item.labelEn}</span>
                             <span className="shrink-0 bg-theme-gold/25 text-theme-darkViolet/70 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full">
-                              {isMr ? 'लवकरच' : 'Soon'}
+                              {t('nav.soon')}
                             </span>
                           </button>
                         ))}
@@ -198,7 +198,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                   onClick={() => goSection('contact')}
                   className="text-theme-darkViolet/75 hover:text-theme-lavender font-semibold text-sm transition-colors cursor-pointer"
                 >
-                  {isMr ? 'संपर्क' : 'Contact'}
+                  {t('nav.contact')}
                 </button>
               </>
             )}
@@ -216,7 +216,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                   className="btn-gloss inline-flex items-center gap-2 bg-theme-lavender text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30"
                 >
                   <LayoutDashboard className="w-3.5 h-3.5" />
-                  <span>{isMr ? 'डॅशबोर्ड' : 'Dashboard'}</span>
+                  <span>{t('nav.dashboard')}</span>
                 </Link>
                 <button
                   onClick={handleLogout}
@@ -236,7 +236,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                       : 'text-theme-darkViolet/80 hover:text-theme-lavender'
                   }`}
                 >
-                  {isMr ? 'लॉगिन' : 'Login'}
+                  {t('nav.login')}
                 </Link>
                 <span className="text-theme-darkViolet/25">|</span>
                 <Link
@@ -245,7 +245,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                     activePage === 'register' ? 'ring-2 ring-theme-darkViolet ring-offset-2' : ''
                   }`}
                 >
-                  {isMr ? 'नोंदणी करा' : 'Sign Up'}
+                  {t('nav.signUp')}
                 </Link>
               </div>
             )}
@@ -272,34 +272,34 @@ export function Navbar({ activePage, compact }: NavbarProps) {
             onClick={() => { setMobileMenuOpen(false); window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); }}
             className={navLinkClass(activePage === 'home')}
           >
-            {isMr ? 'मुख्यपृष्ठ / Home' : 'Home'}
+            {t('nav.home')}
           </Link>
 
           {!compact && (
             <>
               <button
-                onClick={() => goSectionAndClose('about')}
+                onClick={() => goSectionAndClose('offices')}
                 className="block w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-theme-darkViolet hover:bg-theme-lightViolet/40 cursor-pointer"
               >
-                {isMr ? 'आमच्याबद्दल / About Us' : 'About Us'}
+                {t('nav.about')}
               </button>
               <button
                 onClick={() => goSectionAndClose('about')}
                 className="block w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-theme-darkViolet hover:bg-theme-lightViolet/40 cursor-pointer"
               >
-                {isMr ? 'नोकऱ्या / Jobs' : 'Jobs'}
+                {t('nav.jobs')}
               </button>
               <button
                 onClick={() => goSectionAndClose('shg')}
                 className="block w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-theme-darkViolet hover:bg-theme-lightViolet/40 cursor-pointer"
               >
-                {isMr ? 'बचतगट / SHG & Products' : 'SHG & Products'}
+                {t('nav.shgProducts')}
               </button>
               <button
                 onClick={() => goSectionAndClose('contact')}
                 className="block w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-theme-darkViolet hover:bg-theme-lightViolet/40 cursor-pointer"
               >
-                {isMr ? 'संपर्क / Contact' : 'Contact'}
+                {t('nav.contact')}
               </button>
             </>
           )}
@@ -309,7 +309,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
               <>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold text-theme-darkViolet">
-                    {isMr ? 'सूचना / Notifications' : 'Notifications'}
+                    {t('nav.notifications')}
                   </span>
                   <NotificationBell variant="light" />
                 </div>
@@ -319,14 +319,14 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                   className="btn-gloss w-full flex items-center justify-center gap-2 bg-theme-lavender text-white py-2.5 rounded-xl font-bold text-xs shadow-md"
                 >
                   <LayoutDashboard className="w-4 h-4" />
-                  <span>{isMr ? 'डॅशबोर्ड उघडा' : 'Go to Dashboard'}</span>
+                  <span>{t('nav.goToDashboard')}</span>
                 </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center justify-center gap-2 bg-rose-50 text-rose-700 py-2.5 rounded-xl font-bold text-xs border border-rose-200 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>{isMr ? 'लॉगआउट' : 'Logout'}</span>
+                  <span>{t('nav.logout')}</span>
                 </button>
               </>
             ) : (
@@ -338,7 +338,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                     activePage === 'login' ? 'text-theme-lavender font-extrabold' : 'text-theme-darkViolet'
                   }`}
                 >
-                  {isMr ? 'लॉगिन' : 'Login'}
+                  {t('nav.login')}
                 </Link>
                 <Link
                   to="/register"
@@ -347,7 +347,7 @@ export function Navbar({ activePage, compact }: NavbarProps) {
                     activePage === 'register' ? 'ring-2 ring-theme-darkViolet ring-offset-2' : ''
                   }`}
                 >
-                  {isMr ? 'नोंदणी' : 'Sign Up'}
+                  {t('nav.signUp')}
                 </Link>
               </div>
             )}

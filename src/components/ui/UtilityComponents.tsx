@@ -11,9 +11,10 @@ import { RootState } from '../../store';
 import { Globe, ChevronRight } from 'lucide-react';
 import { HandlerPermissions } from '../../types';
 
-export const LanguageSwitcher: React.FC = () => {
+export const LanguageSwitcher: React.FC<{ variant?: 'light' | 'dark' }> = ({ variant = 'light' }) => {
   const { i18n } = useTranslation();
   const currentLang = i18n.language || 'en';
+  const isDark = variant === 'dark';
 
   const toggleLanguage = (lang: 'mr' | 'en') => {
     i18n.changeLanguage(lang);
@@ -21,21 +22,38 @@ export const LanguageSwitcher: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center gap-1.5 bg-gray-50 p-1.5 rounded-xl border border-gray-100">
-      <Globe className="w-4 h-4 text-gray-400 ml-1" />
+    <div
+      className={`flex items-center p-1 rounded-xl border transition-all ${isDark
+          ? 'bg-white/10 border-theme-lightViolet/30'
+          : 'gap-1.5 bg-gray-50 p-1.5 border-gray-100'
+        }`}
+    >
+      <Globe className={isDark ? 'w-4 h-4 text-white/70 mx-1' : 'w-4 h-4 text-gray-400 ml-1'} />
       <button
         onClick={() => toggleLanguage('mr')}
-        className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
-          currentLang === 'mr' ? 'bg-orange-600 text-white shadow-xs' : 'text-gray-600 hover:bg-gray-200/50'
-        }`}
+        aria-label="मराठी"
+        className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${currentLang === 'mr'
+            ? isDark
+              ? 'bg-white/25 text-white'
+              : 'bg-orange-600 text-white shadow-xs'
+            : isDark
+              ? 'text-white/80 hover:bg-white/15'
+              : 'text-gray-600 hover:bg-gray-200/50'
+          }`}
       >
         मराठी
       </button>
       <button
         onClick={() => toggleLanguage('en')}
-        className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
-          currentLang === 'en' ? 'bg-orange-600 text-white shadow-xs' : 'text-gray-600 hover:bg-gray-200/50'
-        }`}
+        aria-label="EN"
+        className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${currentLang === 'en'
+            ? isDark
+              ? 'bg-white/25 text-white'
+              : 'bg-orange-600 text-white shadow-xs'
+            : isDark
+              ? 'text-white/80 hover:bg-white/15'
+              : 'text-gray-600 hover:bg-gray-200/50'
+          }`}
       >
         EN
       </button>
@@ -57,11 +75,10 @@ export const Pagination: React.FC<{
         <button
           key={p}
           onClick={() => onPageChange(p)}
-          className={`w-8.5 h-8.5 rounded-xl text-xs font-bold transition-all border ${
-            current === p
+          className={`w-8.5 h-8.5 rounded-xl text-xs font-bold transition-all border ${current === p
               ? 'bg-orange-600 text-white border-orange-600'
               : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-          }`}
+            }`}
         >
           {p}
         </button>

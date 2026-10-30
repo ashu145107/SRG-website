@@ -11,6 +11,7 @@ const DEFAULT_TARGET = 'https://srgapp.dindoripranit.org';
 // Allow pointing the dev proxy to an alternative backend (local/UAT server)
 // when srgapp.dindoripranit.org is slow or unreachable.
 const BACKEND_TARGET = (process.env.VITE_PROXY_TARGET || DEFAULT_TARGET).replace(/\/+$/, '');
+
 const BACKEND_HOST = new URL(BACKEND_TARGET).hostname;
 
 // ============================================================
@@ -112,6 +113,12 @@ export default defineConfig(() => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
+    },
+    esbuild: {
+      drop: ['console', 'debugger'],
+    },
+    build: {
+      minify: 'esbuild',
     },
     server: {
       proxy: {

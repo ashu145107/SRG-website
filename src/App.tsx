@@ -24,13 +24,24 @@ import ChangePassword from './pages/ChangePassword';
 import { ProtectedRoute } from './components/ui/UtilityComponents';
 import { ScrollToTop } from './components/ScrollToTop';
 
-// Redirect non-hash URL path `/ActivateAccount` or `/activateaccount` to hash-based `#/ActivateAccount`
+// Redirect non-hash URL path `/ActivateAccount` or `/activateaccount` to hash-based `#/ActivateAccount`,
+// preserving any virtual-directory base path (e.g. site hosted under /srg/).
 if (window.location.pathname.toLowerCase().includes('/activateaccount')) {
   const search = window.location.search;
-  window.location.replace(`${window.location.origin}/#/ActivateAccount${search}`);
+  const basePath = window.location.pathname.replace(/\/activateaccount\/?$/i, '');
+  window.location.replace(`${window.location.origin}${basePath}/#/ActivateAccount${search}`);
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes cache
+      retry: 1,
+    },
+  },
+});
 
 /** If user is already logged in, redirect to /dashboard. Otherwise show children. */
 function GuestOnly({ children }: { children: React.ReactNode }) {

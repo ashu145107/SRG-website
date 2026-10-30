@@ -158,9 +158,7 @@ export const ConfirmDialog: React.FC<{
 };
 
 export const Loader: React.FC<{ fullScreen?: boolean }> = ({ fullScreen = false }) => {
-  const { i18n } = useTranslation();
-  const isMr = i18n.language === 'mr';
-  const brandText = isMr ? 'श्री स्वामी समर्थ' : 'Shree Swami Samarth';
+  const { t } = useTranslation();
 
   const content = (
     <div className="flex flex-col items-center justify-center gap-3">
@@ -169,7 +167,7 @@ export const Loader: React.FC<{ fullScreen?: boolean }> = ({ fullScreen = false 
         <div className="absolute inset-0 rounded-full border-2 border-t-theme-lavender animate-spin"></div>
       </div>
       <span className="text-xs font-bold tracking-wide text-theme-darkViolet/60">
-        {isMr ? `${brandText}...` : `${brandText}...`}
+        {t('ui.brand')}...
       </span>
     </div>
   );

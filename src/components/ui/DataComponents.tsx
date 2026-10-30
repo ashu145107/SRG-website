@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { HelpCircle, Mail, AlertTriangle } from 'lucide-react';
 import { Loader } from './FeedbackComponents';
 
@@ -25,12 +26,13 @@ export function DataTable<T extends { id: string | number }>({
   onRowClick,
   mobileCardRender
 }: DataTableProps<T>) {
+  const { t } = useTranslation();
   return (
     <div className="w-full">
       {/* Mobile Card Layout (Visible on Small Screens) */}
       <div className="block md:hidden space-y-4">
         {data.length === 0 ? (
-          <EmptyState title="माहिती उपलब्ध नाही" desc="No data records currently found here." />
+          <EmptyState title={t('common.emptyTitle')} desc={t('common.emptyDesc')} />
         ) : (
           data.map((row, idx) => (
             <div
@@ -75,7 +77,7 @@ export function DataTable<T extends { id: string | number }>({
             {data.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="px-6 py-12 text-center">
-                  <EmptyState title="माहिती उपलब्ध नाही" desc="No data records currently found here." />
+                  <EmptyState title={t('common.emptyTitle')} desc={t('common.emptyDesc')} />
                 </td>
               </tr>
             ) : (

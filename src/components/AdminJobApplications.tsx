@@ -8,8 +8,10 @@ import { useGetAdminJobApplicationsQuery } from '../services/adminApi';
 import { JobApplication } from '../types';
 import { Mail, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2, ExternalLink } from 'lucide-react';
 import { Loader } from './ui/FeedbackComponents';
+import { useTranslation } from 'react-i18next';
 
 export function AdminJobApplications() {
+  const { t } = useTranslation();
   const [pageSize, setPageSize] = useState(15);
   const [pageNumber, setPageNumber] = useState(1);
   const [searchPhrase, setSearchPhrase] = useState('');
@@ -80,10 +82,10 @@ export function AdminJobApplications() {
       <div className="border-b border-gray-100 pb-4">
         <h2 className="text-lg font-extrabold text-blue-950 flex items-center gap-2">
           <Mail className="w-5 h-5 text-orange-600" />
-          नोकरी अर्ज प्रविष्टी / Job Application entry
+          {t('adm.applications.title')}
         </h2>
         <p className="text-xs text-slate-500">
-          प्रणालीत प्राप्त झालेले नोकरी अर्ज व मुलाखत नियोजित प्रगती व्यवस्थापन
+          {t('adm.applications.subtitle')}
         </p>
       </div>
 
@@ -91,11 +93,11 @@ export function AdminJobApplications() {
       <div className="bg-white rounded-2xl border border-gray-150 shadow-xs p-6 space-y-4">
         <div className="flex justify-between items-center pb-2">
           <h3 className="font-extrabold text-blue-950 text-sm tracking-wide uppercase">
-            अर्ज यादी / Job Application List
+            {t('adm.applications.listTitle')}
           </h3>
           {isFetching && (
             <span className="flex items-center gap-1.5 text-[10px] text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded animate-pulse">
-              <Loader2 className="w-3 h-3 animate-spin" /> अद्ययावत करत आहे...
+              <Loader2 className="w-3 h-3 animate-spin" /> {t('adm.common.refreshing')}
             </span>
           )}
         </div>
@@ -201,15 +203,14 @@ export function AdminJobApplications() {
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center">
                     <div className="inline-flex flex-col items-center gap-2 text-red-600 font-medium">
-                      <span className="text-sm">❌ API लोड करण्यात अयशस्वी</span>
-                      <span className="text-xs text-slate-500">Failed to load applications from API. Please check your connection and try again.</span>
+                      <span className="text-sm">{t('adm.applications.loadError')}</span>
                     </div>
                   </td>
                 </tr>
               ) : filteredAndSortedList.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-slate-400 font-medium">
-                    कोणतेही रेकॉर्ड सापडले नाही / No applications found
+                    {t('adm.applications.empty')}
                   </td>
                 </tr>
               ) : (
@@ -335,7 +336,7 @@ export function AdminJobApplications() {
               <div className="flex items-center gap-2">
                 <Mail className="w-5 h-5 text-orange-400" />
                 <h3 className="font-extrabold text-sm sm:text-base">
-                  अर्ज तपशील / Job Application Details
+                  {t('adm.applications.detailTitle')}
                 </h3>
               </div>
               <button
@@ -398,7 +399,7 @@ export function AdminJobApplications() {
                 onClick={() => setSelectedApplication(null)}
                 className="px-4 py-2 bg-slate-200 hover:bg-slate-350 text-slate-700 font-bold text-xs rounded-lg transition-all cursor-pointer"
               >
-                बंद करा / Close
+                {t('adm.common.close')}
               </button>
             </div>
           </div>

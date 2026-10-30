@@ -14,7 +14,7 @@ import { Navbar } from '../components/Navbar';
 import { Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -24,7 +24,6 @@ export default function Login() {
   const [formError, setFormError] = useState('');
 
   const [login, { isLoading: isLoginLoading }] = useLoginMutation();
-  const isMr = i18n.language === 'mr';
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +34,7 @@ export default function Login() {
       dispatch(setCredentials(response));
       navigate('/dashboard');
     } catch (err: any) {
-      setFormError(err.data || 'लॉगिन अयशस्वी / Invalid login details. Please check your credentials.');
+      setFormError(err.data || t('auth.loginFailed'));
     }
   };
 
@@ -57,11 +56,8 @@ export default function Login() {
 
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-theme-darkViolet tracking-tight">
-                  {isMr ? 'खाते लॉगिन' : 'Account Login'}
+                  {t('auth.accountLoginTitle')}
                 </h1>
-                <p className="text-xs font-extrabold text-theme-lavender uppercase tracking-wider mt-1">
-                  {isMr ? 'श्री स्वामी सेवा मार्ग, दिंडोरी' : 'Shri Swami Seva Marg, Dindori'}
-                </p>
               </div>
             </div>
 
@@ -72,7 +68,7 @@ export default function Login() {
               {/* Username/Email/Mobile */}
               <div className="space-y-1.5 text-left">
                 <label className="block text-xs font-bold text-theme-darkViolet">
-                  {isMr ? 'युझरनेम / ईमेल / मोबाईल' : 'Username / Email / Mobile'} *
+                  {t('auth.usernameEmailMobile')} *
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-theme-lavender">
@@ -81,7 +77,7 @@ export default function Login() {
                   <input
                     type="text"
                     required
-                    placeholder={isMr ? 'उदा. user@domain.com किंवा 9876543210' : 'Enter username, email or mobile'}
+                    placeholder={t('auth.usernameEmailMobilePlaceholder')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full text-xs pl-10 pr-4 py-3 bg-white border border-theme-lightViolet/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-theme-lavender/20 focus:border-theme-lavender text-slate-800 font-medium transition-all"
@@ -91,15 +87,15 @@ export default function Login() {
 
               {/* Password */}
               <div className="space-y-1.5 text-left">
-                <div className="flex items-center justify-between">
+                <div className="flex items-baseline justify-between gap-2">
                   <label className="block text-xs font-bold text-theme-darkViolet">
-                    {isMr ? 'पासवर्ड' : 'Password'} *
+                    {t('auth.password')} *
                   </label>
                   <Link
                     to="/forgot-password"
                     className="text-[11px] font-bold text-theme-lavender hover:underline"
                   >
-                    {isMr ? 'पासवर्ड विसरलात?' : 'Forgot Password?'}
+                    {t('auth.forgotPassword')}
                   </Link>
                 </div>
                 <div className="relative">
@@ -131,10 +127,10 @@ export default function Login() {
                 className="btn-gloss w-full py-3.5 px-6 rounded-xl bg-theme-lavender hover:bg-theme-lavender/90 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer mt-2"
               >
                 {isLoginLoading ? (
-                  <span>{isMr ? 'लॉगिन होत आहे...' : 'Logging in...'}</span>
+                  <span>{t('auth.loggingIn')}</span>
                 ) : (
                   <>
-                    <span>{isMr ? 'लॉगिन करा' : 'Sign In'}</span>
+                    <span>{t('auth.signIn')}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -144,9 +140,9 @@ export default function Login() {
             {/* Footer Prompt */}
             <div className="text-center text-xs font-semibold text-slate-500 border-t border-theme-lightViolet/60 pt-4 space-y-2">
               <p>
-                {isMr ? 'खाते नाही आहे का?' : "Don't have an account?"}{' '}
+                {t('auth.dontHaveAccount')}{' '}
                 <Link to="/register" className="text-theme-lavender font-extrabold hover:underline">
-                  {isMr ? 'येथे नवीन नोंदणी करा' : 'Register Here'}
+                  {t('auth.registerHere')}
                 </Link>
               </p>
             </div>

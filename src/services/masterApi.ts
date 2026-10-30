@@ -4,6 +4,7 @@
  */
 
 import { baseApi } from './baseApi';
+import i18n from '../i18n/config';
 
 export interface DropdownOption {
   value: string;
@@ -14,8 +15,28 @@ export interface DropdownOption {
 export interface GenericMasterItem {
   id: number;
   name: string;
+  enName?: string;
   parentId?: number;
 }
+
+const compareLocale = () => (i18n.language === 'mr' ? 'mr' : 'en');
+
+/** Returns the display name for the current UI language, falling back to `name`. */
+export const getLocalizedName = (item?: GenericMasterItem | null): string => {
+  if (!item) return '';
+  if (i18n.language === 'mr') return item.name || '';
+  return item.enName || item.name || '';
+};
+
+export const sortByName = (items: GenericMasterItem[]): GenericMasterItem[] => {
+  const pick = (i: GenericMasterItem) => (i18n.language === 'mr' ? i.name : i.enName || i.name);
+  return [...items].sort((a, b) =>
+    String(pick(a) || '').localeCompare(String(pick(b) || ''), compareLocale(), {
+      sensitivity: 'base',
+      numeric: true,
+    })
+  );
+};
 
 export const masterApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -49,31 +70,31 @@ export const masterApi = baseApi.injectEndpoints({
     }),
     getCountries: builder.query<GenericMasterItem[], void>({
       query: () => '/api/v1/country',
-      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+      transformResponse: (response: { value: GenericMasterItem[] }) => sortByName(response?.value || [])
     }),
     getStates: builder.query<GenericMasterItem[], number>({
       query: (countryId) => `/api/v1/state/${countryId}`,
-      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+      transformResponse: (response: { value: GenericMasterItem[] }) => sortByName(response?.value || [])
     }),
     getDistricts: builder.query<GenericMasterItem[], number>({
       query: (stateId) => `/api/v1/district/${stateId}`,
-      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+      transformResponse: (response: { value: GenericMasterItem[] }) => sortByName(response?.value || [])
     }),
     getTalukas: builder.query<GenericMasterItem[], number>({
       query: (districtId) => `/api/v1/taluka/${districtId}`,
-      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+      transformResponse: (response: { value: GenericMasterItem[] }) => sortByName(response?.value || [])
     }),
     getSevaKendras: builder.query<GenericMasterItem[], number>({
       query: (talukaId) => `/api/v1/sevakendra/${talukaId}`,
-      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+      transformResponse: (response: { value: GenericMasterItem[] }) => sortByName(response?.value || [])
     }),
     getEducationsList: builder.query<GenericMasterItem[], void>({
       query: () => '/api/v1/educations',
-      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+      transformResponse: (response: { value: GenericMasterItem[] }) => sortByName(response?.value || [])
     }),
     getSubEducationsList: builder.query<GenericMasterItem[], number>({
       query: (parentId) => `/api/v1/subeducations/${parentId}`,
-      transformResponse: (response: { value: GenericMasterItem[] }) => response?.value || []
+      transformResponse: (response: { value: GenericMasterItem[] }) => sortByName(response?.value || [])
     }),
   })
 });

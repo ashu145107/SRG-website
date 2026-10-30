@@ -54,7 +54,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
   externalIsFetching,
   externalRefetch,
 }) => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const user = useSelector((state: any) => state.auth?.user);
   const userRole = String(user?.role || '').toUpperCase();
@@ -232,13 +232,13 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
         <div>
           <h2 className="text-xl font-bold text-slate-800">
             {isEmployerOrStaff
-              ? 'तुमच्या नोकरी जाहिराती / Managed Job Requirements'
-              : 'उपलब्ध नोकरीच्या संधी / Available Job Vacancies'}
+              ? t('jobs.list.managedTitle')
+              : t('jobs.list.availableTitle')}
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             {isEmployerOrStaff
-              ? 'थेट प्रणालीद्वारे जोडलेल्या रिक्त जागांचे व्यवस्थापन करा.'
-              : 'तुमच्या शैक्षणिक पात्रतेनुसार विविध नोकरीच्या संधी शोधा.'}
+              ? t('jobs.list.managedSubtitle')
+              : t('jobs.list.availableSubtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -271,7 +271,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
             title="Refresh list"
           >
             <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-            <span className="hidden md:inline">रीफ्रेश / Refresh</span>
+            <span className="hidden md:inline">{t('jobs.list.refresh')}</span>
           </button>
           {isEmployerOrStaff && onAddNewJob && (
             <button
@@ -279,7 +279,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
               className="py-2 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-xs text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>नवीन जागा जोडा / Post Job</span>
+              <span>{t('jobs.list.postJob')}</span>
             </button>
           )}
         </div>
@@ -294,7 +294,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
             </span>
             <input
               type="text"
-              placeholder="नोकरी शोधा (code, designation, company, skill...)"
+              placeholder={t('jobs.list.searchPlaceholder')}
               value={searchPhrase}
               onChange={(e) => setSearchPhrase(e.target.value)}
               className="w-full text-xs pl-9 pr-4 py-2.5 border border-slate-200 bg-slate-50/50 rounded-xl focus:outline-none focus:border-orange-500 text-slate-800"
@@ -376,13 +376,13 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
         /* Empty State */
         <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
           <div className="text-slate-350 text-4xl mb-3">📁</div>
-          <h3 className="text-sm font-bold text-slate-700">जाहिराती आढळल्या नाहीत / No Jobs Found</h3>
-          <p className="text-xs text-slate-500 mt-1">तुमच्या शोध निकषांशी जुळणारी एकही नोकरी सध्या उपलब्ध नाही.</p>
+          <h3 className="text-sm font-bold text-slate-700">{t('jobs.list.noJobsFound')}</h3>
+          <p className="text-xs text-slate-500 mt-1">{t('jobs.list.noJobsSubtitle')}</p>
           <button
             onClick={() => { setSearchPhrase(''); setFilterSkill(''); setFilterWorkPlace(''); }}
             className="mt-4 px-4 py-2 text-xs font-bold bg-slate-100 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-200 transition-all cursor-pointer"
           >
-            फिल्टर्स साफ करा / Clear Filters
+            {t('jobs.list.clearFilters')}
           </button>
         </div>
       ) : (

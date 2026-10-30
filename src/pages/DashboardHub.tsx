@@ -47,7 +47,8 @@ import {
   useGetTalukasQuery,
   useGetSevaKendrasQuery,
   useGetEducationsListQuery,
-  useGetSubEducationsListQuery
+  useGetSubEducationsListQuery,
+  getLocalizedName
 } from '../services/masterApi';
 import { useGetReportsQuery } from '../services/reportApi';
 import {
@@ -66,7 +67,7 @@ import {
   EmptyState
 } from '../components/ui/DataComponents';
 import { Loader, Alert, Toast, Modal } from '../components/ui/FeedbackComponents';
-import { PermissionGuard } from '../components/ui/UtilityComponents';
+import { PermissionGuard, LanguageSwitcher } from '../components/ui/UtilityComponents';
 import { AddJobForm } from '../components/jobs/AddJobForm';
 import { EditJobForm } from '../components/jobs/EditJobForm';
 import { JobDetailsView } from '../components/jobs/JobDetailsView';
@@ -129,7 +130,7 @@ export default function DashboardHub() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-theme-cream text-slate-800 antialiased font-sans">
         <h3 className="text-lg font-bold text-red-600 mb-2">{t('dashboard.unauthorized')}</h3>
         <Link to="/login" className="btn-gloss px-5 py-2.5 bg-theme-lavender hover:bg-theme-lavender/90 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-[0.98]">
-          मराठी/EN लॉगिन
+          {t('dash.unauthorized.login')}
         </Link>
       </div>
     );
@@ -207,11 +208,7 @@ export default function DashboardHub() {
   const [showInterviewModal, setShowInterviewModal] = useState(false);
   const [targetApplicationId, setTargetApplicationId] = useState('');
   const [interviewDate, setInterviewDate] = useState('');
-  // Dropdown states
-  const { data: locations = [] } = useGetLocationsQuery();
-  const { data: jobCategories = [] } = useGetJobCategoriesQuery();
-  // API hooks for triggers
-  const { refetch: refetchStats } = useGetDashboardStatsQuery(undefined, { skip: !user });
+  // API hooks for triggers (profile used by header avatar)
   // Profile dropdown state
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -252,9 +249,9 @@ export default function DashboardHub() {
                 <img src="/home/logo.png" alt="SRG Logo" className="w-10 h-10 object-contain drop-shadow" />
               </Link>
               <div className="text-left min-w-0">
-                <span className="font-extrabold text-xs sm:text-sm tracking-tight block text-white truncate">श्री स्वामी समर्थ सेवा मार्ग</span>
+                <span className="font-extrabold text-xs sm:text-sm tracking-tight block text-white truncate">{t('dash.header.brandName')}</span>
                 <span className="text-[10px] text-theme-gold block font-bold uppercase tracking-wide truncate">
-                  डॅशबोर्ड / {user.role === UserRole.CANDIDATE ? 'CANDIDATE' : user.role === UserRole.COMPANY ? 'EMPLOYER' : user.role}
+                  {t('dash.header.dashboard')} / {user.role === UserRole.CANDIDATE ? 'CANDIDATE' : user.role === UserRole.COMPANY ? 'EMPLOYER' : user.role}
                 </span>
               </div>
             </div>
@@ -269,6 +266,8 @@ export default function DashboardHub() {
                   </span>
                 </div>
               )}
+              {/* Language Switcher */}
+              <LanguageSwitcher variant="dark" />
               {/* Notification Bell */}
               <NotificationBell variant="dark" />
               {/* Profile Dropdown */}
@@ -358,42 +357,42 @@ export default function DashboardHub() {
                   className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'overview' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                 >
-                  <Tag className="w-4 h-4" /><span className="truncate min-w-0">Seva / सेवा (Overview)</span>
+                  <Tag className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.sevaOverview')}</span>
                 </button>
                 <button
                   onClick={() => { setActiveTab('registered_companies'); setDetailCompanyId(''); }}
                   className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'registered_companies' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                 >
-                  <Building2 className="w-4 h-4" /><span className="truncate min-w-0">Registered Company / नोंदणीकृत कंपनी</span>
+                  <Building2 className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.registeredCompany')}</span>
                 </button>
                 <button
                   onClick={() => { setActiveTab('registered_users'); setDetailCandidateId(''); }}
                   className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'registered_users' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                 >
-                  <Users className="w-4 h-4" /><span className="truncate min-w-0">Registered User / नोंदणीकृत वापरकर्ते</span>
+                  <Users className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.registeredUser')}</span>
                 </button>
                 <button
                   onClick={() => { setActiveTab('job_requirements'); setDetailReqId(0); }}
                   className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'job_requirements' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                 >
-                  <Send className="w-4 h-4" /><span className="truncate min-w-0">Job Requirement / नोकरी आवश्यकता</span>
+                  <Send className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.jobRequirement')}</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('job_applications')}
                   className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'job_applications' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                 >
-                  <Mail className="w-4 h-4" /><span className="truncate min-w-0">Job Application / नोकरी अर्ज</span>
+                  <Mail className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.jobApplication')}</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('support_tickets')}
                   className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'support_tickets' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                 >
-                  <LifeBuoy className="w-4 h-4" /><span className="truncate min-w-0">View Ticket / तिकीट पहा</span>
+                  <LifeBuoy className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.viewTicket')}</span>
                 </button>
                 <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
                 <button
@@ -405,7 +404,7 @@ export default function DashboardHub() {
                   }}
                   className="px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
                 >
-                  <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
+                  <Power className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.logOff')}</span>
                 </button>
               </DashboardMenu>
               <div className="lg:col-span-9 space-y-6">
@@ -416,7 +415,7 @@ export default function DashboardHub() {
                       onClick={() => setDetailReqId(0)}
                       className="inline-flex items-center gap-2 text-xs font-bold text-theme-darkViolet/60 hover:text-theme-lavender transition-colors cursor-pointer"
                     >
-                      <ArrowLeft className="w-3.5 h-3.5" /> {t('dashboard.backToRequirements', 'सर्व नोकरी आवश्यकता / All Job Requirements')}
+                      <ArrowLeft className="w-3.5 h-3.5" /> {t('dashboard.backToRequirements')}
                     </Link>
                     <JobRequirementDetailView requirementId={detailReqId} />
                   </>
@@ -429,8 +428,8 @@ export default function DashboardHub() {
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />{' '}
                       {candidateFromReqId > 0
-                        ? t('dashboard.backToRequirementApplications', 'या आवश्यकतेसाठीचे अर्ज / Applications for this Requirement')
-                        : t('dashboard.backToCandidates', 'सर्व नोंदणीकृत वापरकर्ते / All Registered Users')}
+                        ? t('dashboard.backToRequirementApplications')
+                        : t('dashboard.backToCandidates')}
                     </Link>
                     <AdminCandidateProfileView
                       candidateId={detailCandidateId}
@@ -447,7 +446,7 @@ export default function DashboardHub() {
                       onClick={() => setDetailCompanyId('')}
                       className="inline-flex items-center gap-2 text-xs font-bold text-theme-darkViolet/60 hover:text-theme-lavender transition-colors cursor-pointer"
                     >
-                      <ArrowLeft className="w-3.5 h-3.5" /> {t('dashboard.backToCompanies', 'सर्व नोंदणीकृत कंपन्या / All Registered Companies')}
+                      <ArrowLeft className="w-3.5 h-3.5" /> {t('dashboard.backToCompanies')}
                     </Link>
                     <AdminCompanyProfileView companyId={detailCompanyId} onBack={() => setDetailCompanyId('')} />
                   </>
@@ -491,19 +490,19 @@ export default function DashboardHub() {
                 </h3>
                 <div className="flex flex-wrap gap-2.5 mt-2">
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border ${user.handlerPermissions?.canApproveJobs ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 line-through border-red-100'}`}>
-                    नोकरी मान्यता
+                    {t('dash.permissions.jobApproval')}
                   </span>
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border ${user.handlerPermissions?.canManageCompanies ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 line-through border-red-100'}`}>
-                    नियोक्ते संपादन
+                    {t('dash.permissions.employerEdit')}
                   </span>
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border ${user.handlerPermissions?.canManageSHG ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 line-through border-red-100'}`}>
-                    बचत गट नियंत्रण
+                    {t('dash.permissions.shgControl')}
                   </span>
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border ${user.handlerPermissions?.canViewUsers ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 line-through border-red-100'}`}>
-                    वापरकर्ते दर्शक
+                    {t('dash.permissions.userViewer')}
                   </span>
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border ${user.handlerPermissions?.canViewReports ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 line-through border-red-100'}`}>
-                    अहवाल विदा
+                    {t('dash.permissions.reportAccess')}
                   </span>
                 </div>
               </div>
@@ -514,7 +513,7 @@ export default function DashboardHub() {
                     className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all ${activeTab === 'overview' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                       }`}
                   >
-                    <span className="truncate min-w-0">आढावा / Overview</span>
+                    <span className="truncate min-w-0">{t('dash.menu.overview')}</span>
                   </button>
                   {user.handlerPermissions?.canApproveJobs && (
                     <button
@@ -522,7 +521,7 @@ export default function DashboardHub() {
                       className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all ${activeTab === 'jobs' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                         }`}
                     >
-                      <span className="truncate min-w-0">नोकऱ्या मान्यता / Jobs Validation</span>
+                      <span className="truncate min-w-0">{t('dash.menu.jobsValidation')}</span>
                     </button>
                   )}
                   {user.handlerPermissions?.canManageCompanies && (
@@ -531,7 +530,7 @@ export default function DashboardHub() {
                       className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all ${activeTab === 'companies' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                         }`}
                     >
-                      <span className="truncate min-w-0">नियोक्ते फेरबदल / Companies</span>
+                      <span className="truncate min-w-0">{t('dash.menu.companies')}</span>
                     </button>
                   )}
                   {user.handlerPermissions?.canManageSHG && (
@@ -540,7 +539,7 @@ export default function DashboardHub() {
                       className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all ${activeTab === 'shg' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                         }`}
                     >
-                      <span className="truncate min-w-0">बचतगट सक्षमीकरण / SHGs Info</span>
+                      <span className="truncate min-w-0">{t('dash.menu.shgsInfo')}</span>
                     </button>
                   )}
                   {user.handlerPermissions?.canViewReports && (
@@ -549,7 +548,7 @@ export default function DashboardHub() {
                       className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all ${activeTab === 'reports' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                         }`}
                     >
-                      <span className="truncate min-w-0">अहवाल अहवाल / Reports Summary</span>
+                      <span className="truncate min-w-0">{t('dash.menu.reportsSummary')}</span>
                     </button>
                   )}
                   <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
@@ -562,7 +561,7 @@ export default function DashboardHub() {
                     }}
                     className="px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
                   >
-                    <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
+                    <Power className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.logOff')}</span>
                   </button>
                 </DashboardMenu>
                 <div className="lg:col-span-9 space-y-6">
@@ -628,6 +627,7 @@ export const DashboardMenuContext = React.createContext<{ open: boolean; toggle:
 });
 export function DashboardMenu({ children, variant = 'sidebar' }: { children: React.ReactNode; variant?: 'sidebar' | 'drawer' }) {
   const { open, close } = useContext(DashboardMenuContext);
+  const { t } = useTranslation();
   const { user } = useSelector((state: RootState) => state.auth);
   const menuRef = useRef<HTMLDivElement>(null);
   const roleLabel =
@@ -692,8 +692,7 @@ export function DashboardMenu({ children, variant = 'sidebar' }: { children: Rea
                 <div className="flex items-center gap-2.5 min-w-0">
                   <img src="/home/logo.png" alt="SRG Logo" className="w-9 h-9 object-contain drop-shadow-lg shrink-0" />
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-extrabold leading-tight">माहिती फलक</span>
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-white/70 leading-tight">Swayamrojgar Dashboard</span>
+                    <span className="block truncate text-sm font-extrabold leading-tight">{t('dash.menu.drawerTitle')}</span>
                   </span>
                 </div>
                 <button
@@ -748,13 +747,14 @@ export function DashboardMenu({ children, variant = 'sidebar' }: { children: Rea
 // ==========================================
 function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: number }) {
   const { user } = useSelector((state: RootState) => state.auth);
+  const { t, i18n } = useTranslation();
   const { data: stats, isLoading, error } = useGetDashboardStatsQuery(undefined, { skip: !user });
   if (isLoading) {
     return (
       <div className="bg-white rounded-2xl p-6 border border-slate-150 shadow-xs flex items-center justify-center min-h-[140px]">
         <div className="flex flex-col items-center gap-2">
           <div className="w-8 h-8 rounded-full border-4 border-orange-500/20 border-t-orange-600 animate-spin"></div>
-          <p className="text-xs font-bold text-slate-500">माहिती फलक आकडेवारी लोड होत आहे / Loading Dashboard Statistics...</p>
+          <p className="text-xs font-bold text-slate-500">{t('dash.stats.loading')}</p>
         </div>
       </div>
     );
@@ -763,7 +763,7 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
     return null;
   }
   const { adminDashboard, employerDashboard, candidateDashboard, isMock } = stats;
-  let title = "माहिती फलक आकडेवारी / Dashboard Statistics";
+  let title = t('dash.stats.title');
   let items: { labelMr: string; labelEn: string; value: any; icon: React.ReactNode; colorClass: string }[] = [];
   // Per-card accent gradients (top strip + icon ring) keyed by the card's colorClass.
   const CARD_ACCENTS: Record<string, { strip: string; ring: string }> = {
@@ -776,7 +776,7 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
   };
   const noAccent = { strip: 'from-theme-lavender via-purple-500 to-theme-darkViolet', ring: 'from-theme-lavender to-theme-darkViolet' };
   if (adminDashboard) {
-    title = "प्रशासक नियंत्रण फलक / Admin Control Dashboard";
+    title = t('dashboard.adminTitle');
     items = [
       {
         labelMr: 'एकूण वापरकर्ता नोंदणी संख्या',
@@ -801,7 +801,7 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
       }
     ];
   } else if (employerDashboard) {
-    title = "नियोक्ता नियंत्रण फलक / Employer Control Dashboard";
+    title = t('dash.stats.employerTitle');
     items = [
       {
         labelMr: 'एकूण नोकरी अर्ज संख्या',
@@ -826,7 +826,7 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
       }
     ];
   } else if (candidateDashboard) {
-    title = "उमेदवार माहिती फलक / Candidate Dashboard";
+    title = t('dash.stats.candidateTitle');
     items = [
       {
         labelMr: 'प्रोफाइल पूर्णता',
@@ -872,11 +872,11 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
           </div>
           {isMock ? (
             <span className="text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
-              डेमो मोड / Demo Mode
+              {t('dash.stats.demoMode')}
             </span>
           ) : (
             <span className="text-[9px] font-black uppercase tracking-wider bg-orange-100 text-orange-700 px-2 py-0.5 rounded-md">
-              थेट डेटा / Live Sync
+              {t('dash.stats.liveSync')}
             </span>
           )}
         </div>
@@ -907,12 +907,9 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
                     </div>
                   </div>
                   <p className="break-words text-[11px] lg:text-xs font-bold text-slate-700 leading-snug min-w-0 pt-0.5">
-                    {item.labelMr}
+                    {i18n.language === 'mr' ? item.labelMr : item.labelEn}
                   </p>
                 </div>
-                <p className="relative mt-0.5 text-[9px] lg:text-[10px] font-semibold text-slate-400 uppercase tracking-wide break-words leading-tight">
-                  {item.labelEn}
-                </p>
                 <div className="relative mt-auto pt-2 flex justify-end">
                   <p className="gloss whitespace-nowrap text-[clamp(1.25rem,1.9vw,1.875rem)] font-black leading-none tracking-tight drop-shadow-sm">
                     {item.value}
@@ -932,7 +929,6 @@ function LiveDashboardStats({ appliedJobsOverride }: { appliedJobsOverride?: num
 function AdminOverviewTab() {
   const { user } = useSelector((state: RootState) => state.auth);
   const { data: stats, isLoading } = useGetDashboardStatsQuery(undefined, { skip: !user });
-  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const { t } = useTranslation();
   if (isLoading || !stats) return <Loader />;
   return (
@@ -942,9 +938,9 @@ function AdminOverviewTab() {
       {/* Informative system logs */}
       <div className="bg-linear-to-tr from-orange-400 to-amber-500 rounded-2xl p-6 text-white text-left space-y-4 shadow-sm border border-orange-200 max-w-2xl">
         <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-lg">🙏</div>
-        <h3 className="font-extrabold text-base">दिंडोरी प्रणित स्वयंरोजगार यंत्रणा</h3>
+        <h3 className="font-extrabold text-base">{t('dash.brand.systemName')}</h3>
         <p className="text-xs leading-relaxed opacity-95">
-          प्रशासक आणि लायसन (लायजन) कर्मचारी म्हणून, आपले लक्ष महिला बचत गट बाजारांना जोडून देण्यावर आणि ग्रामीण उमेदवारांना योग्य काम मिळवून देण्यावर केंद्रित असले पाहिजे. प्रत्येक उमेदवाराच्या बायोडाटाची अचूक पडताळणी करा.
+          {t('dash.admin.introPara')}
         </p>
         <div className="pt-2">
           <span className="text-[10px] font-black uppercase tracking-wider bg-black/10 px-3 py-1.5 rounded-lg border border-white/20">
@@ -991,18 +987,20 @@ const weekShortLabel = (row: ActivityRow): string => {
 };
 type ActivityViewMode = 'table' | 'bar' | 'pie';
 function ActivityLegend() {
+  const { i18n } = useTranslation();
   return (
-    <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-5">
       {ACTIVITY_METRICS.map((m) => (
-        <span key={m.key} className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
+        <span key={m.key} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
           <span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: m.color }}></span>
-          {m.labelMr} / {m.labelEn}
+          {i18n.language === 'mr' ? m.labelMr : m.labelEn}
         </span>
       ))}
     </div>
   );
 }
 function ActivityLogTable({ rows }: { rows: ActivityRow[] }) {
+  const { t, i18n } = useTranslation();
   const totals = ACTIVITY_METRICS.reduce((acc, m) => {
     acc[m.key] = rows.reduce((s, r) => s + r[m.key], 0);
     return acc;
@@ -1012,10 +1010,10 @@ function ActivityLogTable({ rows }: { rows: ActivityRow[] }) {
       <table className="w-full min-w-[560px] divide-y divide-slate-100 text-left text-xs">
         <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-wider">
           <tr>
-            <th scope="col" className="px-4 py-3.5 font-bold">तारीख / Date</th>
+            <th scope="col" className="px-4 py-3.5 font-bold">{t('dash.activity.date')}</th>
             {ACTIVITY_METRICS.map((m) => (
               <th key={m.key} scope="col" className="px-4 py-3.5 font-bold text-center whitespace-nowrap">
-                {m.labelEn}
+                {i18n.language === 'mr' ? m.labelMr : m.labelEn}
               </th>
             ))}
           </tr>
@@ -1042,7 +1040,7 @@ function ActivityLogTable({ rows }: { rows: ActivityRow[] }) {
         <tfoot>
           <tr className="bg-slate-50/70">
             <td className="whitespace-nowrap px-4 py-3.5 font-black text-slate-700 text-[11px]">
-              एकूण / Total
+              {t('dash.activity.total')}
             </td>
             {ACTIVITY_METRICS.map((m) => (
               <td key={m.key} className="whitespace-nowrap px-4 py-3.5 text-center">
@@ -1061,6 +1059,7 @@ function ActivityLogTable({ rows }: { rows: ActivityRow[] }) {
   );
 }
 function ActivityBarChart({ rows }: { rows: ActivityRow[] }) {
+  const { i18n } = useTranslation();
   const allValues = rows.flatMap((r) => ACTIVITY_METRICS.map((m) => r[m.key]));
   const maxVal = Math.max(...allValues, 1);
   const niceMax = Math.max(4, Math.ceil(maxVal / 2) * 2);
@@ -1079,8 +1078,17 @@ function ActivityBarChart({ rows }: { rows: ActivityRow[] }) {
   const barW = Math.min(24, Math.max(8, (groupW - (nBars - 1) * barGap) / nBars - 2));
   const totalBW = nBars * barW + (nBars - 1) * barGap;
   const gridVals = [0, niceMax / 2, niceMax];
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [hover, setHover] = useState<{ id: string; date: string; label: string; value: number; color: string } | null>(null);
   return (
-    <div>
+    <div
+      className="relative"
+      onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      }}
+      onMouseLeave={() => setHover(null)}
+    >
       <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto" role="img" aria-label="Activity bar graph">
         {gridVals.map((gv) => {
           const y = padT + plotH - (gv / niceMax) * plotH;
@@ -1100,8 +1108,13 @@ function ActivityBarChart({ rows }: { rows: ActivityRow[] }) {
                 const barH = (v / niceMax) * plotH;
                 const x = gx + bi * (barW + barGap);
                 const y = padT + plotH - barH;
+                const id = `${wi}-${m.key}`;
                 return (
-                  <g key={m.key}>
+                  <g
+                    key={m.key}
+                    onMouseEnter={() => setHover({ id, date: r.date, label: i18n.language === 'mr' ? m.labelMr : m.labelEn, value: v, color: m.color })}
+                    onMouseLeave={() => setHover((h) => (h?.id === id ? null : h))}
+                  >
                     <rect
                       x={x}
                       y={y}
@@ -1109,7 +1122,7 @@ function ActivityBarChart({ rows }: { rows: ActivityRow[] }) {
                       height={Math.max(barH, v > 0 ? 2 : 0)}
                       rx="3"
                       fill={m.color}
-                      opacity="0.92"
+                      opacity={hover && hover.id !== id ? 0.35 : 0.92}
                     />
                     {v > 0 && (
                       <text x={x + barW / 2} y={y - 4} textAnchor="middle" fontSize="9" fontWeight="700" fill={m.color}>
@@ -1134,15 +1147,34 @@ function ActivityBarChart({ rows }: { rows: ActivityRow[] }) {
         })}
       </svg>
       <ActivityLegend />
+      {hover && (
+        <div
+          className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full"
+          style={{ left: pos.x, top: pos.y - 10 }}
+        >
+          <div className="rounded-lg bg-slate-900/95 px-3 py-2 text-white shadow-lg whitespace-nowrap">
+            <p className="text-[10px] font-bold text-slate-200">{hover.date}</p>
+            <p className="mt-1 flex items-center gap-1.5 text-[10px] font-semibold">
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: hover.color }}></span>
+              {hover.label}
+            </p>
+            <p className="mt-0.5 text-sm font-black tabular-nums" style={{ color: hover.color }}>{hover.value}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 function ActivityDonutChart({ rows }: { rows: ActivityRow[] }) {
+  const { i18n } = useTranslation();
   const totals = ACTIVITY_METRICS.map((m) => ({
     ...m,
     total: rows.reduce((s, r) => s + r[m.key], 0)
   }));
   const grand = totals.reduce((s, t) => s + t.total, 0);
+  const range = rows.length > 0
+    ? (rows[0].date === rows[rows.length - 1].date ? rows[0].date : `${rows[0].date} – ${rows[rows.length - 1].date}`)
+    : '';
   const R = 78;
   const T = 34;
   const C = 2 * Math.PI * R;
@@ -1154,9 +1186,18 @@ function ActivityDonutChart({ rows }: { rows: ActivityRow[] }) {
     acc += len;
     return seg;
   });
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [hover, setHover] = useState<{ key: string; label: string; value: number; pct: number; color: string } | null>(null);
   return (
     <div className="flex flex-col sm:flex-row items-center gap-6">
-      <div className="relative shrink-0">
+      <div
+        className="relative shrink-0"
+        onMouseMove={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          setPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        }}
+        onMouseLeave={() => setHover(null)}
+      >
         <svg viewBox="0 0 200 200" className="w-44 h-44 sm:w-52 sm:h-52" role="img" aria-label="Activity pie chart">
           <circle cx="100" cy="100" r={R} fill="none" stroke="#EEF1F7" strokeWidth={T} />
           {segs.filter((s) => s.len > 0.4).map((s) => (
@@ -1172,12 +1213,33 @@ function ActivityDonutChart({ rows }: { rows: ActivityRow[] }) {
               strokeDashoffset={-s.start}
               transform="rotate(-90 100 100)"
               strokeLinecap="butt"
+              opacity={hover && hover.key !== s.key ? 0.4 : 1}
+              onMouseEnter={() => setHover({ key: s.key, label: i18n.language === 'mr' ? s.labelMr : s.labelEn, value: s.total, pct: grand > 0 ? Math.round((s.total / grand) * 100) : 0, color: s.color })}
+              onMouseLeave={() => setHover((h) => (h?.key === s.key ? null : h))}
             />
           ))}
           <circle cx="100" cy="100" r={R - T / 2} fill="#fff" />
           <text x="100" y="95" textAnchor="middle" fontSize="24" fontWeight="800" fill="#1E293B">{grand}</text>
           <text x="100" y="112" textAnchor="middle" fontSize="8" fontWeight="600" fill="#94A3B8">TOTAL</text>
         </svg>
+        {hover && (
+          <div
+            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full"
+            style={{ left: pos.x, top: pos.y - 10 }}
+          >
+            <div className="rounded-lg bg-slate-900/95 px-3 py-2 text-white shadow-lg whitespace-nowrap">
+              <p className="flex items-center gap-1.5 text-[10px] font-semibold">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: hover.color }}></span>
+                {hover.label}
+              </p>
+              <p className="mt-0.5 text-sm font-black tabular-nums" style={{ color: hover.color }}>
+                {hover.value}
+                <span className="ml-1 text-[10px] font-bold text-slate-300">({hover.pct}%)</span>
+              </p>
+              <p className="mt-0.5 text-[10px] font-medium text-slate-300">{range}</p>
+            </div>
+          </div>
+        )}
       </div>
       <div className="flex-1 w-full min-w-0">
         <ul className="space-y-2.5">
@@ -1189,7 +1251,7 @@ function ActivityDonutChart({ rows }: { rows: ActivityRow[] }) {
               <span className="w-3 h-3 rounded-[4px] shrink-0" style={{ backgroundColor: t.color }}></span>
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-bold text-slate-700 leading-tight truncate">
-                  {t.labelMr} / {t.labelEn}
+                  {i18n.language === 'mr' ? t.labelMr : t.labelEn}
                 </p>
               </div>
               <span className="text-sm font-black tabular-nums" style={{ color: t.color }}>{t.total}</span>
@@ -1204,12 +1266,13 @@ function ActivityDonutChart({ rows }: { rows: ActivityRow[] }) {
   );
 }
 function ActivityLogPanel({ logs }: { logs: any[] }) {
-  const [view, setView] = useState<ActivityViewMode>('table');
+  const { t } = useTranslation();
+  const [view, setView] = useState<ActivityViewMode>('pie');
   const rows = normalizeActivityLogs(logs);
   const headerBtns: { mode: ActivityViewMode; icon: React.ReactNode; label: string }[] = [
-    { mode: 'table', icon: <Table2 className="w-3.5 h-3.5" />, label: 'Table' },
-    { mode: 'bar', icon: <BarChart3 className="w-3.5 h-3.5" />, label: 'Bar Graph' },
     { mode: 'pie', icon: <ChartPie className="w-3.5 h-3.5" />, label: 'Pie Chart' },
+    { mode: 'bar', icon: <BarChart3 className="w-3.5 h-3.5" />, label: 'Bar Graph' },
+    { mode: 'table', icon: <Table2 className="w-3.5 h-3.5" />, label: 'Table' },
   ];
   return (
     <div className="bg-white rounded-2xl border border-gray-150 shadow-xs text-left overflow-hidden">
@@ -1220,10 +1283,10 @@ function ActivityLogPanel({ logs }: { logs: any[] }) {
           </div>
           <div>
             <h3 className="font-extrabold text-blue-950 text-sm tracking-wide">
-              स्वयंरोजगार अनुप्रयोग क्रियाकलाप लॉग / Swayamrojgar App Activity Log
+              {t('dash.activity.title')}
             </h3>
             <p className="text-[10px] text-slate-400 font-medium">
-              आठवड्यानुसार क्रियाकलाप सारांश / Week-wise activity summary
+              {t('dash.activity.subtitle')}
             </p>
           </div>
         </div>
@@ -1246,14 +1309,14 @@ function ActivityLogPanel({ logs }: { logs: any[] }) {
       <div className="p-5">
         {rows.length === 0 ? (
           <div className="py-8 text-center text-xs text-slate-400 font-medium">
-            अद्याप क्रियाकलाप डेटा उपलब्ध नाही / No activity log data available yet
+            {t('dash.activity.empty')}
           </div>
-        ) : view === 'table' ? (
-          <ActivityLogTable rows={rows} />
+        ) : view === 'pie' ? (
+          <ActivityDonutChart rows={rows} />
         ) : view === 'bar' ? (
           <ActivityBarChart rows={rows} />
         ) : (
-          <ActivityDonutChart rows={rows} />
+          <ActivityLogTable rows={rows} />
         )}
       </div>
     </div>
@@ -1263,19 +1326,19 @@ function ActivityLogPanel({ logs }: { logs: any[] }) {
 // COMPONENT LIST: 3. JOBS APPROVAL GRID WITH LIST AND EDIT
 // ==========================================
 function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) {
+  const { t } = useTranslation();
   const { user } = useSelector((state: RootState) => state.auth);
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
   const [selectedJobCode, setSelectedJobCode] = useState<string | undefined>(undefined);
   const [selectedJobIdForEdit, setSelectedJobIdForEdit] = useState<number | null>(null);
   const [isPostingNewJob, setIsPostingNewJob] = useState(false);
   const { data: jobs = [], refetch } = useGetJobsQuery(undefined, { skip: !user });
-  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const [updateJob] = useUpdateJobMutation();
   const [deleteJob] = useDeleteJobMutation();
   const handleApprove = async (jobId: string) => {
     try {
       await updateJob({ id: jobId, isApproved: true }).unwrap();
-      setToastMsg('नोकरी मंजूर केली / Job listing approved and published!');
+      setToastMsg(t('dash.toast.jobApproved'));
       refetch();
     } catch (_) {
       setToastMsg('Failed to approve vacancy.');
@@ -1284,7 +1347,7 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
   const handleDelete = async (jobId: string) => {
     try {
       await deleteJob(jobId).unwrap();
-      setToastMsg('नोकरी काढून टाकली / Listing deleted successfully!');
+      setToastMsg(t('dash.toast.jobDeleted'));
       refetch();
     } catch (_) {
       setToastMsg('Deletions failed');
@@ -1305,7 +1368,7 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
         onCancel={() => setIsPostingNewJob(false)}
         onSuccess={() => {
           setIsPostingNewJob(false);
-          setToastMsg('नोकरी यशस्वीरित्या जोडली! / Job added successfully!');
+          setToastMsg(t('dash.toast.jobAdded'));
           refetch();
         }}
       />
@@ -1314,9 +1377,9 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
   return (
     <div className="space-y-6 text-left">
       {/* 1. Recruiter Vacancies Approval Desk */}
-      <Card title="नोकऱ्या मान्यता आणि तपासणी / Recruiter Vacancies Approval Desk">
+      <Card title={t('dash.admin.vacanciesApprovalTitle')}>
         <p className="text-xs text-slate-500 mb-6 font-semibold">
-          कंपन्यांनी / नियोक्त्यांनी टाकलेल्या जाहिरातींची पडताळणी करा आणि उमेदवारांना दिसण्यासाठी मंजूर करा.
+          {t('dash.admin.vacanciesApprovalDesc')}
         </p>
         {jobs.length === 0 ? (
           <EmptyState title="No vacancies listed" desc="Vacancies submitted by employers appear here." />
@@ -1335,16 +1398,16 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
                   </div>
                   <p className="text-xs font-bold text-slate-600 block">{job.companyName} | {job.location}</p>
                   <p className="text-xs text-slate-500 font-semibold block leading-relaxed">{job.description}</p>
-                  <p className="text-[10px] text-orange-600 font-semibold block uppercase">वर्गवारी: {job.category} | वेतन: {job.salary}</p>
+                  <p className="text-[10px] text-orange-600 font-semibold block uppercase">{t('dash.job.categorySalary', { category: job.category, salary: job.salary })}</p>
                 </div>
                 <div className="flex items-center gap-2 mt-2 md:mt-0">
                   {!job.isApproved && (
                     <PrimaryButton onClick={() => handleApprove(job.id)} className="px-3.5 py-1.5 text-xs font-bold">
-                      मंजूर करा / Approve
+                      {t('dash.admin.approve')}
                     </PrimaryButton>
                   )}
                   <DangerButton onClick={() => handleDelete(job.id)} className="px-3.5 py-1.5 text-xs font-bold bg-rose-50 border border-rose-100 hover:bg-rose-100 text-rose-700">
-                    काढून टाका / Delete
+                    {t('dashboard.delete')}
                   </DangerButton>
                 </div>
               </div>
@@ -1353,13 +1416,13 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
         )}
       </Card>
       {/* 2. Unified Job Listings view with Edit option */}
-      <Card title="सर्व सक्रिय नोकऱ्यांची यादी / List of All Jobs">
+      <Card title={t('dash.admin.allJobsTitle')}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <p className="text-xs text-slate-500 font-medium">
-            प्रणालीतील सर्व नोकऱ्या शोधा, पहा आणि संपादित करा.
+            {t('dash.admin.allJobsDesc')}
           </p>
           <PrimaryButton onClick={() => setIsPostingNewJob(true)} className="py-2 px-4 text-xs font-bold">
-            नवीन नोकरी जोडा / Add New Job
+            {t('dash.admin.addNewJob')}
           </PrimaryButton>
         </div>
         <JobListingView
@@ -1371,7 +1434,7 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
       <Modal
         isOpen={selectedJobIdForEdit !== null}
         onClose={() => setSelectedJobIdForEdit(null)}
-        title="नोकरी आवश्यकता संपादित करा / Edit Job Requirement"
+        title={t('dash.admin.editJobTitle')}
         maxWidthClass="max-w-3xl"
       >
         {selectedJobIdForEdit !== null && (
@@ -1380,7 +1443,7 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
             onCancel={() => setSelectedJobIdForEdit(null)}
             onSuccess={() => {
               setSelectedJobIdForEdit(null);
-              setToastMsg('नोकरी यशस्वीरित्या अद्ययावत केली! / Job updated successfully!');
+              setToastMsg(t('dash.toast.jobUpdated'));
               refetch();
             }}
           />
@@ -1393,23 +1456,23 @@ function AdminJobsApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => v
 // COMPONENT LIST: 4. COMPANIES APPROVAL GRID
 // ==========================================
 function AdminCompaniesApprovalTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) {
+  const { t } = useTranslation();
   const { user } = useSelector((state: RootState) => state.auth);
   const { data: companies = [], refetch } = useGetCompaniesQuery(undefined, { skip: !user });
-  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const [updateCompany] = useUpdateCompanyMutation();
   const handleApproveComp = async (compId: string) => {
     try {
       await updateCompany({ id: compId, isApproved: true }).unwrap();
-      setToastMsg('कंपनी मंजूर केली / Recruiter company profile approved!');
+      setToastMsg(t('dash.toast.companyApproved'));
       refetch();
     } catch (_) {
       setToastMsg('Failed company edit approval.');
     }
   };
   return (
-    <Card title="नियोक्ते व उद्योग पडताळणी / Recruiters Verification Suite">
+      <Card title={t('dash.admin.companiesApprovalTitle')}>
       <p className="text-xs text-slate-550 mb-6 font-semibold">
-        उद्योगपती व नियोक्त्यांनी नोंदणी केल्यावर त्यांच्या प्रोफाइलची कसून तपासणी करून अप्रूव्ह करा.
+        {t('dash.admin.companiesApprovalDesc')}
       </p>
       {companies.length === 0 ? (
         <EmptyState title="No Corporate Listings" desc="Awaiting employer signups." />
@@ -1426,17 +1489,17 @@ function AdminCompaniesApprovalTab({ setToastMsg }: { setToastMsg: (msg: string)
                     <Badge type="warning">AWAITING REVIEW</Badge>
                   )}
                 </div>
-                <p className="text-xs text-slate-600 block leading-normal">
-                  प्रतिनिधी: {comp.contactPerson} | उद्योग: {comp.industry}
-                </p>
-                <p className="text-xs text-slate-500 font-semibold block leading-none">
-                  संपर्क: {comp.email} | {comp.phone} | पत्ता: {comp.address}
-                </p>
+                  <p className="text-xs text-slate-600 block leading-normal">
+                    {t('dash.admin.representative')} {comp.contactPerson} | {t('dash.admin.industry')} {comp.industry}
+                  </p>
+                  <p className="text-xs text-slate-500 font-semibold block leading-none">
+                    {t('dash.admin.contact')} {comp.email} | {comp.phone} | {t('dash.admin.address')} {comp.address}
+                  </p>
               </div>
               <div>
                 {!comp.isApproved && (
                   <PrimaryButton onClick={() => handleApproveComp(comp.id)} className="px-3.5 py-1.5 text-xs font-bold font-sans">
-                    मान्यता द्या / Verify & Approve
+                    {t('dash.admin.verifyApprove')}
                   </PrimaryButton>
                 )}
               </div>
@@ -1451,24 +1514,24 @@ function AdminCompaniesApprovalTab({ setToastMsg }: { setToastMsg: (msg: string)
 // SUB-TAB VIEW: 5. ANALYTICAL REPORTS
 // ==========================================
 function HandlerSHGTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) {
+  const { t } = useTranslation();
   const { user } = useSelector((state: RootState) => state.auth);
   const { data: list = [], refetch } = useGetSHGProfilesQuery(undefined, { skip: !user });
-  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   return (
-    <Card title="बचतगट गृहउद्योग पडताळणी / Women SHGs Micro-enterprise verification">
+    <Card title={t('dash.shg.verificationTitle')}>
       <p className="text-xs text-slate-500 mb-6 font-semibold">
-        लायजन / मदतनीस म्हणून तुम्ही महिला बचत गटांच्या हस्तकला आणि गृहउद्योग उत्पादनांना बाजाराशी जोडून देऊ शकता.
+        {t('dash.shg.verificationDesc')}
       </p>
       <div className="space-y-4 text-left">
         {list.map((shg) => (
           <div key={shg.id} className="p-5 bg-slate-50 border border-slate-100 rounded-2xl relative">
             <div className="space-y-2">
-              <h4 className="text-sm font-bold text-emerald-800 flex items-center gap-1.5 leading-none">
-                🌾 {shg.shgName} ({shg.memberCount} सभासद)
-              </h4>
-              <p className="text-xs font-semibold text-slate-600 block">
-                गटप्रमुख: {shg.leaderName} | जिल्हा: {shg.district} | फोन: {shg.phone}
-              </p>
+            <h4 className="text-sm font-bold text-emerald-800 flex items-center gap-1.5 leading-none">
+              🌾 {shg.shgName} ({shg.memberCount} {t('dash.shg.members')})
+            </h4>
+            <p className="text-xs font-semibold text-slate-600 block">
+              {t('dash.shg.leader')} {shg.leaderName} | {t('dash.shg.district')} {shg.district} | {t('dash.shg.phone')} {shg.phone}
+            </p>
               {shg.activities.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2.5">
                   {shg.activities.map((act, i) => (
@@ -1671,6 +1734,32 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   const [compState, setCompState] = useState('');
   const [compDistrict, setCompDistrict] = useState('');
   const [compTaluka, setCompTaluka] = useState('');
+  // Numeric IDs driving the cascading location master-data dropdowns (PROF-026).
+  // The string state above stays in sync and is what gets sent to the backend.
+  const [compStateId, setCompStateId] = useState<number>(1); // Default Maharashtra
+  const [compDistrictId, setCompDistrictId] = useState<number>(0);
+  const [compTalukaId, setCompTalukaId] = useState<number>(0);
+  const { data: compStates = [] } = useGetStatesQuery(1); // India
+  const { data: compDistricts = [] } = useGetDistrictsQuery(compStateId, { skip: !compStateId });
+  const { data: compTalukas = [] } = useGetTalukasQuery(compDistrictId, { skip: !compDistrictId });
+  const handleCompStateChange = (id: number) => {
+    setCompStateId(id);
+    setCompState(getLocalizedName(compStates.find(s => s.id === id)));
+    setCompDistrictId(0);
+    setCompDistrict('');
+    setCompTalukaId(0);
+    setCompTaluka('');
+  };
+  const handleCompDistrictChange = (id: number) => {
+    setCompDistrictId(id);
+    setCompDistrict(getLocalizedName(compDistricts.find(d => d.id === id)));
+    setCompTalukaId(0);
+    setCompTaluka('');
+  };
+  const handleCompTalukaChange = (id: number) => {
+    setCompTalukaId(id);
+    setCompTaluka(getLocalizedName(compTalukas.find(t => t.id === id)));
+  };
   const [compCompanyType, setCompCompanyType] = useState('');
   const [compWebsite, setCompWebsite] = useState('');
   const [compAltEmail, setCompAltEmail] = useState('');
@@ -1697,9 +1786,43 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       setCompAddress(profile.address);
       setCompMobile(profile.phone || '');
       setCompEmail(profile.email || '');
+      setCompState(profile.state || '');
       setCompDistrict(profile.district || '');
+      setCompTaluka(profile.taluka || '');
+      setCompStateId(profile.stateId || 0);
+      setCompDistrictId(profile.districtId || 0);
+      setCompTalukaId(profile.talukaId || 0);
     }
   }, [profile]);
+  // PROF-026: keep the string state and numeric IDs in sync with the master
+  // lists — resolve saved strings into IDs (backend returned 0) and back-fill
+  // empty strings from the selected ID, so Save always sends the right name.
+  React.useEffect(() => {
+    const matchesName = (item: { name: string; enName?: string }, value: string) =>
+      item.name.trim().toLowerCase() === value.trim().toLowerCase() ||
+      (item.enName || '').trim().toLowerCase() === value.trim().toLowerCase();
+    if (compStateId === 0 && compState && compStates.length) {
+      const m = compStates.find(s => matchesName(s, compState));
+      if (m) setCompStateId(m.id);
+    } else if (compStateId !== 0 && !compState && compStates.length) {
+      const m = compStates.find(s => s.id === compStateId);
+      if (m) setCompState(getLocalizedName(m));
+    }
+    if (compDistrictId === 0 && compDistrict && compDistricts.length) {
+      const m = compDistricts.find(d => matchesName(d, compDistrict));
+      if (m) setCompDistrictId(m.id);
+    } else if (compDistrictId !== 0 && !compDistrict && compDistricts.length) {
+      const m = compDistricts.find(d => d.id === compDistrictId);
+      if (m) setCompDistrict(getLocalizedName(m));
+    }
+    if (compTalukaId === 0 && compTaluka && compTalukas.length) {
+      const m = compTalukas.find(tl => matchesName(tl, compTaluka));
+      if (m) setCompTalukaId(m.id);
+    } else if (compTalukaId !== 0 && !compTaluka && compTalukas.length) {
+      const m = compTalukas.find(tl => tl.id === compTalukaId);
+      if (m) setCompTaluka(getLocalizedName(m));
+    }
+  }, [compStateId, compDistrictId, compTalukaId, compState, compDistrict, compTaluka, compStates, compDistricts, compTalukas]);
   const handlePostVacancy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vacancyTitle || !vacancySalary || !vacancyDesc) {
@@ -1718,7 +1841,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         type: vacancyType,
         category: vacancyCategory
       }).unwrap();
-      setToastMsg('नोकरी रिक्त जागा जोडली (Pending Admin Validation)!');
+      setToastMsg(t('dash.toast.vacancyAdded'));
       // Reset form fields
       setVacancyTitle('');
       setVacancySalary('');
@@ -1843,7 +1966,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
     try {
       const result = await updateJobApplicationStatus(payload);
       if (result.success) {
-        setToastMsg(result.message || 'मुलाखत नियोजित केली / Interview Scheduled!');
+        setToastMsg(result.message || t('dash.toast.interviewScheduled'));
         if (targetAppId) {
           setLocalStatusOverrides(prev => ({
             ...prev,
@@ -1875,7 +1998,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         setCompPicUploading(true);
         const up = await uploadProfilePic(compPicFile);
         if (!up.success) {
-          setToastMsg(`Logo अपलोड अयशस्वी / Logo upload failed: ${up.message}`);
+          setToastMsg(t('dash.toast.logoUploadFailed', { msg: up.message }));
           setCompPicUploading(false);
           return;
         }
@@ -1903,7 +2026,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         alternateEmail: compAltEmail,
       });
       if (res.success) {
-        setToastMsg('प्रोफाइल जतन केले / Profile updated successfully!');
+        setToastMsg(t('dash.toast.profileUpdated'));
         setCompPicFile(null);
         setCompPicPreview('');
         refetchProfile();
@@ -1924,42 +2047,42 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'overview' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <Tag className="w-4 h-4" /><span className="truncate min-w-0">आढावा / Overview</span>
+          <Tag className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.overview')}</span>
         </button>
         <button
           onClick={() => setActiveTab('pipeline')}
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'pipeline' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <Compass className="w-4 h-4" /><span className="truncate min-w-0">अर्ज प्रक्रिया / Pipeline ({pipelineApps.length})</span>
+          <Compass className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.pipeline')} ({pipelineApps.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('listings')}
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'listings' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <Briefcase className="w-4 h-4" /><span className="truncate min-w-0">रिक्रूट नोकऱ्या / Vacancies ({jobsList.length})</span>
+          <Briefcase className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.vacancies')} ({jobsList.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('post')}
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'post' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <FilePlus className="w-4 h-4" /><span className="truncate min-w-0">नवीन नोकरी जोडा / Post Job</span>
+          <FilePlus className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.postJob')}</span>
         </button>
         <button
           onClick={() => setActiveTab('profile')}
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'profile' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <Settings className="w-4 h-4" /><span className="truncate min-w-0">कंपनी प्रोफाइल / Profile Settings</span>
+          <Settings className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.profileSettings')}</span>
         </button>
         <button
           onClick={() => setActiveTab('support_tickets')}
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'support_tickets' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <LifeBuoy className="w-4 h-4" /><span className="truncate min-w-0">View Ticket / तिकीट पहा</span>
+          <LifeBuoy className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.viewTicket')}</span>
         </button>
         <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
         <button
@@ -1971,7 +2094,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
           }}
           className="px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
         >
-          <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
+          <Power className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.logOff')}</span>
         </button>
       </DashboardMenu>
       <div className="lg:col-span-9 space-y-6">
@@ -1983,13 +2106,13 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         {profile && !profile.isApproved && (
           <Alert
             type="warning"
-            title="पडताळणी प्रलंबित आहे (Review Pending)"
+            title={t('dash.employer.reviewPending')}
             message="Your employer recruiter profile verification is actively pending review by Shri Swami Samarth self-employment staff handlers. Once verified, your posted vacancies will instantly receive high-priority visibility!"
           />
         )}
         {/* 1. Job application Pipelines tab */}
         {activeTab === 'pipeline' && (
-          <Card title="उमेदवारांचे अर्ज प्रक्रिया / Applicant Pipeline Tracking">
+          <Card title={t('dash.employer.pipelineTitle')}>
             {pipelineApps.length === 0 ? (
               <EmptyState title="No Applicants Found" desc="Vacancies you post will gather seekers applied pipelines here." />
             ) : (
@@ -2057,11 +2180,11 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                               onClick={() => app.candidateId && navigate(`/candidate/${app.candidateId}`)}
                               className="text-xs text-orange-600 font-extrabold uppercase tracking-wide hover:text-orange-800 hover:underline transition-colors text-left cursor-pointer"
                             >
-                              अर्जदार: {app.candidateName}
+                              {t('dash.employer.applicant', { name: app.candidateName })}
                             </button>
                             <h4 className="text-sm font-bold text-blue-950">{app.jobTitle}</h4>
                             <p className="text-[10px] text-gray-500 font-semibold block leading-none">
-                              मोबाईल: {app.candidatePhone} | अर्ज दिनांक: {app.appliedAt}
+                              {t('dash.employer.mobileAppliedOn', { phone: app.candidatePhone, date: app.appliedAt })}
                             </p>
                           </div>
                           <div>
@@ -2166,7 +2289,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
               <Modal
                 isOpen={selectedJobIdForEdit !== null}
                 onClose={() => setSelectedJobIdForEdit(null)}
-                title="नोकरी आवश्यकता संपादित करा / Edit Job Requirement"
+                title={t('dash.admin.editJobTitle')}
                 maxWidthClass="max-w-3xl"
               >
                 {selectedJobIdForEdit !== null && (
@@ -2190,7 +2313,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         )}
         {/* 4. Recruiter Settings Profile card updater */}
         {activeTab === 'profile' && (
-          <Card title="नियोक्ता माहिती संपादन / Employer Profile Settings">
+          <Card title={t('dash.employer.profileTitle')}>
             <form onSubmit={handleSaveCorporateProfile} className="space-y-5">
               {/* Company logo / profile pic */}
               <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -2232,82 +2355,96 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <TextBox
-                  label="संपर्क व्यक्ती / Liaison Name (Contact Person)"
+                  label={t('dash.form.liaisonName')}
                   value={compContact}
                   onChange={(e) => setCompContact(e.target.value)}
                   required
                 />
                 <TextBox
-                  label="मोबाईल / Mobile Number"
+                  label={t('dash.form.mobile')}
                   value={compMobile}
                   onChange={(e) => setCompMobile(e.target.value)}
                 />
                 <TextBox
-                  label="ई-मेल / Email"
+                  label={t('dash.form.email')}
                   type="email"
                   value={compEmail}
                   onChange={(e) => setCompEmail(e.target.value)}
                 />
                 <TextBox
-                  label="उद्योग प्रकार / Industry Type"
+                  label={t('dash.form.industryType')}
                   value={compIndustry}
                   onChange={(e) => setCompIndustry(e.target.value)}
                 />
                 <TextBox
-                  label="कंपनी प्रकार / Company Type"
+                  label={t('dash.form.companyType')}
                   value={compCompanyType}
                   onChange={(e) => setCompCompanyType(e.target.value)}
                 />
                 <TextBox
-                  label="पर्यायी संपर्क व्यक्ती / Alternate Contact Person"
+                  label={t('dash.form.altContactPerson')}
                   value={compAltContact}
                   onChange={(e) => setCompAltContact(e.target.value)}
                 />
                 <TextBox
-                  label="पर्यायी मोबाईल / Alternate Contact Number"
+                  label={t('dash.form.altContactNumber')}
                   value={compAltNumber}
                   onChange={(e) => setCompAltNumber(e.target.value)}
                 />
                 <TextBox
-                  label="पर्यायी ई-मेल / Alternate Email"
+                  label={t('dash.form.altEmail')}
                   type="email"
                   value={compAltEmail}
                   onChange={(e) => setCompAltEmail(e.target.value)}
                 />
                 <TextBox
-                  label="वेबसाइट / Website"
+                  label={t('dash.form.website')}
                   value={compWebsite}
                   onChange={(e) => setCompWebsite(e.target.value)}
                 />
-                <TextBox
-                  label="राज्य / State"
-                  value={compState}
-                  onChange={(e) => setCompState(e.target.value)}
+                <Dropdown
+                  label={t('dash.form.state')}
+                  options={[
+                    { value: '0', label: t('reg.option.selectState') },
+                    ...compStates.map(s => ({ value: String(s.id), label: getLocalizedName(s) }))
+                  ]}
+                  value={String(compStateId)}
+                  onChange={(e) => handleCompStateChange(Number(e.target.value))}
                 />
-                <TextBox
-                  label="जिल्हा / District"
-                  value={compDistrict}
-                  onChange={(e) => setCompDistrict(e.target.value)}
+                <Dropdown
+                  label={t('dash.form.district')}
+                  options={[
+                    { value: '0', label: t('reg.option.selectDistrict') },
+                    ...compDistricts.map(d => ({ value: String(d.id), label: getLocalizedName(d) }))
+                  ]}
+                  value={String(compDistrictId)}
+                  onChange={(e) => handleCompDistrictChange(Number(e.target.value))}
+                  disabled={!compStateId}
                 />
-                <TextBox
-                  label="तालुका / Taluka"
-                  value={compTaluka}
-                  onChange={(e) => setCompTaluka(e.target.value)}
+                <Dropdown
+                  label={t('dash.form.taluka')}
+                  options={[
+                    { value: '0', label: t('reg.option.selectTaluka') },
+                    ...compTalukas.map(tl => ({ value: String(tl.id), label: getLocalizedName(tl) }))
+                  ]}
+                  value={String(compTalukaId)}
+                  onChange={(e) => handleCompTalukaChange(Number(e.target.value))}
+                  disabled={!compDistrictId}
                 />
               </div>
               <TextArea
-                label="पत्ता / Corporate Head Office Address"
+                label={t('dash.form.corporateAddress')}
                 value={compAddress}
                 onChange={(e) => setCompAddress(e.target.value)}
               />
               <TextArea
-                label="कंपनी वर्णन / Company Description"
+                label={t('dash.form.companyDesc')}
                 value={compDescription}
                 onChange={(e) => setCompDescription(e.target.value)}
               />
               <div className="flex justify-end">
                 <PrimaryButton type="submit" disabled={compPicUploading}>
-                  {compPicUploading ? 'अपलोड होत आहे / Uploading...' : t('dashboard.save')}
+                  {compPicUploading ? t('dash.form.uploading') : t('dashboard.save')}
                 </PrimaryButton>
               </div>
             </form>
@@ -2318,14 +2455,14 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       <Modal
         isOpen={showInterviewModal}
         onClose={() => setShowInterviewModal(false)}
-        title="मुलाखत नियोजित करा / Coordinate Interview Scheduled"
+        title={t('dash.employer.interviewModalTitle')}
       >
         <form onSubmit={handleScheduleInterviewSubmit} className="space-y-4">
           <p className="text-xs text-gray-500 leading-relaxed font-semibold">
             Choose a suitable date and coordinates timing setup. An automated notification will sync to the applicant tracking panel.
           </p>
           <TextBox
-            label="मुलाखत दिनांक / Interview date and Clock timings"
+            label={t('dash.form.interviewDate')}
             type="datetime-local"
             value={interviewDate}
             onChange={(e) => setInterviewDate(e.target.value)}
@@ -2333,10 +2470,10 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
           />
           <div className="flex justify-end gap-2.5 pt-4">
             <SecondaryButton onClick={() => setShowInterviewModal(false)}>
-              बंद करा / Cancel
+              {t('dash.form.close')}
             </SecondaryButton>
             <PrimaryButton type="submit">
-              नियोजित करा / Set Interview Date
+              {t('dash.form.setInterviewDate')}
             </PrimaryButton>
           </div>
         </form>
@@ -2351,7 +2488,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
             setStatusRemarks('');
           }
         }}
-        title="अर्ज स्थिती अद्यतनित करा / Update Application Status"
+        title={t('dash.employer.statusModalTitle')}
       >
         {statusUpdateApp && selectedStatusObj && (
           <form
@@ -2363,13 +2500,13 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
           >
             <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5">
               <p className="text-xs font-bold text-slate-800">
-                अर्जदार: <span className="text-orange-600 font-extrabold">{statusUpdateApp.candidateName}</span>
+                {t('dash.employer.applicantLabel')} <span className="text-orange-600 font-extrabold">{statusUpdateApp.candidateName}</span>
               </p>
               <p className="text-xs text-slate-600">
-                नोकरी: <span className="font-semibold text-blue-950">{statusUpdateApp.jobTitle}</span>
+                {t('dash.employer.jobLabel')} <span className="font-semibold text-blue-950">{statusUpdateApp.jobTitle}</span>
               </p>
               <div className="flex items-center gap-2 pt-1">
-                <span className="text-xs text-slate-500">नवीन स्थिती / Target Status:</span>
+                <span className="text-xs text-slate-500">{t('dash.employer.targetStatus')}:</span>
                 <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-orange-100 text-orange-850">
                   {selectedStatusObj.name}
                 </span>
@@ -2381,7 +2518,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
               )}
             </div>
             <TextArea
-              label="शेरा / Remarks (Optional)"
+              label={t('dash.form.remarks')}
               value={statusRemarks}
               onChange={(e) => setStatusRemarks(e.target.value)}
               placeholder="e.g., Shortlisted based on profile screening, round completed, etc."
@@ -2396,10 +2533,10 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                   setStatusRemarks('');
                 }}
               >
-                रद्द करा / Cancel
+                {t('dash.form.cancel')}
               </SecondaryButton>
               <PrimaryButton type="submit" disabled={isUpdatingStatus}>
-                {isUpdatingStatus ? 'अपडेट होत आहे... / Updating...' : 'स्थिती अद्यतनित करा / Confirm Status'}
+                {isUpdatingStatus ? t('dash.form.updating') : t('dash.form.confirmStatus')}
               </PrimaryButton>
             </div>
           </form>
@@ -2412,7 +2549,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
 // INTEGRATED SUB-BOARD: JOB SEEKER / CANDIDATE PORTAL
 // ==========================================
 function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: string; setToastMsg: (msg: string) => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -2465,9 +2602,9 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
     const subEduObj = liveSubEducationsList.find(se => se.id === Number(liveSubEducationId));
     const parts: string[] = [];
     if (skObj) parts.push(skObj.name);
-    if (talukaObj) parts.push(talukaObj.name);
-    if (districtObj) parts.push(districtObj.name);
-    if (stateObj) parts.push(stateObj.name);
+    if (talukaObj) parts.push(getLocalizedName(talukaObj));
+    if (districtObj) parts.push(getLocalizedName(districtObj));
+    if (stateObj) parts.push(getLocalizedName(stateObj));
     if (countryObj && countryObj.name !== 'INDIA') parts.push(countryObj.name);
     if (parts.length > 0) {
       setSeekerCity(parts.join(', '));
@@ -2475,7 +2612,7 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
     if (eduObj) {
       setQualification(subEduObj ? `${eduObj.name} - ${subEduObj.name}` : eduObj.name);
     }
-    setToastMsg('थेट एपीआय निवडलेली माहिती वर यशस्वीपणे भरली! सेव्ह बदल वर क्लिक करा. / Selections populated! Now click Save.');
+    setToastMsg(t('dash.toast.selectionsPopulated'));
   };
   // Search parameters filter state
   const [searchPhrase, setSearchPhrase] = useState('');
@@ -2502,7 +2639,7 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
         candidateName: fullName || fullName || "",
         candidatePhone: profile?.phone || profile?.phone || ""
       }).unwrap();
-      setToastMsg('अर्ज यशस्वीरीत्या सादर केला! / Applied to role successfully!');
+      setToastMsg(t('dash.toast.appliedRole'));
       refetchMyApps();
     } catch (err: any) {
       setToastMsg(err.data || 'Duplicated applications blocked.');
@@ -2520,7 +2657,7 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
         skills: skillsText.split(',').map(s => s.trim()).filter(Boolean),
         resumeName
       }).unwrap();
-      setToastMsg('माहिती अद्ययावत केली / Candidate profile details saved!');
+      setToastMsg(t('dash.toast.candidateProfilesaved'));
       refetchProfile();
     } catch (_) {
       setToastMsg('Profile updates failed.');
@@ -2585,35 +2722,28 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'overview' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <Tag className="w-4 h-4" /><span className="truncate min-w-0">आढावा / Overview</span>
+          <Tag className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.overview')}</span>
         </button>
         <button
           onClick={() => { setActiveTab('search'); setSelectedJobIdForDetail(null); }}
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'search' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <Search className="w-4 h-4" /><span className="truncate min-w-0">शोध नोकरी / Find Jobs</span>
+          <Search className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.findJobs')}</span>
         </button>
         <button
           onClick={() => { setActiveTab('history'); setSelectedJobIdForDetail(null); }}
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'history' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <History className="w-4 h-4" /><span className="truncate min-w-0">माझे अर्ज / Applied ({appliedCount})</span>
-        </button>
-        <button
-          onClick={() => { setActiveTab('profile'); setSelectedJobIdForDetail(null); }}
-          className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'profile' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
-            }`}
-        >
-          <UserCircle className="w-4 h-4" /><span className="truncate min-w-0">बायोडाटा संपादन / Complete Profile</span>
+          <History className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.applied')} ({appliedCount})</span>
         </button>
         <button
           onClick={() => { setActiveTab('support_tickets'); setSelectedJobIdForDetail(null); }}
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'support_tickets' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <LifeBuoy className="w-4 h-4" /><span className="truncate min-w-0">View Ticket / तिकीट पहा</span>
+          <LifeBuoy className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.viewTicket')}</span>
         </button>
         <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
         <button
@@ -2625,7 +2755,7 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
           }}
           className="px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
         >
-          <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
+          <Power className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.logOff')}</span>
         </button>
       </DashboardMenu>
       <div className="lg:col-span-9 space-y-6">
@@ -2642,7 +2772,7 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                   <Search className="w-5 h-5" />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-sm font-extrabold leading-tight">नवीन नोकऱ्या शोधा / Find New Jobs</span>
+                  <span className="block text-sm font-extrabold leading-tight">{t('dash.candidate.findNewJobs')}</span>
                   <span className="block text-[10px] font-semibold text-white/70 leading-tight mt-0.5">Explore fresh openings & apply in one tap</span>
                 </span>
                 <Briefcase className="w-4 h-4 text-white/80 shrink-0" />
@@ -2655,8 +2785,8 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
         {!resumeName && (
           <Alert
             type="info"
-            title="बायोडाटा / Resume अपलोड आवश्यक"
-            message="Please upload your digital Resume/CV in PDF format under 'Complete Profile' tab to ensure verified recruiters can download and review your competencies!"
+            title={t('dash.candidate.resumeUploadRequired')}
+            message="Please upload your digital Resume/CV in PDF format under the Profile page (Resume tab) to ensure verified recruiters can download and review your competencies!"
           />
         )}
         {/* 1. Job search list tab */}
@@ -2702,7 +2832,7 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
               alreadyApplied={true}
             />
           ) : (
-            <Card title="तुमच्या अर्जांची स्थिती / Your Active Job Applications">
+            <Card title={t('dash.candidate.activeApplications')}>
               {(() => {
                 const mergedApps: Array<{ id: string; jobTitle: string; companyName: string; status: string; numericId?: number; jobCode?: string }> = [];
                 const seenKeys = new Set<string>();
@@ -2794,7 +2924,7 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                       >
                         <div className="space-y-1.5">
                           <h4 className="text-sm font-bold text-slate-800">{app.jobTitle}</h4>
-                          <p className="text-xs text-slate-600 font-bold block leading-none">कंपनी: {app.companyName}</p>
+                          <p className="text-xs text-slate-600 font-bold block leading-none">{t('dash.candidate.companyName', { name: app.companyName })}</p>
                         </div>
                         <div>
                           <Badge type="primary">{app.status}</Badge>
@@ -2813,36 +2943,47 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
         )}
         {/* 3. Seeker Profile settings updater */}
         {activeTab === 'profile' && (
-          <Card title="उमेदवाराची सविस्तर माहिती / Candidate Profile Settings">            <form onSubmit={handleSaveSeekerProfile} className="space-y-5">
+          <Card title={t('dash.candidate.profileTitle')}>
+            <form onSubmit={handleSaveSeekerProfile} className="space-y-5">
               <TextBox
-                label="पूर्ण नाव / Full Name"
+                label={t('dash.form.fullName')}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
               />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Dropdown
-                  label="राहण्याचे शहर / City Location"
-                  options={locations.map(l => ({ value: l.value, label: `${l.labelMr} / ${l.labelEn}` }))}
+                  label={t('dash.form.city')}
+                  options={locations.map(l => ({ value: l.value, label: i18n.language === 'mr' ? l.labelMr : l.labelEn }))}
                   value={seekerCity}
                   onChange={(e) => setSeekerCity(e.target.value)}
                 />
-                <TextBox
-                  label="शिक्षण / Highest Academic Degree"
+                <Dropdown
+                  label={t('dash.form.degree')}
+                  options={[
+                    { value: '', label: t('reg.option.selectEducation') },
+                    ...liveEducationsList.map(e => ({ value: e.name, label: e.name })),
+                    ...(qualification && !liveEducationsList.some(e => e.name === qualification)
+                      ? [{ value: qualification, label: qualification }]
+                      : [])
+                  ]}
                   value={qualification}
-                  placeholder="E.g. B.A., M.B.A., XII pass"
-                  onChange={(e) => setQualification(e.target.value)}
+                  onChange={(e) => {
+                    setQualification(e.target.value);
+                    const m = liveEducationsList.find(ed => ed.name === e.target.value);
+                    setLiveEducationId(m ? m.id : 0);
+                  }}
                   required
                 />
                 <TextBox
-                  label="एकूण अनुभव वर्षे / Experience (Years)"
+                  label={t('dash.form.experience')}
                   type="number"
                   value={experience}
                   onChange={(e) => setExperience(Number(e.target.value))}
                 />
               </div>
               <TextBox
-                label="मुख्य कौशल्ये (स्वल्पविराम द्या) / Key Skills"
+                label={t('dash.form.keySkills')}
                 value={skillsText}
                 placeholder="E.g. Sales, Drivers license, Computer typing, tailoring"
                 onChange={(e) => setSkillsText(e.target.value)}
@@ -2851,19 +2992,19 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
               <div className="bg-orange-50/40 border border-orange-100 rounded-2xl p-5 space-y-4">
                 <div className="text-left">
                   <h4 className="text-sm font-bold text-blue-950 flex items-center gap-1.5 md:text-base">
-                    <span>🌍</span> थेट स्वयंरोजगार मास्टर डेटा शोधक (Live Swagger API Explorer)
+                    <span>🌍</span> {t('dash.candidate.liveDataFinder')}
                   </h4>
                   <p className="text-xs text-slate-550 mt-1 leading-normal">
-                    आपल्या प्रोफाइलसाठी अधिकृत दिंडोरी प्रणीत एपीआय वरून थेट रिअल-टाइम देश, राज्य, जिल्हा, तालुका, सेवा केंद्र आणि शिक्षण सूची निवडा! (Select and pop from real-time API)
+                    {t('dash.candidate.liveDataHelp')}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {/* Location Group */}
                   <div className="space-y-3">
-                    <h5 className="text-xs font-bold text-orange-700 uppercase tracking-wider block text-left">ठिकाण पडताळणी / Location Cascade</h5>
+                    <h5 className="text-xs font-bold text-orange-700 uppercase tracking-wider block text-left">{t('dash.candidate.locationCascade')}</h5>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="text-left">
-                        <label className="block text-[10px] font-bold text-gray-500 mb-1">देश / Country</label>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">{t('dash.form.country')}</label>
                         <select
                           className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
                           value={liveCountryId}
@@ -2875,14 +3016,14 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                             setLiveSevaKendraId(0);
                           }}
                         >
-                          <option value="0">--- Select Country ---</option>
+                          <option value="0">{t('reg.option.selectCountry')}</option>
                           {liveCountries.map(c => (
                             <option key={c.id} value={c.id}>{c.name}</option>
                           ))}
                         </select>
                       </div>
                       <div className="text-left">
-                        <label className="block text-[10px] font-bold text-gray-500 mb-1">राज्य / State</label>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">{t('dash.form.state')}</label>
                         <select
                           className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
                           value={liveStateId}
@@ -2894,16 +3035,16 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                           }}
                           disabled={!liveCountryId}
                         >
-                          <option value="0">--- Select State ---</option>
+                          <option value="0">{t('reg.option.selectState')}</option>
                           {liveStates.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
+                            <option key={s.id} value={s.id}>{getLocalizedName(s)}</option>
                           ))}
                         </select>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="text-left">
-                        <label className="block text-[10px] font-bold text-gray-500 mb-1">जिल्हा / District</label>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">{t('dash.form.district')}</label>
                         <select
                           className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
                           value={liveDistrictId}
@@ -2914,14 +3055,14 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                           }}
                           disabled={!liveStateId}
                         >
-                          <option value="0">--- Select District ---</option>
+                          <option value="0">{t('reg.option.selectDistrict')}</option>
                           {liveDistricts.map(d => (
-                            <option key={d.id} value={d.id}>{d.name}</option>
+                            <option key={d.id} value={d.id}>{getLocalizedName(d)}</option>
                           ))}
                         </select>
                       </div>
                       <div className="text-left">
-                        <label className="block text-[10px] font-bold text-gray-500 mb-1">तालुका / Taluka</label>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">{t('dash.form.taluka')}</label>
                         <select
                           className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
                           value={liveTalukaId}
@@ -2931,21 +3072,21 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                           }}
                           disabled={!liveDistrictId}
                         >
-                          <option value="0">--- Select Taluka ---</option>
+                          <option value="0">{t('reg.option.selectTaluka')}</option>
                           {liveTalukas.map(t => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
+                            <option key={t.id} value={t.id}>{getLocalizedName(t)}</option>
                           ))}
                         </select>
                       </div>
                       <div className="text-left">
-                        <label className="block text-[10px] font-bold text-gray-500 mb-1">सेवाकेंद्र / Seva Kendra</label>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">{t('dash.form.sevaKendra')}</label>
                         <select
                           className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
                           value={liveSevaKendraId}
                           onChange={(e) => setLiveSevaKendraId(Number(e.target.value))}
                           disabled={!liveTalukaId}
                         >
-                          <option value="0">--- Select Kendra ---</option>
+                          <option value="0">{t('reg.option.selectSevaKendra')}</option>
                           {liveSevaKendras.map(sk => (
                             <option key={sk.id} value={sk.id}>{sk.name}</option>
                           ))}
@@ -2955,10 +3096,10 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                   </div>
                   {/* Education Group */}
                   <div className="space-y-3 border-t md:border-t-0 md:border-l border-gray-200 pt-4 md:pt-0 md:pl-5">
-                    <h5 className="text-xs font-bold text-orange-700 uppercase tracking-wider block text-left">शिक्षण पात्रता / Education Cascade</h5>
+                    <h5 className="text-xs font-bold text-orange-700 uppercase tracking-wider block text-left">{t('dash.candidate.educationCascade')}</h5>
                     <div className="space-y-3">
                       <div className="text-left">
-                        <label className="block text-[10px] font-bold text-gray-500 mb-1">शिक्षण प्रकार / Highest Education</label>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">{t('dash.form.highestEducation')}</label>
                         <select
                           className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
                           value={liveEducationId}
@@ -2967,21 +3108,21 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                             setLiveSubEducationId(0);
                           }}
                         >
-                          <option value="0">--- Select Education ---</option>
+                          <option value="0">{t('reg.option.selectEducation')}</option>
                           {liveEducationsList.map(e => (
                             <option key={e.id} value={e.id}>{e.name}</option>
                           ))}
                         </select>
                       </div>
                       <div className="text-left">
-                        <label className="block text-[10px] font-bold text-gray-500 mb-1">उप-शिक्षण / Sub Education Course</label>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">{t('dash.form.subEducation')}</label>
                         <select
                           className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-700"
                           value={liveSubEducationId}
                           onChange={(e) => setLiveSubEducationId(Number(e.target.value))}
                           disabled={!liveEducationId}
                         >
-                          <option value="0">--- Select Sub Education ---</option>
+                          <option value="0">{t('reg.option.selectSpecialization')}</option>
                           {liveSubEducationsList.map(se => (
                             <option key={se.id} value={se.id}>{se.name}</option>
                           ))}
@@ -2996,14 +3137,14 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                     onClick={handleAutofillLiveSelections}
                     className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-[0.98]"
                   >
-                    📝 वरील प्रोफाइलमध्ये माहिती भरा / Autofill Selections Above
+                    📝 {t('dash.candidate.autofill')}
                   </button>
                 </div>
               </div>
               {/* Real Resume Drag and Drop / select mock upload */}
               <div className="space-y-1.5 text-left">
                 <label className="block text-xs font-semibold text-gray-700">
-                  तुमचा बायोडाटा अपलोड करा (पीडीएफ) / Upload Resume (PDF)
+                  {t('dash.candidate.uploadResumeBtn')}
                 </label>
                 <div className="border border-dashed border-gray-200 bg-gray-50/50 rounded-xl p-6 text-center flex flex-col items-center justify-center relative">
                   <input
@@ -3035,6 +3176,7 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
 // INTEGRATED SUB-BOARD: SELF HELP GROUPS (SHG) PORTAL
 // ==========================================
 function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg: (msg: string) => void }) {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -3053,8 +3195,8 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
   const [showcase, setShowcase] = useState<{ id: string; name: string; description: string; price: number }[]>([
     {
       id: 'prod-1',
-      name: 'अष्टगंध अगरबत्ती (Premium)',
-      description: 'सुगंधी द्रव्यांपासून बनवलेली अगरबत्ती',
+      name: t('dash.shg.seedProductName'),
+      description: t('dash.shg.seedProductDesc'),
       price: 150
     }
   ]);
@@ -3064,7 +3206,7 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
   const [prodDesc, setProdDesc] = useState('');
   const [updateSHG] = useUpdateSHGProfileMutation();
   const handleEnrollTraining = (courseTitle: string) => {
-    setToastMsg(`प्रशिक्षण नोंदणी यशस्वी: \"${courseTitle}\"! Admissions desk will verify.`);
+    setToastMsg(t('dash.toast.trainingEnrolled', { name: courseTitle }));
   };
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
@@ -3077,7 +3219,7 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
     };
     const updatedCatalog = [...showcase, freshProd];
     setShowcase(updatedCatalog);
-    setToastMsg('उत्पादन कॅटलॉगमध्ये जोडले/ Handicraft Product added to showcase katalog!');
+    setToastMsg(t('dash.toast.productAdded'));
     setProdName('');
     setProdPrice('');
     setProdDesc('');
@@ -3094,7 +3236,7 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
         activities: activitiesText.split(',').map(a => a.trim()).filter(Boolean),
         productShowcase: showcase
       }).unwrap();
-      setToastMsg('बचतगट माहिती सुरक्षित केली/ SHG details updated securely!');
+      setToastMsg(t('dash.toast.shgUpdated'));
     } catch (_) {
       setToastMsg('Failed profiles updaters');
     }
@@ -3107,21 +3249,21 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'trainings' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <Award className="w-4 h-4" /><span className="truncate min-w-0">व्यावसायिक प्रशिक्षण / Courses</span>
+          <Award className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.courses')}</span>
         </button>
         <button
           onClick={() => setActiveTab('products')}
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'products' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <ShoppingBag className="w-4 h-4" /><span className="truncate min-w-0">उत्पादन कॅटलॉग / Sell Products</span>
+          <ShoppingBag className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.sellProducts')}</span>
         </button>
         <button
           onClick={() => setActiveTab('profile')}
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'profile' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <Settings className="w-4 h-4" /><span className="truncate min-w-0">बचतगट प्रोफाइल / Group Profiles</span>
+          <Settings className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.groupProfiles')}</span>
         </button>
         <hr className="my-1 border-theme-lightViolet/60 hidden lg:block" />
         <button
@@ -3133,7 +3275,7 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
           }}
           className="px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 mt-2 cursor-pointer"
         >
-          <Power className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
+          <Power className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.logOff')}</span>
         </button>
       </DashboardMenu>
       <div className="lg:col-span-9 space-y-6">
@@ -3141,26 +3283,26 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
         <LiveDashboardStats />
         {/* Trainings listed tab */}
         {activeTab === 'trainings' && (
-          <Card title="उपलब्ध व्यावसायिक तंत्र शिक्षण वर्ग / Active Vocations Training classes">
+          <Card title={t('dash.shg.trainingTitle')}>
             <p className="text-xs text-slate-500 mb-6 font-semibold">
-              महिला गृहउद्योगांचे कौशल्य आणि उत्पादन दर्जा वाढवण्यासाठी खालीलपैकी कोणत्याही मोफत सरकारी व सेवा मार्ग पुरस्कृत कोर्सला नाव नोंदवा.
+              {t('dash.shg.trainingIntro')}
             </p>
             <div className="space-y-4">
               {trainings.map((c) => (
                 <div key={c.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1 text-left">
                     <span className="text-[10px] font-bold text-orange-600 bg-orange-100 px-2.5 rounded-md leading-normal uppercase">
-                      कालावधी: {c.duration}
+                      {t('dash.shg.duration', { duration: c.duration })}
                     </span>
-                    <h4 className="text-sm font-extrabold text-blue-950 mt-1 leading-tight">{c.titleMr}</h4>
-                    <p className="text-xs text-slate-550 leading-relaxed font-semibold block">{c.descriptionMr}</p>
+                    <h4 className="text-sm font-extrabold text-blue-950 mt-1 leading-tight">{i18n.language === 'mr' ? c.titleMr : c.titleEn}</h4>
+                    <p className="text-xs text-slate-550 leading-relaxed font-semibold block">{i18n.language === 'mr' ? c.descriptionMr : c.descriptionEn}</p>
                     <p className="text-[10px] text-gray-400 font-bold block uppercase mt-1 leading-none">
-                      मार्गदर्शक: {c.instructor} | वर्ग सुनावणी: {c.startDate}
+                      {t('dash.shg.instructorAndStart', { instructor: c.instructor, startDate: c.startDate })}
                     </p>
                   </div>
                   <div>
-                    <PrimaryButton onClick={() => handleEnrollTraining(c.titleMr)} className="px-4 py-2 text-xs font-semibold shrink-0 cursor-pointer">
-                      प्रवेश घ्या / Enroll Course
+                    <PrimaryButton onClick={() => handleEnrollTraining(i18n.language === 'mr' ? c.titleMr : c.titleEn)} className="px-4 py-2 text-xs font-semibold shrink-0 cursor-pointer">
+                      {t('dash.shg.enrollCourse')}
                     </PrimaryButton>
                   </div>
                 </div>
@@ -3171,39 +3313,39 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
         {/* Product showcase catalog upload tab */}
         {activeTab === 'products' && (
           <div className="space-y-6 text-left">
-            <Card title="नवे गृहउद्योग उत्पादन जोडा / Add Craft Item to Showcase catalogue">
+            <Card title={t('dash.shg.addCraftTitle')}>
               <form onSubmit={handleAddProduct} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <TextBox
-                    label="उत्पादनाचे नाव / Handicraft Item Name"
-                    placeholder="E.g. शुद्ध हळद पावडर / शेवया"
+                    label={t('dash.form.itemName')}
+                    placeholder={t('dash.form.itemNamePlaceholder')}
                     value={prodName}
                     onChange={(e) => setProdName(e.target.value)}
                     required
                   />
                   <TextBox
-                    label="किंमत (रुपये) / Retail Price (INR)"
+                    label={t('dash.form.retailPrice')}
                     type="number"
-                    placeholder="E.g. १५०"
+                    placeholder={t('dash.form.retailPricePlaceholder')}
                     value={prodPrice}
                     onChange={(e) => setProdPrice(e.target.value)}
                     required
                   />
                 </div>
                 <TextArea
-                  label="उत्पादन माहिती / Brief Product Description"
-                  placeholder="पारंपारिक मसाला किंवा बनवण्याची पद्धत सांगा..."
+                  label={t('dash.form.briefDescription')}
+                  placeholder={t('dash.form.briefDescriptionPlaceholder')}
                   value={prodDesc}
                   onChange={(e) => setProdDesc(e.target.value)}
                 />
                 <div className="flex justify-end">
                   <PrimaryButton type="submit">
-                    कॅटलॉगमध्ये सामील करा / Publish Item
+                    {t('dash.shg.publishItem')}
                   </PrimaryButton>
                 </div>
               </form>
             </Card>
-            <Card title="तुमच्या बचतगटाचे चालू बाजार माहिती / Published Catalogue items">
+            <Card title={t('dash.shg.catalogueTitle')}>
               {showcase.length === 0 ? (
                 <EmptyState title="No Products items listed" desc="Add self-employment products above." />
               ) : (
@@ -3217,7 +3359,7 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
                         📦 {prod.name}
                       </h4>
                       <p className="text-xs text-slate-500 leading-relaxed font-semibold">
-                        {prod.description || 'नैसर्गिक घटकांपासून तयार केलेले दर्जेदार उत्पादन.'}
+                        {prod.description || t('dash.shg.defaultProductDesc')}
                       </p>
                     </div>
                   ))}
@@ -3228,17 +3370,17 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
         )}
         {/* Group Profile Settings */}
         {activeTab === 'profile' && (
-          <Card title="बचतगट मूळ माहिती संपादन / Self Help Group Info">
+          <Card title={t('dash.shg.groupInfoTitle')}>
             <form onSubmit={handleSaveSHGDetails} className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <TextBox
-                  label="बचतगटाचे नाव / SHG Registered Name"
+                  label={t('dash.form.shgName')}
                   value={shgName}
                   onChange={(e) => setShgName(e.target.value)}
                   required
                 />
                 <TextBox
-                  label="गट प्रमुख नाव / Group Leader Name"
+                  label={t('dash.form.leaderName')}
                   value={shgLeader}
                   onChange={(e) => setShgLeader(e.target.value)}
                   required
@@ -3246,27 +3388,27 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <TextBox
-                  label="एकूण सभासद संख्या / Total Members Count"
+                  label={t('dash.form.totalMembers')}
                   type="number"
                   value={memberCount}
                   onChange={(e) => setMemberCount(Number(e.target.value))}
                   required
                 />
                 <TextBox
-                  label="जिल्हा / Location District"
+                  label={t('dash.form.locationDistrict')}
                   value={shgDistrict}
                   onChange={(e) => setShgDistrict(e.target.value)}
                   required
                 />
               </div>
               <TextBox
-                label="बचतगटाचे व्यावसायिक उपक्रम / Vocation Core Activities (separated by , comma)"
+                label={t('dash.form.vocationActivities')}
                 value={activitiesText}
                 onChange={(e) => setActivitiesText(e.target.value)}
               />
               <div className="flex justify-end pt-3">
                 <PrimaryButton type="submit">
-                  बदला जतन करा / Save Group Info
+                  {t('dash.form.saveGroupInfo')}
                 </PrimaryButton>
               </div>
             </form>

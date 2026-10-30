@@ -57,7 +57,7 @@ const normalizeProfile = (data: any): MyProfile => {
     raw.picPath || raw.pic_File_Path || raw.profilePic_File_Path || raw.photo_File_Path ||
     raw.logo || raw.logoUrl || raw.companyLogo || raw.companyLogoUrl || raw.logoPath || raw.logo_File_Path || '';
   const profilePicUrl = picRaw && !picRaw.toString().startsWith('http')
-    ? `https://srgapp.dindoripranit.org${picRaw.toString().startsWith('/') ? '' : '/'}${picRaw}`
+    ? `${getApiBaseUrl()}${picRaw.toString().startsWith('/') ? '' : '/'}${picRaw}`
     : picRaw;
   const address = personal.address || raw.address || '';
   const district = typeof personal.district === 'string' ? personal.district : raw.district || '';
@@ -67,7 +67,13 @@ const normalizeProfile = (data: any): MyProfile => {
   const state = personal.state || personal.stateName || raw.state || raw.stateName || '';
   const stateId = personal.stateId ?? raw.stateId ?? 0;
   const districtId = personal.districtId ?? raw.districtId ?? 0;
-  const taluka = personal.taluka || personal.talukaName || raw.taluka || raw.talukaName || '';
+  const talukaRaw = personal.taluka || personal.talukaName || raw.taluka || raw.talukaName || '';
+  // Guard against a backend data-mapping bug where the state name (e.g. "Maharashtra")
+  // is returned in the taluka field — such a value is not a taluka, so drop it.
+  const taluka =
+    talukaRaw && state && String(talukaRaw).trim().toLowerCase() === String(state).trim().toLowerCase()
+      ? ''
+      : talukaRaw;
   const talukaId = personal.talukaId ?? raw.talukaId ?? 0;
   const maritalStatus = personal.maritalStatus || raw.maritalStatus || '';
   const pincode = personal.pincode || raw.pincode || '';
@@ -95,7 +101,7 @@ const normalizeProfile = (data: any): MyProfile => {
   const resumeRaw = education.resume_File_Path || raw.resumeUrl || raw.resumeFileName || '';
   // Prepend base URL if the path is relative (e.g. /Uploads/Resume/...)
   const resumeUrl = resumeRaw && !resumeRaw.startsWith('http')
-    ? `https://srgapp.dindoripranit.org${resumeRaw.startsWith('/') ? '' : '/'}${resumeRaw}`
+    ? `${getApiBaseUrl()}${resumeRaw.startsWith('/') ? '' : '/'}${resumeRaw}`
     : resumeRaw;
   const resumeName = education.resumeName || raw.resumeName || raw.resumeFileName || (resumeUrl ? resumeUrl.split('/').pop() || 'Resume' : '');
 

@@ -9,8 +9,10 @@ import { CompanyProfile } from '../types';
 import { useGetCompanyTypesQuery, useGetIndustryTypesQuery } from '../services/jobMasterApi';
 import { Building2, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2, Plus, ExternalLink } from 'lucide-react';
 import { Loader, Toast } from './ui/FeedbackComponents';
+import { useTranslation } from 'react-i18next';
 
 export function AdminRegisteredCompanies() {
+  const { t } = useTranslation();
   const [pageSize, setPageSize] = useState(15);
   const [pageNumber, setPageNumber] = useState(1);
   const [searchPhrase, setSearchPhrase] = useState('');
@@ -58,12 +60,12 @@ export function AdminRegisteredCompanies() {
     try {
       const res: any = await addCompany({ ...form, companyTypeId: Number(form.companyTypeId) || 1, industryTypeId: Number(form.industryTypeId) || 1 });
       if (res?.error) {
-        const msg = typeof res.error.data === 'string' ? res.error.data : 'कंपनी नोंदणी अयशस्वी. / Company registration failed.';
+        const msg = typeof res.error.data === 'string' ? res.error.data : t('adm.companies.toast.registrationFailed');
         setToastType('error');
         setToastMsg(msg);
         return;
       }
-      const msg = res?.data?.message || 'कंपनी यशस्वीरित्या नोंदणी केली! / Company registered successfully!';
+      const msg = res?.data?.message || t('adm.companies.toast.registrationSuccess');
       setToastType('success');
       setToastMsg(msg);
       setShowAddCompany(false);
@@ -71,7 +73,7 @@ export function AdminRegisteredCompanies() {
       refetch();
     } catch (err: any) {
       setToastType('error');
-      setToastMsg('कंपनी नोंदणी अयशस्वी. / Company registration failed. ' + (err?.message || err));
+      setToastMsg(t('adm.companies.toast.registrationFailed') + ' ' + (err?.message || err));
     }
   };
 
@@ -130,10 +132,10 @@ export function AdminRegisteredCompanies() {
         <div>
           <h2 className="text-lg font-extrabold text-blue-950 flex items-center gap-2">
             <Building2 className="w-5 h-5 text-orange-600" />
-            कंपनी नोंदणी प्रविष्टी / Company Registration entry
+            {t('adm.companies.title')}
           </h2>
           <p className="text-xs text-slate-500">
-            नोंदणीकृत नियोक्ते आणि कंपनी प्रोफाइल तपशील व्यवस्थापन
+            {t('adm.companies.subtitle')}
           </p>
         </div>
         <button
@@ -148,11 +150,11 @@ export function AdminRegisteredCompanies() {
       <div className="bg-white rounded-2xl border border-gray-150 shadow-xs p-6 space-y-4">
         <div className="flex justify-between items-center pb-2">
           <h3 className="font-extrabold text-blue-950 text-sm tracking-wide uppercase">
-            नोंदणीकृत कंपनी यादी / Registered Company List
+            {t('adm.companies.listTitle')}
           </h3>
           {isFetching && (
             <span className="flex items-center gap-1.5 text-[10px] text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded animate-pulse">
-              <Loader2 className="w-3 h-3 animate-spin" /> अद्ययावत करत आहे...
+              <Loader2 className="w-3 h-3 animate-spin" /> {t('adm.common.refreshing')}
             </span>
           )}
         </div>
@@ -267,15 +269,14 @@ export function AdminRegisteredCompanies() {
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center">
                     <div className="inline-flex flex-col items-center gap-2 text-red-600 font-medium">
-                      <span className="text-sm">❌ API लोड करण्यात अयशस्वी</span>
-                      <span className="text-xs text-slate-500">Failed to load companies from API. Please check your connection and try again.</span>
+                      <span className="text-sm">{t('adm.companies.loadError')}</span>
                     </div>
                   </td>
                 </tr>
               ) : filteredAndSortedList.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-slate-400 font-medium">
-                    कोणतेही रेकॉर्ड सापडले नाही / No companies found
+                    {t('adm.companies.empty')}
                   </td>
                 </tr>
               ) : (
@@ -390,7 +391,7 @@ export function AdminRegisteredCompanies() {
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-orange-400" />
                 <h3 className="font-extrabold text-sm sm:text-base">
-                  कंपनी प्रोफाइल तपशील / Company Profile Details
+                  {t('adm.companies.detailTitle')}
                 </h3>
               </div>
               <button
@@ -443,7 +444,7 @@ export function AdminRegisteredCompanies() {
                 onClick={() => setSelectedCompany(null)}
                 className="px-4 py-2 bg-slate-200 hover:bg-slate-350 text-slate-700 font-bold text-xs rounded-lg transition-all cursor-pointer"
               >
-                बंद करा / Close
+                {t('adm.common.close')}
               </button>
             </div>
           </div>
@@ -458,7 +459,7 @@ export function AdminRegisteredCompanies() {
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-orange-400" />
                 <h3 className="font-extrabold text-sm sm:text-base">
-                  नवीन कंपनी नोंदणी / Register New Company
+                  {t('adm.companies.addTitle')}
                 </h3>
               </div>
               <button
@@ -473,7 +474,7 @@ export function AdminRegisteredCompanies() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-bold text-slate-600 mb-1.5">
-                    कंपनीचे नाव / Company Name <span className="text-red-500">*</span>
+                    {t('adm.companies.fieldName')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     id="addcomp-fullname"
@@ -485,7 +486,7 @@ export function AdminRegisteredCompanies() {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-600 mb-1.5">
-                    मोबाईल क्रमांक / Mobile Number <span className="text-red-500">*</span>
+                    {t('adm.companies.fieldMobile')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     id="addcomp-mobile"
@@ -497,7 +498,7 @@ export function AdminRegisteredCompanies() {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-600 mb-1.5">
-                    ईमेल / Email <span className="text-red-500">*</span>
+                    {t('adm.companies.fieldEmail')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     id="addcomp-email"
@@ -510,7 +511,7 @@ export function AdminRegisteredCompanies() {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-600 mb-1.5">
-                    संपर्क व्यक्ती / Contact Person <span className="text-red-500">*</span>
+                    {t('adm.companies.fieldContactPerson')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     id="addcomp-contactperson"
@@ -522,7 +523,7 @@ export function AdminRegisteredCompanies() {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-600 mb-1.5">
-                    कंपनी प्रकार / Company Type <span className="text-red-500">*</span>
+                    {t('adm.companies.fieldCompanyType')} <span className="text-red-500">*</span>
                   </label>
                   <select
                     id="addcomp-companytype"
@@ -530,7 +531,7 @@ export function AdminRegisteredCompanies() {
                     onChange={(e) => setForm({ ...form, companyTypeId: Number(e.target.value) })}
                     className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
                   >
-                    <option value={0}>-- निवडा / Select --</option>
+                    <option value={0}>{t('adm.common.selectPlaceholder')}</option>
                     {companyTypes.map((ct) => (
                       <option key={ct.id} value={ct.id}>{ct.label}</option>
                     ))}
@@ -538,7 +539,7 @@ export function AdminRegisteredCompanies() {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-600 mb-1.5">
-                    उद्योग प्रकार / Industry Type <span className="text-red-500">*</span>
+                    {t('adm.companies.fieldIndustryType')} <span className="text-red-500">*</span>
                   </label>
                   <select
                     id="addcomp-industrytype"
@@ -546,7 +547,7 @@ export function AdminRegisteredCompanies() {
                     onChange={(e) => setForm({ ...form, industryTypeId: Number(e.target.value) })}
                     className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
                   >
-                    <option value={0}>-- निवडा / Select --</option>
+                    <option value={0}>{t('adm.common.selectPlaceholder')}</option>
                     {industryTypes.map((it) => (
                       <option key={it.id} value={it.id}>{it.label}</option>
                     ))}
@@ -554,7 +555,7 @@ export function AdminRegisteredCompanies() {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-600 mb-1.5">
-                    पर्यायी संपर्क व्यक्ती / Alt. Contact Person
+                    {t('adm.companies.fieldAltContactPerson')}
                   </label>
                   <input
                     id="addcomp-altcontactperson"
@@ -566,7 +567,7 @@ export function AdminRegisteredCompanies() {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-600 mb-1.5">
-                    पर्यायी संपर्क क्रमांक / Alt. Contact Number
+                    {t('adm.companies.fieldAltContactNumber')}
                   </label>
                   <input
                     id="addcomp-altnumber"
@@ -578,7 +579,7 @@ export function AdminRegisteredCompanies() {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-600 mb-1.5">
-                    पर्यायी ईमेल / Alt. Email
+                    {t('adm.companies.fieldAltEmail')}
                   </label>
                   <input
                     id="addcomp-altemail"
@@ -591,7 +592,7 @@ export function AdminRegisteredCompanies() {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-600 mb-1.5">
-                    वेबसाइट / Website
+                    {t('adm.companies.fieldWebsite')}
                   </label>
                   <input
                     id="addcomp-website"
@@ -605,7 +606,7 @@ export function AdminRegisteredCompanies() {
 
               <div>
                 <label className="block font-bold text-slate-600 mb-1.5">
-                  पत्ता / Address <span className="text-red-500">*</span>
+                  {t('adm.companies.fieldAddress')} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   id="addcomp-address"
@@ -619,7 +620,7 @@ export function AdminRegisteredCompanies() {
 
               <div>
                 <label className="block font-bold text-slate-600 mb-1.5">
-                  वर्णन / Description
+                  {t('adm.companies.fieldDescription')}
                 </label>
                 <textarea
                   id="addcomp-discription"
@@ -637,7 +638,7 @@ export function AdminRegisteredCompanies() {
                 onClick={() => setShowAddCompany(false)}
                 className="px-4 py-2 bg-slate-200 hover:bg-slate-350 text-slate-700 font-bold text-xs rounded-lg transition-all cursor-pointer"
               >
-                रद्द करा / Cancel
+                {t('adm.common.cancel')}
               </button>
               <button
                 onClick={handleAddCompanySubmit}
@@ -646,10 +647,10 @@ export function AdminRegisteredCompanies() {
               >
                 {isAddingCompany ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> नोंदणी होत आहे...
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('adm.companies.registering')}
                   </>
                 ) : (
-                  <>नोंदणी करा / Register</>
+                  <>{t('adm.companies.register')}</>
                 )}
               </button>
             </div>

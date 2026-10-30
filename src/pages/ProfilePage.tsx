@@ -9,10 +9,13 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { RootState } from '../store';
 import { useGetMyProfileQuery, uploadProfilePic, uploadResume, bustProfileImageCache, updateUserPersonalInfo, updateUserEducationInfo } from '../services/profileApi';
+import { useGetJobTypesQuery, useGetShiftTypesQuery, useGetWorkModesQuery } from '../services/jobMasterApi';
+import { useGetStatesQuery, useGetDistrictsQuery, useGetTalukasQuery, useGetEducationsListQuery, useGetSubEducationsListQuery, GenericMasterItem, getLocalizedName } from '../services/masterApi';
 import { Toast } from '../components/ui/FeedbackComponents';
 import { Loader } from '../components/ui/FeedbackComponents';
 import { DashboardMenu, DashboardMenuContext } from './DashboardHub';
@@ -213,7 +216,9 @@ const emptyDetailsForm: DetailsFormState = {
 };
 
 interface EducationFormState {
+  educationId: number;
   education: string;
+  specializationId: number;
   specialization: string;
   skill: string;
   courses: string;
@@ -232,7 +237,9 @@ interface EducationFormState {
 }
 
 const emptyEducationForm: EducationFormState = {
+  educationId: 0,
   education: '',
+  specializationId: 0,
   specialization: '',
   skill: '',
   courses: '',
@@ -251,6 +258,7 @@ const emptyEducationForm: EducationFormState = {
 };
 
 export default function ProfilePage() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -295,6 +303,10 @@ export default function ProfilePage() {
   const [detailsSaving, setDetailsSaving] = useState(false);
   const [detailsError, setDetailsError] = useState('');
   const [detailsForm, setDetailsForm] = useState<DetailsFormState>(emptyDetailsForm);
+  // Selected location ids for the State / District / Taluka cascade (mirrors Register.tsx)
+  const [detailsStateId, setDetailsStateId] = useState(0);
+  const [detailsDistrictId, setDetailsDistrictId] = useState(0);
+  const [detailsTalukaId, setDetailsTalukaId] = useState(0);
 
   // Education details edit state
   const [educationEditing, setEducationEditing] = useState(false);
@@ -304,6 +316,65 @@ export default function ProfilePage() {
 
   // Fetch profile from API
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useGetMyProfileQuery();
+
+  // Master data for the Education "Job Type / Shift Type / Work Status" dropdowns
+  const { data: jobTypes = [] } = useGetJobTypesQuery();
+  const { data: shiftTypes = [] } = useGetShiftTypesQuery();
+  const { data: workModes = [] } = useGetWorkModesQuery();
+
+  // Master data for the Basic Details State → District → Taluka dropdowns, the
+  // same cascade as the registration form. The profile carries no country, so
+  // states load under India (country id 1) — the candidate profile form's default.
+  const { data: detailStates = [] } = useGetStatesQuery(1);
+  const { data: detailDistricts = [] } = useGetDistrictsQuery(detailsStateId, { skip: !detailsStateId });
+  const { data: detailTalukas = [] } = useGetTalukasQuery(detailsDistrictId, { skip: !detailsDistrictId });
+
+  // Master data for the Education → Specialization dropdowns, mirroring Register.tsx.
+  const { data: educations = [] } = useGetEducationsListQuery();
+  const { data: subEducations = [] } = useGetSubEducationsListQuery(educationForm.educationId, { skip: !educationForm.educationId });
+
+  // Older profiles stored free-text location names with id 0. The lists load one
+  // level at a time, so keep matching names to ids as each level arrives until
+  // the saved location shows as selected in the edit form.
+  useEffect(() => {
+    if (!detailsEditing) return;
+    const matchesName = (item: GenericMasterItem, name: string) =>
+      item.name === name || item.enName === name;
+    const resolveId = (savedId: number, name: string, list: GenericMasterItem[]) =>
+      savedId || list.find((item) => matchesName(item, name))?.id || 0;
+    setDetailsStateId((prev) => resolveId(prev, detailsForm.state, detailStates));
+    setDetailsDistrictId((prev) => resolveId(prev, detailsForm.district, detailDistricts));
+    setDetailsTalukaId((prev) => resolveId(prev, detailsForm.taluka, detailTalukas));
+  }, [
+    detailsEditing,
+    detailsForm.state,
+    detailsForm.district,
+    detailsForm.taluka,
+    detailStates,
+    detailDistricts,
+    detailTalukas,
+  ]);
+
+  // Older profiles stored free-text education/specialization names with id 0, or
+  // the id alone. Resolve matching names to ids as the cascading lists arrive so
+  // the saved value shows as selected in the edit dropdowns.
+  useEffect(() => {
+    if (!educationEditing) return;
+    const resolveId = (savedId: number, name: string, list: GenericMasterItem[]) =>
+      savedId || list.find((item) => item.name === name)?.id || 0;
+    setEducationForm((prev) => {
+      const educationId = resolveId(prev.educationId, prev.education, educations);
+      const specializationId = resolveId(prev.specializationId, prev.specialization, subEducations);
+      if (educationId === prev.educationId && specializationId === prev.specializationId) return prev;
+      return { ...prev, educationId, specializationId };
+    });
+  }, [
+    educationEditing,
+    educationForm.education,
+    educationForm.specialization,
+    educations,
+    subEducations,
+  ]);
 
   if (!user) {
     return (
@@ -321,6 +392,11 @@ export default function ProfilePage() {
     setToastMsg(message && message.trim() ? message : fallback);
     setToastType(type);
   };
+
+  // Client-side upload limits enforced per stated profile upload policy (1 MB).
+  const MAX_UPLOAD_BYTES = 1024 * 1024;
+  const MAX_UPLOAD_MB = 1;
+  const toMB = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1);
 
   // Upload profile picture handler
   const handleProfilePicUpload = async () => {
@@ -391,6 +467,9 @@ export default function ProfilePage() {
       pincode: profile?.pincode || '',
       address: profile?.address || '',
     });
+    setDetailsStateId(profile?.stateId || 0);
+    setDetailsDistrictId(profile?.districtId || 0);
+    setDetailsTalukaId(profile?.talukaId || 0);
     setDetailsError('');
     setDetailsEditing(true);
   };
@@ -399,6 +478,40 @@ export default function ProfilePage() {
     setDetailsEditing(false);
     setDetailsError('');
     setDetailsForm(emptyDetailsForm);
+    setDetailsStateId(0);
+    setDetailsDistrictId(0);
+    setDetailsTalukaId(0);
+  };
+
+  // Cascade handlers — changing a parent clears its children (same as Register.tsx)
+  const handleDetailsStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = Number(e.target.value);
+    setDetailsStateId(id);
+    setDetailsDistrictId(0);
+    setDetailsTalukaId(0);
+    setDetailsForm((prev) => ({
+      ...prev,
+      state: getLocalizedName(detailStates.find((s) => s.id === id)),
+      district: '',
+      taluka: '',
+    }));
+  };
+
+  const handleDetailsDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = Number(e.target.value);
+    setDetailsDistrictId(id);
+    setDetailsTalukaId(0);
+    setDetailsForm((prev) => ({
+      ...prev,
+      district: getLocalizedName(detailDistricts.find((d) => d.id === id)),
+      taluka: '',
+    }));
+  };
+
+  const handleDetailsTalukaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = Number(e.target.value);
+    setDetailsTalukaId(id);
+    setDetailsForm((prev) => ({ ...prev, taluka: getLocalizedName(detailTalukas.find((t) => t.id === id)) }));
   };
 
   // Save handler — POST /api/v1/updateuserpersonalinfo (candidate/admin)
@@ -421,6 +534,18 @@ export default function ProfilePage() {
       setDetailsError('Please enter a valid 6-digit pincode.');
       return;
     }
+    if (!detailsStateId) {
+      setDetailsError('Please select your State.');
+      return;
+    }
+    if (!detailsDistrictId) {
+      setDetailsError('Please select your District.');
+      return;
+    }
+    if (!detailsTalukaId) {
+      setDetailsError('Please select your Taluka.');
+      return;
+    }
 
     setDetailsSaving(true);
     try {
@@ -433,12 +558,12 @@ export default function ProfilePage() {
         dob: detailsForm.dob ? new Date(`${detailsForm.dob}T00:00:00.000Z`).toISOString() : null,
         gender: detailsForm.gender,
         address: detailsForm.address.trim(),
-        stateId: profile?.stateId ?? 0,
-        state: detailsForm.state.trim(),
-        districtId: profile?.districtId ?? 0,
-        district: detailsForm.district.trim(),
-        talukaId: profile?.talukaId ?? 0,
-        taluka: detailsForm.taluka.trim(),
+        stateId: detailsStateId,
+        state: getLocalizedName(detailStates.find((s) => s.id === detailsStateId)) || detailsForm.state.trim(),
+        districtId: detailsDistrictId,
+        district: getLocalizedName(detailDistricts.find((d) => d.id === detailsDistrictId)) || detailsForm.district.trim(),
+        talukaId: detailsTalukaId,
+        taluka: getLocalizedName(detailTalukas.find((t) => t.id === detailsTalukaId)) || detailsForm.taluka.trim(),
         maritalStatus: detailsForm.maritalStatus,
         pincode: detailsForm.pincode.trim(),
       });
@@ -447,6 +572,9 @@ export default function ProfilePage() {
         showToast(result.message, 'success');
         setDetailsEditing(false);
         setDetailsForm(emptyDetailsForm);
+        setDetailsStateId(0);
+        setDetailsDistrictId(0);
+        setDetailsTalukaId(0);
         refetchProfile();
       } else {
         showToast(result.message, 'error');
@@ -464,10 +592,39 @@ export default function ProfilePage() {
     setEducationForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Job Type / Shift Type selects carry both an id and its label; keep both in sync.
+  const handleJobTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = e.target.value;
+    const label = jobTypes.find((t) => String(t.id) === id)?.label || '';
+    setEducationForm((prev) => ({ ...prev, preferredJobTypeId: id, jobType: label }));
+  };
+
+  const handleShiftTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = e.target.value;
+    const label = shiftTypes.find((t) => String(t.id) === id)?.label || '';
+    setEducationForm((prev) => ({ ...prev, preferredShiftId: id, shiftType: label }));
+  };
+
+  // Education / Specialization cascading selects carry both an id and its name.
+  // Changing the education resets the dependent specialization.
+  const handleEducationSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = Number(e.target.value);
+    const label = educations.find((ed) => ed.id === id)?.name || '';
+    setEducationForm((prev) => ({ ...prev, educationId: id, education: label, specializationId: 0, specialization: '' }));
+  };
+
+  const handleSpecializationSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = Number(e.target.value);
+    const label = subEducations.find((se) => se.id === id)?.name || '';
+    setEducationForm((prev) => ({ ...prev, specializationId: id, specialization: label }));
+  };
+
   // Open the inline education form prefilled from the current profile.
   const startEditEducation = () => {
     setEducationForm({
+      educationId: profile?.educationId ?? 0,
       education: profile?.education || profile?.qualification || '',
+      specializationId: profile?.specializationId ?? 0,
       specialization: profile?.specialization || '',
       skill: profile?.skills?.join(', ') || '',
       courses: profile?.courses || '',
@@ -476,9 +633,13 @@ export default function ProfilePage() {
       expectation: profile?.expectation != null ? String(profile.expectation) : '',
       noticePeriod: profile?.noticePeriod != null ? String(profile.noticePeriod) : '',
       preferredJobLocations: profile?.preferredJobLocations || '',
-      preferredJobTypeId: profile?.preferredJobTypeId != null ? String(profile.preferredJobTypeId) : '',
+      preferredJobTypeId: profile?.preferredJobTypeId != null
+        ? String(profile.preferredJobTypeId)
+        : String(jobTypes.find((t) => t.label === profile?.jobType)?.id ?? ''),
       jobType: profile?.jobType || '',
-      preferredShiftId: profile?.preferredShiftId != null ? String(profile.preferredShiftId) : '',
+      preferredShiftId: profile?.preferredShiftId != null
+        ? String(profile.preferredShiftId)
+        : String(shiftTypes.find((t) => t.label === profile?.shiftType)?.id ?? ''),
       shiftType: profile?.shiftType || '',
       workStatus: profile?.workStatus || '',
       resumeHeadline: profile?.resumeHeadline || '',
@@ -504,9 +665,9 @@ export default function ProfilePage() {
       const result = await updateUserEducationInfo({
         id: profile?.educationInfoId ?? 0,
         userId: userIdNum,
-        educationId: profile?.educationId ?? 0,
+        educationId: educationForm.educationId,
         education: educationForm.education.trim(),
-        specializationId: profile?.specializationId ?? 0,
+        specializationId: educationForm.specializationId,
         specialization: educationForm.specialization.trim(),
         skill: educationForm.skill.trim(),
         courses: educationForm.courses.trim(),
@@ -557,12 +718,12 @@ export default function ProfilePage() {
 
   const menuItems = (() => {
     const items: { label: string; to: string; icon: React.ReactNode }[] = [
-      { label: 'डॅशबोर्ड / Dashboard', to: '/dashboard', icon: <BarChart3 className="w-4 h-4" /> },
+      { label: t('profile.menu.dashboard'), to: '/dashboard', icon: <BarChart3 className="w-4 h-4" /> },
     ];
     if (user?.role === UserRole.COMPANY) {
-      items.push({ label: 'कंपनी प्रोफाइल / Profile Settings', to: '/dashboard?tab=profile', icon: <Settings className="w-4 h-4" /> });
+      items.push({ label: t('profile.menu.companyProfile'), to: '/dashboard?tab=profile', icon: <Settings className="w-4 h-4" /> });
     }
-    items.push({ label: 'पासवर्ड बदला / Change Password', to: '/change-password', icon: <LockKeyhole className="w-4 h-4" /> });
+    items.push({ label: t('profile.menu.changePassword'), to: '/change-password', icon: <LockKeyhole className="w-4 h-4" /> });
     return items;
   })();
 
@@ -587,9 +748,9 @@ export default function ProfilePage() {
               <img src="/home/logo.png" alt="SRG Logo" className="w-10 h-10 object-contain drop-shadow" />
             </Link>
             <div className="text-left min-w-0">
-              <span className="font-extrabold text-xs sm:text-sm tracking-tight block text-white truncate">श्री स्वामी समर्थ सेवा मार्ग</span>
+              <span className="font-extrabold text-xs sm:text-sm tracking-tight block text-white truncate">{t('profile.brand.name')}</span>
               <span className="text-[10px] text-theme-gold block font-bold uppercase tracking-wide truncate">
-                प्रोफाइल / {user.role === UserRole.COMPANY ? 'EMPLOYER' : user.role}
+                {t('profile.header.profile')} / {user.role === UserRole.COMPANY ? 'EMPLOYER' : user.role}
               </span>
             </div>
           </div>
@@ -688,7 +849,7 @@ export default function ProfilePage() {
           onClick={() => { dispatch(logout()); navigate('/'); }}
           className="px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
         >
-          <LogOut className="w-4 h-4" /><span className="truncate min-w-0">Log Off / लॉग ऑफ</span>
+          <LogOut className="w-4 h-4" /><span className="truncate min-w-0">{t('profile.logoff')}</span>
         </button>
       </DashboardMenu>
 
@@ -709,7 +870,7 @@ export default function ProfilePage() {
               onClick={() => navigate('/dashboard?tab=profile')}
               className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold bg-theme-lavender hover:bg-theme-lavender/90 text-white rounded-xl shadow-sm transition-all cursor-pointer"
             >
-              <Settings className="w-4 h-4" /> कंपनी प्रोफाइल संपादित करा / Edit Profile
+              <Settings className="w-4 h-4" /> {t('profile.company.editProfile')}
             </button>
           )}
         </div>
@@ -786,23 +947,23 @@ export default function ProfilePage() {
                     <div className="border border-orange-200 bg-orange-50/40 rounded-2xl p-4 sm:p-6 space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div className="sm:col-span-2">
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">पूर्ण नाव / Full Name *</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.fullName')}</label>
                           <input type="text" name="fullName" value={detailsForm.fullName} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">मोबाइल / Mobile *</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.mobile')}</label>
                           <input type="tel" name="mobile" value={detailsForm.mobile} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">ईमेल / Email</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.email')}</label>
                           <input type="email" name="email" value={detailsForm.email} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">जन्मतारीख / Date of Birth</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.dob')}</label>
                           <input type="date" name="dob" value={detailsForm.dob} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white cursor-pointer" />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">लिंग / Gender</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.gender')}</label>
                           <select name="gender" value={detailsForm.gender} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white">
                             <option value="">-- Select --</option>
                             <option value="Male">Male</option>
@@ -811,7 +972,7 @@ export default function ProfilePage() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">वैवाहिक स्थिती / Marital Status</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.maritalStatus')}</label>
                           <select name="maritalStatus" value={detailsForm.maritalStatus} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white">
                             <option value="">-- Select --</option>
                             <option value="Single">Single</option>
@@ -821,24 +982,54 @@ export default function ProfilePage() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">राज्य / State</label>
-                          <input type="text" name="state" value={detailsForm.state} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.state')}</label>
+                          <select
+                            value={detailsStateId}
+                            onChange={handleDetailsStateChange}
+                            className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white disabled:opacity-60"
+                            disabled={!detailStates.length}
+                          >
+                            <option value="0">{t('profile.personal.selectState')}</option>
+                            {detailStates.map((s) => (
+                              <option key={s.id} value={s.id}>{getLocalizedName(s)}</option>
+                            ))}
+                          </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">जिल्हा / District</label>
-                          <input type="text" name="district" value={detailsForm.district} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.district')}</label>
+                          <select
+                            value={detailsDistrictId}
+                            onChange={handleDetailsDistrictChange}
+                            className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white disabled:opacity-60"
+                            disabled={!detailsStateId || !detailDistricts.length}
+                          >
+                            <option value="0">{t('profile.personal.selectDistrict')}</option>
+                            {detailDistricts.map((d) => (
+                              <option key={d.id} value={d.id}>{getLocalizedName(d)}</option>
+                            ))}
+                          </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">तालुका / Taluka</label>
-                          <input type="text" name="taluka" value={detailsForm.taluka} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.taluka')}</label>
+                          <select
+                            value={detailsTalukaId}
+                            onChange={handleDetailsTalukaChange}
+                            className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white disabled:opacity-60"
+                            disabled={!detailsDistrictId || !detailTalukas.length}
+                          >
+                            <option value="0">{t('profile.personal.selectTaluka')}</option>
+                            {detailTalukas.map((t) => (
+                              <option key={t.id} value={t.id}>{getLocalizedName(t)}</option>
+                            ))}
+                          </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">पिन कोड / Pincode</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.pincode')}</label>
                           <input type="text" name="pincode" inputMode="numeric" maxLength={6} value={detailsForm.pincode} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5">पत्ता / Address</label>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.address')}</label>
                         <textarea name="address" rows={2} value={detailsForm.address} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white resize-none" />
                       </div>
 
@@ -954,11 +1145,27 @@ export default function ProfilePage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1.5">Education</label>
-                          <input type="text" name="education" value={educationForm.education} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
+                          <select name="education" value={educationForm.educationId} onChange={handleEducationSelect} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white">
+                            <option value={0}>{t('reg.option.selectEducation')}</option>
+                            {educations.map((ed) => (
+                              <option key={ed.id} value={ed.id}>{ed.name}</option>
+                            ))}
+                            {educationForm.educationId > 0 && !educations.some((ed) => ed.id === educationForm.educationId) && (
+                              <option value={educationForm.educationId}>{educationForm.education || educationForm.educationId}</option>
+                            )}
+                          </select>
                         </div>
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1.5">Specialization</label>
-                          <input type="text" name="specialization" value={educationForm.specialization} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
+                          <select name="specialization" value={educationForm.specializationId} onChange={handleSpecializationSelect} disabled={!educationForm.educationId} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white disabled:opacity-60">
+                            <option value={0}>{t('reg.option.selectSpecialization')}</option>
+                            {subEducations.map((se) => (
+                              <option key={se.id} value={se.id}>{se.name}</option>
+                            ))}
+                            {educationForm.specializationId > 0 && !subEducations.some((se) => se.id === educationForm.specializationId) && (
+                              <option value={educationForm.specializationId}>{educationForm.specialization || educationForm.specializationId}</option>
+                            )}
+                          </select>
                         </div>
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1.5">Skills (comma separated)</label>
@@ -990,15 +1197,39 @@ export default function ProfilePage() {
                         </div>
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1.5">Job Type</label>
-                          <input type="text" name="jobType" value={educationForm.jobType} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
+                          <select name="preferredJobTypeId" value={educationForm.preferredJobTypeId} onChange={handleJobTypeChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white">
+                            <option value="">-- Select Job Type --</option>
+                            {jobTypes.map((jt) => (
+                              <option key={jt.id} value={jt.id}>{jt.label}</option>
+                            ))}
+                            {educationForm.preferredJobTypeId && !jobTypes.some((jt) => String(jt.id) === educationForm.preferredJobTypeId) && (
+                              <option value={educationForm.preferredJobTypeId}>{educationForm.jobType || educationForm.preferredJobTypeId}</option>
+                            )}
+                          </select>
                         </div>
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1.5">Shift Type</label>
-                          <input type="text" name="shiftType" value={educationForm.shiftType} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
+                          <select name="preferredShiftId" value={educationForm.preferredShiftId} onChange={handleShiftTypeChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white">
+                            <option value="">-- Select Shift Type --</option>
+                            {shiftTypes.map((st) => (
+                              <option key={st.id} value={st.id}>{st.label}</option>
+                            ))}
+                            {educationForm.preferredShiftId && !shiftTypes.some((st) => String(st.id) === educationForm.preferredShiftId) && (
+                              <option value={educationForm.preferredShiftId}>{educationForm.shiftType || educationForm.preferredShiftId}</option>
+                            )}
+                          </select>
                         </div>
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1.5">Work Status</label>
-                          <input type="text" name="workStatus" value={educationForm.workStatus} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white" />
+                          <select name="workStatus" value={educationForm.workStatus} onChange={handleEducationChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white">
+                            <option value="">-- Select Work Status --</option>
+                            {workModes.map((wm) => (
+                              <option key={wm.id} value={wm.label}>{wm.label}</option>
+                            ))}
+                            {educationForm.workStatus && !workModes.some((wm) => wm.label === educationForm.workStatus) && (
+                              <option value={educationForm.workStatus}>{educationForm.workStatus}</option>
+                            )}
+                          </select>
                         </div>
                         <div className="sm:col-span-2">
                           <label className="block text-xs font-bold text-slate-700 mb-1.5">Resume Headline</label>
@@ -1117,15 +1348,35 @@ export default function ProfilePage() {
                 {profile?.profilePicUrl ? 'Current profile picture' : 'No profile picture set'}
               </p>
 
+              <p className="text-xs text-slate-600 font-medium text-center px-4">
+                {t('profile.upload.picFormat')}
+              </p>
+
               {/* Hidden file input */}
               <input
                 ref={profilePicInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/jpg"
                 className="hidden"
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
+                  if (e.target.value) e.target.value = '';
+                  if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+                    showToast(t('profile.upload.invalidType', { name: file.name }), 'error');
+                    return;
+                  }
+                  if (file.size > MAX_UPLOAD_BYTES) {
+                    showToast(
+                      t('profile.upload.fileTooLarge', {
+                        name: file.name,
+                        size: toMB(file.size),
+                        max: MAX_UPLOAD_MB,
+                      }),
+                      'error',
+                    );
+                    return;
+                  }
                   try {
                     const processed = await processProfileImage(file);
                     setProfilePicFile(processed);
@@ -1134,7 +1385,6 @@ export default function ProfilePage() {
                     setProfilePicFile(file);
                     setProfilePicPreview(URL.createObjectURL(file));
                   }
-                  if (e.target.value) e.target.value = '';
                 }}
               />
 
@@ -1179,7 +1429,12 @@ export default function ProfilePage() {
                   <FileText className="w-8 h-8 text-blue-600 shrink-0" />
                   <p className="text-sm font-bold text-blue-900 truncate flex-1 min-w-0">My Resume</p>
                   <button
-                    onClick={() => window.open(profile.resumeUrl, '_blank')}
+                    onClick={() => {
+                      const win = window.open(profile.resumeUrl, '_blank');
+                      if (!win) {
+                        showToast('Popup blocked. Please allow pop-ups to view your resume.', 'error');
+                      }
+                    }}
                     className="px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5 shrink-0"
                   >
                     <Eye className="w-3.5 h-3.5" /> View
@@ -1189,6 +1444,8 @@ export default function ProfilePage() {
                 <p className="text-xs text-gray-400 font-medium text-center py-16">No resume uploaded yet</p>
               )}
 
+              <p className="text-xs text-slate-600 font-medium">{t('profile.upload.resumeFormat')}</p>
+
               {/* Hidden file input */}
               <input
                 ref={resumeInputRef}
@@ -1197,7 +1454,25 @@ export default function ProfilePage() {
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) setResumeFile(file);
+                  if (e.target.value) e.target.value = '';
+                  if (!file) return;
+                  const ext = (file.name.split('.').pop() || '').toLowerCase();
+                  if (!['pdf', 'doc', 'docx'].includes(ext)) {
+                    showToast(t('profile.upload.invalidType', { name: file.name }), 'error');
+                    return;
+                  }
+                  if (file.size > MAX_UPLOAD_BYTES) {
+                    showToast(
+                      t('profile.upload.fileTooLarge', {
+                        name: file.name,
+                        size: toMB(file.size),
+                        max: MAX_UPLOAD_MB,
+                      }),
+                      'error',
+                    );
+                    return;
+                  }
+                  setResumeFile(file);
                 }}
               />
 

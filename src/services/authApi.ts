@@ -5,6 +5,7 @@
 
 import { baseApi, getApiBaseUrl, getClientIp } from './baseApi';
 import { User, UserRole, HandlerPermissions } from '../types';
+import i18n from '../i18n/config';
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -116,7 +117,7 @@ export const authApi = baseApi.injectEndpoints({
           return {
             error: {
               status: 500,
-              data: `नेटवर्क कनेक्शन एरर / Server Connection Error: ${err.message || err}`
+              data: i18n.t('auth.api.networkError', { msg: err.message || String(err) })
             }
           };
         }
@@ -156,7 +157,7 @@ export const authApi = baseApi.injectEndpoints({
         if (payload.email && payload.email.trim()) {
           const emailCheck = payload.email.trim().toLowerCase();
           if (users.some(u => u.email && u.email.toLowerCase() === emailCheck)) {
-            return { error: { status: 400, data: 'ईमेल आधीच नोंदणीकृत आहे. / Email already registered.' } };
+            return { error: { status: 400, data: i18n.t('auth.api.emailAlreadyRegistered') } };
           }
         }
 
@@ -204,7 +205,7 @@ export const authApi = baseApi.injectEndpoints({
               return {
                 error: {
                   status: regRes.status,
-                  data: `नोंदणी सर्व्हर त्रुटी / API Server registration failed. Status: ${regRes.status}`
+                  data: i18n.t('auth.api.registrationServerError', { status: regRes.status })
                 }
               };
             }
@@ -243,7 +244,7 @@ export const authApi = baseApi.injectEndpoints({
 
               return { data: { user: newUser, token: newUser.token } };
             } else {
-              const errMsg = resData?.error?.message || 'नोंदणी अयशस्वी. Please check details or ensure connection is stable.';
+              const errMsg = resData?.error?.message || i18n.t('auth.api.registrationFailed');
               return {
                 error: {
                   status: 400,
@@ -255,7 +256,7 @@ export const authApi = baseApi.injectEndpoints({
             return {
               error: {
                 status: 500,
-                data: `नोंदणी नेटवर्क एरर / Registration Network Error: ${err.message || err}`
+                data: i18n.t('auth.api.registrationNetworkError', { msg: err.message || String(err) })
               }
             };
           }
@@ -377,7 +378,7 @@ export const authApi = baseApi.injectEndpoints({
             return {
               error: {
                 status: regRes.status,
-                data: `नोंदणी सर्व्हर त्रुटी / API Server company registration failed. Status: ${regRes.status}`
+                data: i18n.t('auth.api.companyRegistrationServerError', { status: regRes.status })
               }
             };
           }
@@ -416,7 +417,7 @@ export const authApi = baseApi.injectEndpoints({
 
             return { data: { user: newUser, token } };
           } else {
-            const errMsg = resData?.error?.message || 'नोंदणी अयशस्वी. Please check details or ensure connection is stable.';
+            const errMsg = resData?.error?.message || i18n.t('auth.api.registrationFailed');
             return {
               error: {
                 status: 400,
@@ -428,7 +429,7 @@ export const authApi = baseApi.injectEndpoints({
           return {
             error: {
               status: 500,
-              data: `नोंदणी नेटवर्क एरर / Registration Network Error: ${err.message || err}`
+              data: i18n.t('auth.api.registrationNetworkError', { msg: err.message || String(err) })
             }
           };
         }
@@ -475,7 +476,7 @@ export const authApi = baseApi.injectEndpoints({
             return {
               error: {
                 status: res.status,
-                data: `सर्व्हर त्रुटी / API Server connection failed. Status: ${res.status}`
+                data: i18n.t('auth.api.serverError', { status: res.status })
               }
             };
           }
@@ -493,7 +494,7 @@ export const authApi = baseApi.injectEndpoints({
           return {
             error: {
               status: 500,
-              data: `नेटवर्क कनेक्शन एरर / Server Connection Error: ${err.message || err}`
+              data: i18n.t('auth.api.networkError', { msg: err.message || String(err) })
             }
           };
         }
@@ -538,7 +539,7 @@ export const authApi = baseApi.injectEndpoints({
             return {
               error: {
                 status: res.status,
-                data: `सर्व्हर त्रुटी / API Server connection failed. Status: ${res.status}`
+                data: i18n.t('auth.api.serverError', { status: res.status })
               }
             };
           }
@@ -556,7 +557,7 @@ export const authApi = baseApi.injectEndpoints({
           return {
             error: {
               status: 500,
-              data: `नेटवर्क कनेक्शन एरर / Server Connection Error: ${err.message || err}`
+              data: i18n.t('auth.api.networkError', { msg: err.message || String(err) })
             }
           };
         }
@@ -565,24 +566,27 @@ export const authApi = baseApi.injectEndpoints({
 
     activateAccount: builder.mutation<
       { isSuccess: boolean; isFailure: boolean; value: any; error?: { code: string; message: string } },
-      { code: string }
+      { code?: string; token?: string }
     >({
-      queryFn: async ({ code }) => {
+      queryFn: async (payload) => {
         try {
-          const res = await fetch(`${getApiBaseUrl()}/api/v1/activateaccount?d=${encodeURIComponent(code)}`, {
+          const rawToken = (payload.token || payload.code || '').trim();
+          // The backend API expects POST /api/v1/activateaccount with JSON body: { code: rawToken }
+          // Passing query string ?d= causes remote IIS server to fail with 500 error
+          const res = await fetch(`${getApiBaseUrl()}/api/v1/activateaccount`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json'
             },
-            body: JSON.stringify({ code })
+            body: JSON.stringify({ code: rawToken })
           });
 
           if (!res.ok) {
             return {
               error: {
                 status: res.status,
-                data: `सक्रियकरण सर्व्हर त्रुटी / API Server activation failed. Status: ${res.status}`
+                data: i18n.t('auth.api.activationServerError', { status: res.status })
               }
             };
           }
@@ -593,7 +597,7 @@ export const authApi = baseApi.injectEndpoints({
           return {
             error: {
               status: 500,
-              data: `सक्रियकरण नेटवर्क एरर / Activation Network Error: ${err.message || err}`
+              data: i18n.t('auth.api.activationNetworkError', { msg: err.message || String(err) })
             }
           };
         }

@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { useAddJobRequirementMutation } from '../../hooks/useJobQueries';
 import { JobRequirement } from '../../services/jobTypes';
 import {
@@ -31,6 +32,7 @@ interface AddJobFormProps {
 }
 
 export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) => {
+  const { t } = useTranslation();
   const user = useSelector((state: any) => state.auth?.user);
   const addJobMutation = useAddJobRequirementMutation();
   const addJob = addJobMutation.mutateAsync;
@@ -129,48 +131,48 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
 
     // Form Validation
     if (!form.jobDesignation.trim()) {
-      setValidationError('कृपया नोकरीचे पद / Designation प्रविष्ट करा.');
+      setValidationError(t('jobs.add.errDesignation'));
       return;
     }
 
     if (!form.jobDiscription.trim() || form.jobDiscription.length < 10) {
-      setValidationError('कृपया कमीत कमी १० अक्षरांचे नोकरीचे वर्णन / Description प्रविष्ट करा.');
+      setValidationError(t('jobs.add.errDescription'));
       return;
     }
 
     if (form.jobDiscription.length > MAX_JOB_DESCRIPTION_LENGTH) {
-      setValidationError(`नोकरीचे वर्णन ${MAX_JOB_DESCRIPTION_LENGTH} अक्षरांपेक्षा जास्त असू शकत नाही / Description cannot exceed ${MAX_JOB_DESCRIPTION_LENGTH} characters.`);
+      setValidationError(t('jobs.add.errDescriptionMax', { max: MAX_JOB_DESCRIPTION_LENGTH }));
       return;
     }
 
     if (!form.skill.trim()) {
-      setValidationError('कृपया आवश्यक कौशल्ये / Skills प्रविष्ट करा.');
+      setValidationError(t('jobs.add.errSkills'));
       return;
     }
 
     // Salary validation fix
     if (!Number.isFinite(form.salary) || form.salary <= 0) {
-      setValidationError('कृपया किमान वेतन / Minimum Salary 0 पेक्षा जास्त प्रविष्ट करा.');
+      setValidationError(t('jobs.add.errMinSalary'));
       return;
     }
 
     if (!Number.isFinite(form.salaryTo) || form.salaryTo <= 0) {
-      setValidationError('कृपया कमाल वेतन / Maximum Salary 0 पेक्षा जास्त प्रविष्ट करा.');
+      setValidationError(t('jobs.add.errMaxSalary'));
       return;
     }
 
     if (form.salaryTo < form.salary) {
-      setValidationError('कमाल वेतन हे किमान वेतनापेक्षा जास्त किंवा समान असावे.');
+      setValidationError(t('jobs.add.errMaxSalaryGteMin'));
       return;
     }
 
     if (form.experianceTo < form.experiance) {
-      setValidationError('कमाल अनुभव हा किमान अनुभवापेक्षा जास्त असावा.');
+      setValidationError(t('jobs.add.errMaxExpGtMin'));
       return;
     }
 
     if (!form.jobLocation.trim()) {
-      setValidationError('कृपया नोकरीचे ठिकाण / Location प्रविष्ट करा.');
+      setValidationError(t('jobs.add.errLocation'));
       return;
     }
 
@@ -188,7 +190,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
       const result = await addJob(payload);
 
       setToastType('success');
-      setToastMsg('नोकरी रिक्त जागा यशस्वीरित्या जोडली! / Job Requirement Added Successfully!');
+      setToastMsg(t('jobs.add.successToast'));
       setShowToast(true);
 
       if (onSuccess) {
@@ -214,8 +216,8 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
     <div className="bg-white rounded-2xl border border-slate-150 shadow-xs p-6 max-w-4xl mx-auto text-left animate-fade-in">
       <div className="flex justify-between items-center pb-4 mb-6 border-b border-slate-100">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">नवीन नोकरी रिक्त जागा जोडा / Add Job Requirement</h2>
-          <p className="text-xs text-slate-500 mt-0.5">नियोक्ते व कंपन्यांसाठी थेट नोकरी नोंदणी पोर्टल</p>
+          <h2 className="text-xl font-bold text-slate-800">{t('jobs.add.heading')}</h2>
+          <p className="text-xs text-slate-500 mt-0.5">{t('jobs.add.subtitle')}</p>
         </div>
         {onCancel && (
           <button
@@ -223,7 +225,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             type="button"
             className="text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors py-1.5 px-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer"
           >
-            मागे जा / Cancel
+            {t('jobs.add.cancel')}
           </button>
         )}
       </div>
@@ -251,7 +253,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Core Info Row */}
         <div className="bg-slate-50/55 p-4 rounded-xl border border-slate-100">
-          <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे शीर्षक (हेडर) / Profile Header *</label>
+          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.profileHeader')}</label>
           <input
             type="text"
             name="profileHeader"
@@ -266,7 +268,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
         {/* Designation, Vacancies & Role Type */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे पद / Designation *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.designation')}</label>
             <input
               type="text"
               name="jobDesignation"
@@ -278,7 +280,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">एकूण जागा / No. of Vacancies *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.noOfVacancies')}</label>
             <input
               type="number"
               name="noOfVacancy"
@@ -290,7 +292,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचा प्रकार / Job Type *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.jobType')}</label>
             <select
               name="jobTypeId"
               value={form.jobTypeId}
@@ -298,9 +300,9 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
             >
               <option value={0}>-- Select --</option>
-              {jobTypes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
+              {jobTypes.map((jt) => (
+                <option key={jt.id} value={jt.id}>
+                  {jt.label}
                 </option>
               ))}
             </select>
@@ -311,10 +313,10 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-orange-50/20 rounded-xl border border-orange-100/30">
           {/* Experience Group */}
           <div>
-            <span className="block text-xs font-extrabold text-orange-950 mb-2">अनुभव आवश्यकता / Experience Range (Years)</span>
+            <span className="block text-xs font-extrabold text-orange-950 mb-2">{t('jobs.add.experienceRange')}</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] text-slate-500 mb-1">किमान अनुभव / Min Experience</label>
+                <label className="block text-[10px] text-slate-500 mb-1">{t('jobs.add.minExperience')}</label>
                 <input
                   type="number"
                   name="experiance"
@@ -325,7 +327,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                 />
               </div>
               <div>
-                <label className="block text-[10px] text-slate-500 mb-1">कमाल अनुभव / Max Experience</label>
+                <label className="block text-[10px] text-slate-500 mb-1">{t('jobs.add.maxExperience')}</label>
                 <input
                   type="number"
                   name="experianceTo"
@@ -340,10 +342,10 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
 
           {/* Salary Group */}
           <div>
-            <span className="block text-xs font-extrabold text-orange-950 mb-2">मासिक वेतनश्रेणी / Monthly Salary Range (INR)</span>
+            <span className="block text-xs font-extrabold text-orange-950 mb-2">{t('jobs.add.salaryRange')}</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] text-slate-500 mb-1">किमान वेतन / Min Salary</label>
+                <label className="block text-[10px] text-slate-500 mb-1">{t('jobs.add.minSalary')}</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -357,7 +359,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                 />
               </div>
               <div>
-                <label className="block text-[10px] text-slate-500 mb-1">कमाल वेतन / Max Salary</label>
+                <label className="block text-[10px] text-slate-500 mb-1">{t('jobs.add.maxSalary')}</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -377,7 +379,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
         {/* Specialized Fields: Work Mode, Workplace type, location */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">कामाची पद्धत / Work Mode *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.workMode')}</label>
             <select
               name="workModeId"
               value={form.workModeId}
@@ -393,7 +395,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">कार्यालय किंवा क्षेत्र / Workplace Type</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.workplaceType')}</label>
             <input
               type="text"
               name="workPlace"
@@ -404,7 +406,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे ठिकाण / Job Location *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.jobLocation')}</label>
             <input
               type="text"
               name="jobLocation"
@@ -420,7 +422,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
         {/* Education, Sub-Education, Expiry Date */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">शिक्षण पात्रता / Required Education *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.requiredEducation')}</label>
             <select
               name="educationId"
               value={form.educationId}
@@ -439,7 +441,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">विशेषीकरण / Sub-Education</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.subEducation')}</label>
             <select
               name="subEducationId"
               value={form.subEducationId}
@@ -456,7 +458,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">अंतिम मुदत / Expiry Date *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.expiryDate')}</label>
             <input
               type="date"
               name="expiryDate"
@@ -471,7 +473,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
         {/* Company Type, Industry Type */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">कंपनीचा प्रकार / Company Type</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.companyType')}</label>
             <select
               name="companyTypeId"
               value={form.companyTypeId}
@@ -487,7 +489,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">उद्योगाचे क्षेत्र / Industry Type</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.industryType')}</label>
             <select
               name="industryTypeId"
               value={form.industryTypeId}
@@ -506,10 +508,10 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
 
         {/* Interview Details */}
         <div className="p-4 bg-slate-50 border border-slate-150 rounded-xl space-y-4">
-          <span className="block text-xs font-extrabold text-slate-800 border-b border-slate-100 pb-1.5">मुलाखत तपशील / Interview Details</span>
+          <span className="block text-xs font-extrabold text-slate-800 border-b border-slate-100 pb-1.5">{t('jobs.add.interviewDetails')}</span>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">मुलाखतीची पद्धत / Interview Mode</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.interviewMode')}</label>
               <select
                 name="interviewModeId"
                 value={form.interviewModeId}
@@ -525,7 +527,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">मुलाखतीचे ठिकाण / Interview Location</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.interviewLocation')}</label>
               <input
                 type="text"
                 name="interviewLocation"
@@ -541,7 +543,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
         {/* Skills, Certifications, Preferences */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">आवश्यक कौशल्ये (स्वल्पविराम द्या) / Skills *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.skills')}</label>
             <input
               type="text"
               name="skill"
@@ -553,7 +555,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">आवश्यक प्रमाणपत्रे / Certifications Required</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.certifications')}</label>
             <input
               type="text"
               name="certificationsRequired"
@@ -567,20 +569,20 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">लिंग प्राधान्य / Gender Preference</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.genderPreference')}</label>
             <select
               name="genderPreference"
               value={form.genderPreference}
               onChange={handleChange}
               className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
             >
-              <option value="Any">दोन्ही / Any Gender</option>
-              <option value="Male">पुरुष / Male</option>
-              <option value="Female">महिला / Female</option>
+              <option value="Any">{t('jobs.add.anyGender')}</option>
+              <option value="Male">{t('jobs.add.male')}</option>
+              <option value="Female">{t('jobs.add.female')}</option>
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">वयोमर्यादा / Age Range</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.ageRange')}</label>
             <input
               type="text"
               name="ageRange"
@@ -590,7 +592,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">वेतन कालावधी / Salary Period</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.salaryPeriod')}</label>
             <select
               name="salaryPeriodId"
               value={form.salaryPeriodId}
@@ -609,7 +611,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">साप्ताहिक सुट्टी / Weekly Off</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.weeklyOff')}</label>
             <select
               name="weeklyOffId"
               value={form.weeklyOffId}
@@ -625,7 +627,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">कामाची पाळी / Shift Type</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.shiftType')}</label>
             <select
               name="shiftTypeId"
               value={form.shiftTypeId}
@@ -641,7 +643,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">इतर फायदे / Key Perks & Benefits</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.benefits')}</label>
             <select
               name="benefits"
               value={form.benefits}
@@ -660,24 +662,24 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
 
         {/* Job Description & Posting Notes */}
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1.5">नोकरीचे सविस्तर वर्णन / Job Description *</label>
+          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.jobDescription')}</label>
           <textarea
             name="jobDiscription"
             rows={5}
             maxLength={MAX_JOB_DESCRIPTION_LENGTH}
-            placeholder="नोकरीचे मुख्य काम, कामाच्या वेळा आणि जबाबदाऱ्या सविस्तर लिहा..."
+            placeholder={t('jobs.add.jobDescriptionPlaceholder')}
             value={form.jobDiscription}
             onChange={handleChange}
             className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all resize-none"
             required
           />
           <div className={`mt-1 text-[10px] font-semibold text-right ${form.jobDiscription.length >= MAX_JOB_DESCRIPTION_LENGTH ? 'text-rose-600' : 'text-slate-400'}`}>
-            {MAX_JOB_DESCRIPTION_LENGTH - form.jobDiscription.length} अक्षरे शिल्लक / {MAX_JOB_DESCRIPTION_LENGTH - form.jobDiscription.length} characters left ({form.jobDiscription.length}/{MAX_JOB_DESCRIPTION_LENGTH})
+            {MAX_JOB_DESCRIPTION_LENGTH - form.jobDiscription.length} {t('jobs.add.charactersLeft')} ({form.jobDiscription.length}/{MAX_JOB_DESCRIPTION_LENGTH})
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1.5">नियोक्ता टिप्पणी / Internal Posting Notes</label>
+          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.postingNotes')}</label>
           <input
             type="text"
             name="postingNotes"
@@ -696,7 +698,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               type="button"
               className="py-3 px-5 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all cursor-pointer"
             >
-              मागे जा / Cancel
+              {t('jobs.add.cancel')}
             </button>
           )}
           <button
@@ -716,10 +718,10 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                जतन होत आहे... / Saving...
+                {t('jobs.add.saving')}
               </>
             ) : (
-              'रिक्त जागा जतन करा / Save & Post Requirement'
+              t('jobs.add.savePost')
             )}
           </button>
         </div>

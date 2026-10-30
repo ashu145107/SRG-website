@@ -75,15 +75,15 @@ export default function ChangePassword() {
     setErrorText('');
 
     if (!oldPassword) {
-      setErrorText(t('auth.oldPwdRequired', 'जुना पासवर्ड प्रविष्ट करा / Please enter your old password.'));
+      setErrorText(t('auth.oldPwdRequired'));
       return;
     }
     if (!strength.checks.min8 || strength.score < 3) {
-      setErrorText(t('auth.newPwdWeak', 'मजबूत पासवर्ड निवडा — किमान 8 अक्षरे, मोठी/लहान अक्षरे, अंक आणि विशेष चिन्ह. / Choose a strong password — min 8 characters with upper/lower case, a number and a special character.'));
+      setErrorText(t('auth.newPwdWeak'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setErrorText(t('auth.confirmPwdMismatch', 'नवीन पासवर्ड आणि पुष्टी पासवर्ड जुळत नाहीत / New password and confirmation do not match.'));
+      setErrorText(t('auth.confirmPwdMismatch'));
       return;
     }
 
@@ -92,7 +92,7 @@ export default function ChangePassword() {
       if (result.isSuccess) {
         setDialog({
           type: 'success',
-          message: result.value || t('auth.pwdChanged', 'पासवर्ड यशस्वीरित्या बदलला! / Password changed successfully!'),
+          message: result.value || t('auth.pwdChanged'),
         });
         setOldPassword('');
         setNewPassword('');
@@ -100,13 +100,13 @@ export default function ChangePassword() {
       } else {
         setDialog({
           type: 'error',
-          message: result.value || result.error?.message || t('auth.errorMessage', 'अर्ज यशस्वी झाला नाही. कृपया प्रयत्न करा. / The request could not be completed. Please try again.'),
+          message: result.value || result.error?.message || t('auth.errorMessage'),
         });
       }
     } catch (err: any) {
       setDialog({
         type: 'error',
-        message: (err as any)?.data || t('auth.errorMessage', 'अर्ज यशस्वी झाला नाही. कृपया प्रयत्न करा. / The request could not be completed. Please try again.'),
+        message: (err as any)?.data || t('auth.errorMessage'),
       });
     }
   };
@@ -117,7 +117,7 @@ export default function ChangePassword() {
       <nav className="bg-theme-darkViolet text-white border-b border-theme-lightViolet/20 sticky top-0 z-40 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-12 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-1.5 text-xs font-bold text-theme-gold hover:text-white transition-colors cursor-pointer">
-            <ArrowLeft className="w-4 h-4" /> {t('auth.backToDashboard', 'डॅशबोर्ड / Dashboard')}
+            <ArrowLeft className="w-4 h-4" /> {t('auth.backToDashboard')}
           </Link>
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
@@ -141,9 +141,9 @@ export default function ChangePassword() {
               <LockKeyhole className="w-6 h-6 text-theme-lavender" />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-theme-darkViolet">{t('auth.changePassword', 'पासवर्ड बदला / Change Password')}</h1>
+              <h1 className="text-2xl font-black text-theme-darkViolet">{t('auth.changePassword')}</h1>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                {t('auth.changePwdSub', 'तुमचा सुरक्षा पासवर्ड अद्ययावत करा / Update your account security password.')}
+                {t('auth.changePwdSub')}
               </p>
             </div>
           </div>
@@ -154,7 +154,7 @@ export default function ChangePassword() {
             {errorText && <Alert type="danger" message={errorText} />}
 
             <PasswordBox
-              label={t('auth.oldPassword', 'जुना पासवर्ड / Old Password')}
+              label={t('auth.oldPassword')}
               value={oldPassword}
               onChange={(e) => setOldPassword(e.target.value)}
               required
@@ -162,7 +162,7 @@ export default function ChangePassword() {
             />
 
             <PasswordBox
-              label={t('auth.newPassword', 'नवीन पासवर्ड / New Password')}
+              label={t('auth.newPassword')}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               required
@@ -222,7 +222,7 @@ export default function ChangePassword() {
             </div>
 
             <PasswordBox
-              label={t('auth.confirmPassword', 'नवीन पासवर्डची पुष्टी / Confirm New Password')}
+              label={t('auth.confirmPassword')}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
@@ -230,7 +230,7 @@ export default function ChangePassword() {
             />
 
             <PrimaryButton type="submit" loading={isLoading} className="w-full py-3">
-              {t('auth.changePasswordBtn', 'पासवर्ड बदला / Change Password')}
+              {t('auth.changePasswordBtn')}
             </PrimaryButton>
           </form>
         </div>
@@ -248,7 +248,7 @@ export default function ChangePassword() {
                   </div>
                   <div>
                     <h3 className="text-lg font-extrabold text-slate-900">
-                      {t('auth.successTitle', 'यशस्वी! / Success!')}
+                      {t('auth.successTitle')}
                     </h3>
                     <p className="mt-2 text-sm text-slate-600 leading-relaxed">{dialog.message}</p>
                   </div>
@@ -260,7 +260,7 @@ export default function ChangePassword() {
                   </div>
                   <div>
                     <h3 className="text-lg font-extrabold text-slate-900">
-                      {t('auth.errorTitle', 'त्रुटी! / Error!')}
+                      {t('auth.errorTitle')}
                     </h3>
                     <p className="mt-2 text-sm text-slate-600 leading-relaxed">{dialog.message}</p>
                   </div>
@@ -274,14 +274,14 @@ export default function ChangePassword() {
                   onClick={() => navigate('/dashboard')}
                   className="btn-gloss inline-flex items-center gap-2 bg-theme-lavender hover:bg-theme-darkViolet text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md cursor-pointer"
                 >
-                  {t('auth.goToDashboard', 'डॅशबोर्ड कडे जा / Go to Dashboard')}
+                  {t('auth.goToDashboard')}
                 </button>
               )}
               <button
                 onClick={() => setDialog(null)}
                 className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
               >
-                {t('auth.close', 'बंद करा / Close')}
+                {t('auth.close')}
               </button>
             </div>
           </div>

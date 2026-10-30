@@ -14,7 +14,11 @@ import { ArrowRight, CheckCircle2, XCircle, Mail, Phone } from 'lucide-react';
 interface DialogState {
   type: 'success' | 'error';
   message: string;
+  title?: string;
 }
+
+const isUnknownAccountMessage = (msg: string) =>
+  /does not exist|not registered|no account found|account is suspended/i.test(msg || '');
 
 export default function ForgotPassword() {
   const { t } = useTranslation();
@@ -33,42 +37,46 @@ export default function ForgotPassword() {
     const mobileVal = mobile.trim();
 
     if (!emailVal && !mobileVal) {
-      setErrorText(
-        t(
-          'auth.emailOrMobileRequired',
-          'नोंदणीकृत ईमेल किंवा मोबाईल नंबर प्रविष्ट करा / Please enter your registered email or mobile number.'
-        )
-      );
+      setErrorText(t('auth.emailOrMobileRequired'));
       return;
     }
     if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-      setErrorText(t('auth.emailInvalid', 'वैध ईमेल पत्ता प्रविष्ट करा / Please enter a valid email address.'));
+      setErrorText(t('auth.emailInvalid'));
       return;
     }
     if (mobileVal && !/^\d{10}$/.test(mobileVal)) {
-      setErrorText(
-        t('auth.mobileInvalid', '10 अंकी मोबाईल नंबर प्रविष्ट करा / Please enter a valid 10-digit mobile number.')
-      );
+      setErrorText(t('auth.mobileInvalid'));
       return;
     }
 
     try {
       const result = await forgot({ email: emailVal, mobile: mobileVal }).unwrap();
-      if (result.isSuccess) {
+      const backendMsg = result.value || '';
+
+      if (isUnknownAccountMessage(backendMsg)) {
+        setDialog({
+          type: 'error',
+          title: t('auth.accountNotFoundTitle'),
+          message: t('auth.accountNotFoundMsg'),
+        });
+      } else if (result.isSuccess) {
         setDialog({
           type: 'success',
-          message: result.value || t('auth.successMessage', 'खाते तपशील तुमच्या ईमेल पत्त्यावर पाठविले आहेत. / Account details have been sent to your email address.'),
+          message:
+            /details has been sent/i.test(backendMsg) || !backendMsg
+              ? t('auth.successMessage')
+              : backendMsg,
         });
       } else {
         setDialog({
           type: 'error',
-          message: result.value || result.error?.message || t('auth.errorMessage', 'अर्ज यशस्वी झाला नाही. कृपया प्रयत्न करा. / The request could not be completed. Please try again.'),
+          message: backendMsg || result.error?.message || t('auth.errorMessage'),
         });
       }
     } catch (err: any) {
       setDialog({
         type: 'error',
-        message: (err as any)?.data || t('auth.errorMessage', 'अर्ज यशस्वी झाला नाही. कृपया प्रयत्न करा. / The request could not be completed. Please try again.'),
+        message: (err as any)?.data || t('auth.errorMessage'),
       });
     }
   };
@@ -94,7 +102,7 @@ export default function ForgotPassword() {
                   {t('auth.forgotPassword')}
                 </h1>
                 <p className="text-xs font-extrabold text-theme-lavender uppercase tracking-wider mt-1">
-                  {t('auth.emailOrMobile', 'श्री स्वामी सेवा मार्ग, दिंडोरी / Enter your registered email or mobile')}
+                  {t('auth.emailOrMobile')}
                 </p>
               </div>
             </div>
@@ -125,7 +133,7 @@ export default function ForgotPassword() {
               {/* Mobile */}
               <div className="space-y-1.5 text-left">
                 <label className="block text-xs font-bold text-theme-darkViolet">
-                  {t('auth.mobile', 'मोबाईल नंबर / Mobile Number')}
+                  {t('auth.mobile')}
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-theme-lavender">
@@ -150,10 +158,10 @@ export default function ForgotPassword() {
                 className="btn-gloss w-full py-3.5 px-6 rounded-xl bg-theme-lavender hover:bg-theme-lavender/90 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer mt-2"
               >
                 {isLoading ? (
-                  <span>{t('auth.submitting', 'पाठवत आहे... / Submitting...')}</span>
+                  <span>{t('auth.submitting')}</span>
                 ) : (
                   <>
-                    <span>{t('auth.forgotBtn', 'पुनर्प्राप्ती करा / Recover Password')}</span>
+                    <span>{t('auth.forgotBtn')}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -163,9 +171,9 @@ export default function ForgotPassword() {
             {/* Footer Prompt */}
             <div className="text-center text-xs font-semibold text-slate-500 border-t border-theme-lightViolet/60 pt-4 space-y-2">
               <p>
-                {t('auth.backToLoginPrompt', 'पासवर्ड आठवला? / Remembered your password?')}{' '}
+                {t('auth.backToLoginPrompt')}{' '}
                 <Link to="/login" className="text-theme-lavender font-extrabold hover:underline">
-                  {t('auth.backToLogin', 'लॉगिन कडे परत / Back to Login')}
+                  {t('auth.backToLogin')}
                 </Link>
               </p>
             </div>
@@ -185,7 +193,7 @@ export default function ForgotPassword() {
                   </div>
                   <div>
                     <h3 className="text-lg font-extrabold text-slate-900">
-                      {t('auth.successTitle', 'यशस्वी! / Success!')}
+                      {dialog.title || t('auth.successTitle')}
                     </h3>
                     <p className="mt-2 text-sm text-slate-600 leading-relaxed">{dialog.message}</p>
                   </div>
@@ -197,7 +205,7 @@ export default function ForgotPassword() {
                   </div>
                   <div>
                     <h3 className="text-lg font-extrabold text-slate-900">
-                      {t('auth.errorTitle', 'त्रुटी! / Error!')}
+                      {dialog.title || t('auth.errorTitle')}
                     </h3>
                     <p className="mt-2 text-sm text-slate-600 leading-relaxed">{dialog.message}</p>
                   </div>
@@ -211,14 +219,14 @@ export default function ForgotPassword() {
                   to="/login"
                   className="btn-gloss inline-flex items-center gap-2 bg-theme-lavender hover:bg-theme-darkViolet text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md"
                 >
-                  {t('auth.goToLogin', 'लॉगिन कडे जा / Go to Login')}
+                  {t('auth.goToLogin')}
                 </Link>
               )}
               <button
                 onClick={() => setDialog(null)}
                 className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
               >
-                {t('auth.close', 'बंद करा / Close')}
+                {t('auth.close')}
               </button>
             </div>
           </div>

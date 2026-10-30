@@ -33,9 +33,8 @@ interface ComingSoonModalProps {
  * instead of the viewport.
  */
 export function ComingSoonModal({ isOpen, onClose, content }: ComingSoonModalProps) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isMr = i18n.language === 'mr';
-  const L = (en: string, mr: string) => (isMr ? mr : en);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -62,7 +61,7 @@ export function ComingSoonModal({ isOpen, onClose, content }: ComingSoonModalPro
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-1.5 rounded-lg text-theme-darkViolet/40 hover:text-theme-darkViolet hover:bg-white/70 transition cursor-pointer"
-            aria-label={L('Close', 'बंद करा')}
+            aria-label={t('comingSoon.close')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -77,22 +76,22 @@ export function ComingSoonModal({ isOpen, onClose, content }: ComingSoonModalPro
           </div>
 
           <span className="inline-flex items-center gap-1.5 mt-6 bg-theme-gold/25 text-theme-darkViolet px-3.5 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-widest">
-            <Sparkles className="w-3.5 h-3.5" /> {L('Coming Soon', 'लवकरच येत आहे')}
+            <Sparkles className="w-3.5 h-3.5" /> {t('comingSoon.badge')}
           </span>
         </div>
 
         <div className="px-7 pt-6 pb-7">
           <h3 className="text-xl font-extrabold text-theme-darkViolet leading-snug">
-            {L(content.titleEn, content.titleMr)}
+            {isMr ? content.titleMr : content.titleEn}
           </h3>
           <p className="text-sm text-theme-darkViolet/65 mt-2.5 leading-relaxed">
-            {L(content.bodyEn, content.bodyMr)}
+            {isMr ? content.bodyMr : content.bodyEn}
           </p>
           <button
             onClick={onClose}
             className="btn-gloss mt-6 w-full bg-theme-lavender text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-theme-darkViolet transition-all shadow-md shadow-theme-lavender/30 cursor-pointer"
           >
-            {L('Got it', 'ठळक')}
+            {t('comingSoon.gotIt')}
           </button>
         </div>
       </div>

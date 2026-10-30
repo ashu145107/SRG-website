@@ -16,7 +16,8 @@ import {
   useGetTalukasQuery,
   useGetSevaKendrasQuery,
   useGetEducationsListQuery,
-  useGetSubEducationsListQuery
+  useGetSubEducationsListQuery,
+  getLocalizedName
 } from '../services/masterApi';
 import { PrimaryButton } from '../components/ui/Buttons';
 import { Alert, Toast } from '../components/ui/FeedbackComponents';
@@ -24,6 +25,14 @@ import { LanguageSwitcher } from '../components/ui/UtilityComponents';
 import { Navbar } from '../components/Navbar';
 import { UserRole } from '../types';
 import { ArrowLeft, User, Phone, Mail, Award, CheckCircle2, MapPin, Building, Globe, Layers } from 'lucide-react';
+
+/** Inline per-field validation message rendered under an input (REG-017). */
+const FieldError: React.FC<{ show?: boolean; message?: string }> = ({ show, message }) =>
+  show && message ? (
+    <p className="text-[11px] text-red-600 font-semibold mt-1 text-left" role="alert">
+      {message}
+    </p>
+  ) : null;
 
 export default function Register() {
   const { t } = useTranslation();
@@ -102,6 +111,8 @@ export default function Register() {
 
   // Highlight input textboxes/select fields in red if validation fails
   const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({});
+  // Inline per-field error messages rendered directly under the affected input (REG-017)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const clearError = (fieldName: string) => {
     if (invalidFields[fieldName]) {
@@ -111,11 +122,42 @@ export default function Register() {
         return updated;
       });
     }
+    if (fieldErrors[fieldName]) {
+      setFieldErrors((prev) => {
+        const updated = { ...prev };
+        delete updated[fieldName];
+        return updated;
+      });
+    }
+  };
+
+  // REG-017: after a failed submit the user is parked at the bottom of the
+  // form with no feedback. Smooth-scroll back to the top, then move focus to
+  // the first field flagged invalid (or to the error banner when the failure
+  // came from the server, e.g. duplicate email).
+  const focusOnErrors = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      const firstInvalid = document.querySelector<HTMLElement>(
+        'input.border-red-500, textarea.border-red-500, select.border-red-500'
+      );
+      if (firstInvalid) {
+        firstInvalid.focus({ preventScroll: true });
+        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      const banner = document.querySelector<HTMLElement>('[data-error-banner]');
+      if (banner) {
+        banner.focus({ preventScroll: true });
+        banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 80);
   };
 
   // Clear all invalid fields when changing registration type
   useEffect(() => {
     setInvalidFields({});
+    setFieldErrors({});
     setErrorText('');
   }, [registrationType]);
 
@@ -199,47 +241,45 @@ export default function Register() {
     if (Object.keys(newInvalids).length > 0) {
       setInvalidFields(newInvalids);
 
+      const errs: Record<string, string> = {};
       if (newInvalids['name']) {
-        setErrorText('कृपया आपले संपूर्ण नाव प्रविष्ट करा / Please enter your full name.');
+        errs['name'] = t('reg.error.fullNameRequired');
       } else if (newInvalids['phone']) {
-        if (!phone.trim()) {
-          setErrorText('कृपया तुमचा मोबाईल नंबर प्रविष्ट करा / Please enter your mobile number.');
-        } else {
-          setErrorText('मोबाईल नंबर चुकीचा आहे (कृपया १० ते १५ अंकी वैध क्रमांक टाका). / Mobile number must be 10 to 15 numeric digits.');
-        }
+        errs['phone'] = phone.trim() ? t('reg.error.mobileInvalid') : t('reg.error.mobileRequired');
       } else if (newInvalids['email']) {
-        setErrorText('कृपया वैध ईमेल प्रविष्ट करा / Please enter a valid email address.');
+        errs['email'] = t('reg.error.emailInvalid');
       } else if (newInvalids['countryId']) {
-        setErrorText('कृपया देश निवडा / Please select a Country.');
+        errs['countryId'] = t('reg.error.countryRequired');
       } else if (newInvalids['stateId']) {
-        setErrorText('कृपया राज्य निवडा / Please select a State.');
+        errs['stateId'] = t('reg.error.stateRequired');
       } else if (newInvalids['districtId']) {
-        setErrorText('कृपया जिल्हा निवडा / Please select a District.');
+        errs['districtId'] = t('reg.error.districtRequired');
       } else if (newInvalids['talukaId']) {
-        setErrorText('कृपया तालुका निवडा / Please select a Taluka.');
+        errs['talukaId'] = t('reg.error.talukaRequired');
       } else if (newInvalids['educationId']) {
-        setErrorText('कृपया आपले सर्वोच्च शिक्षण निवडा / Please select your Education detail.');
+        errs['educationId'] = t('reg.error.educationRequired');
       } else if (newInvalids['subEducationId']) {
-        setErrorText('कृपया उप-शिक्षण क्षेत्र / स्पेशल निवडा / Please select your Sub-Education detail.');
+        errs['subEducationId'] = t('reg.error.subEducationRequired');
       } else if (newInvalids['experience']) {
-        if (experience.trim() === '') {
-          setErrorText('कृपया कामाचा अनुभव अंकात प्रविष्ट करा (उदा. ०) / Please enter experience in years.');
-        } else {
-          setErrorText('कामाचा अनुभव वैध संख्येमध्ये प्रविष्ट करा. / Please enter a valid non-negative number of experience years.');
-        }
+        errs['experience'] = experience.trim() === '' ? t('reg.error.experienceRequired') : t('reg.error.experienceInvalid');
       } else if (newInvalids['isTnCChecked']) {
-        setErrorText('कृपया अटी आणि शर्ती मान्य करा. / You must agree to the Terms and Conditions.');
+        errs['isTnCChecked'] = t('reg.error.termsRequired');
       }
+      setFieldErrors(errs);
+      const firstKey = Object.keys(errs)[0];
+      setErrorText(firstKey ? errs[firstKey] : t('reg.error.correctFields'));
+      focusOnErrors();
       return;
     }
 
     setInvalidFields({});
+    setFieldErrors({});
 
     // Find Names for friendly profile summary storage
     const selectedCountry = countries.find(c => c.id === countryId)?.name || '';
-    const selectedState = states.find(s => s.id === stateId)?.name || '';
-    const selectedDistrict = districts.find(d => d.id === districtId)?.name || '';
-    const selectedTaluka = talukas.find(t => t.id === talukaId)?.name || '';
+    const selectedState = getLocalizedName(states.find(s => s.id === stateId));
+    const selectedDistrict = getLocalizedName(districts.find(d => d.id === districtId));
+    const selectedTaluka = getLocalizedName(talukas.find(t => t.id === talukaId));
     const selectedSevaKendra = 'dindori';
     const selectedEducation = educations.find(e => e.id === educationId)?.name || '';
     const selectedSubEdu = subEducations.find(se => se.id === subEducationId)?.name || '';
@@ -269,9 +309,10 @@ export default function Register() {
       }).unwrap();
 
       setIsRegisteredSuccess(true);
-      setToastMessage(`खाते यशस्वीरीत्या नोंदणीकृत झाले! / Account registered successfully!`);
+      setToastMessage(t('reg.toast.accountRegistered'));
     } catch (err: any) {
-      setErrorText(err.data || 'नोंदणी अयशस्वी. कृपया पुन्हा प्रयत्न करा. / Registration failed. Please try again.');
+      setErrorText(err.data || t('reg.error.registrationFailed'));
+      focusOnErrors();
     }
   };
 
@@ -318,13 +359,9 @@ export default function Register() {
       newInvalids['empContactPerson'] = true;
     }
 
-    if (!empAlternateContactPerson.trim()) {
-      newInvalids['empAlternateContactPerson'] = true;
-    }
-
-    if (!empAlternateContactNumber.trim()) {
-      newInvalids['empAlternateContactNumber'] = true;
-    } else if (!mobilePattern.test(empAlternateContactNumber.trim())) {
+    // Alternate contact person, alternate mobile, website and alternate email
+    // are optional (REG-013) — only validate format when a value is supplied.
+    if (empAlternateContactNumber.trim() && !mobilePattern.test(empAlternateContactNumber.trim())) {
       newInvalids['empAlternateContactNumber'] = true;
     }
 
@@ -340,13 +377,7 @@ export default function Register() {
       newInvalids['empDescription'] = true;
     }
 
-    if (!empWebsite.trim()) {
-      newInvalids['empWebsite'] = true;
-    }
-
-    if (!empAlternateEmail.trim()) {
-      newInvalids['empAlternateEmail'] = true;
-    } else if (!emailPattern.test(empAlternateEmail.trim().toLowerCase())) {
+    if (empAlternateEmail.trim() && !emailPattern.test(empAlternateEmail.trim().toLowerCase())) {
       newInvalids['empAlternateEmail'] = true;
     }
 
@@ -357,59 +388,45 @@ export default function Register() {
     if (Object.keys(newInvalids).length > 0) {
       setInvalidFields(newInvalids);
 
+      const errs: Record<string, string> = {};
       if (newInvalids['empFullName']) {
-        setErrorText('कृपया कंपनीचे पूर्ण नाव प्रविष्ट करा / Please enter Company Full Name.');
+        errs['empFullName'] = t('reg.error.companyNameRequired');
       } else if (newInvalids['empMobile']) {
-        if (!empMobile.trim()) {
-          setErrorText('कृपया मोबाईल नंबर प्रविष्ट करा / Please enter Mobile Number.');
-        } else {
-          setErrorText('मोबाईल नंबर नक्की १० अंकी असावा / Mobile number must be exactly 10 digits.');
-        }
+        errs['empMobile'] = empMobile.trim() ? t('reg.error.empMobileInvalid') : t('reg.error.empMobileRequired');
       } else if (newInvalids['empAddress']) {
-        setErrorText('कृपया पत्ता प्रविष्ट करा / Please enter Address.');
+        errs['empAddress'] = t('reg.error.addressRequired');
       } else if (newInvalids['empEmail']) {
-        if (!empEmail.trim()) {
-          setErrorText('कृपया मुख्य ईमेल प्रविष्ट करा / Please enter Email Address.');
-        } else {
-          setErrorText('कृपया वैध मुख्य ईमेल पत्ता प्रविष्ट करा / Please enter a valid main Email Address.');
-        }
+        errs['empEmail'] = empEmail.trim() ? t('reg.error.empEmailInvalid') : t('reg.error.emailRequired');
       } else if (newInvalids['empStateId']) {
-        setErrorText('कृपया राज्य निवडा / Please select State.');
+        errs['empStateId'] = t('reg.error.empStateRequired');
       } else if (newInvalids['empDistrictId']) {
-        setErrorText('कृपया जिल्हा निवडा / Please select District.');
+        errs['empDistrictId'] = t('reg.error.empDistrictRequired');
       } else if (newInvalids['empTalukaId']) {
-        setErrorText('कृपया तालुका निवडा / Please select Taluka.');
+        errs['empTalukaId'] = t('reg.error.empTalukaRequired');
       } else if (newInvalids['empContactPerson']) {
-        setErrorText('कृपया मुख्य संपर्क व्यक्तीचे नाव प्रविष्ट करा / Please enter Contact Person.');
-      } else if (newInvalids['empAlternateContactPerson']) {
-        setErrorText('कृपया पर्यायी संपर्क व्यक्तीचे नाव प्रविष्ट करा / Please enter Alternate Contact Person.');
+        errs['empContactPerson'] = t('reg.error.contactPersonRequired');
       } else if (newInvalids['empAlternateContactNumber']) {
-        if (!empAlternateContactNumber.trim()) {
-          setErrorText('कृपया पर्यायी संपर्क मोबाईल नंबर प्रविष्ट करा / Please enter Alternate Contact Number.');
-        } else {
-          setErrorText('पर्यायी संपर्क मोबाईल नंबर नक्की १० अंकी असावा / Alternate Contact Number must be exactly 10 digits.');
-        }
+        errs['empAlternateContactNumber'] = t('reg.error.altContactNumberInvalid');
       } else if (newInvalids['empCompanyTypeId']) {
-        setErrorText('कृपया कंपनी प्रकार निवडा / Please select Company Type.');
+        errs['empCompanyTypeId'] = t('reg.error.companyTypeRequired');
       } else if (newInvalids['empIndustryTypeId']) {
-        setErrorText('कृपया उद्योग प्रकार निवडा / Please select Industry Type.');
+        errs['empIndustryTypeId'] = t('reg.error.industryTypeRequired');
       } else if (newInvalids['empDescription']) {
-        setErrorText('कृपया कंपनीचे संक्षिप्त वर्णन प्रविष्ट करा / Please enter Description.');
-      } else if (newInvalids['empWebsite']) {
-        setErrorText('कृपया कंपनीची वेबसाईट प्रविष्ट करा / Please enter Website.');
+        errs['empDescription'] = t('reg.error.descriptionRequired');
       } else if (newInvalids['empAlternateEmail']) {
-        if (!empAlternateEmail.trim()) {
-          setErrorText('कृपया पर्यायी ईमेल प्रविष्ट करा / Please enter Alternate Email.');
-        } else {
-          setErrorText('कृपया वैध पर्यायी ईमेल प्रविष्ट करा / Please enter a valid Alternate Email.');
-        }
+        errs['empAlternateEmail'] = t('reg.error.altEmailInvalid');
       } else if (newInvalids['isTnCChecked']) {
-        setErrorText('कृपया अटी आणि शर्ती मान्य करा. / You must agree to the Terms and Conditions.');
+        errs['isTnCChecked'] = t('reg.error.termsRequired');
       }
+      setFieldErrors(errs);
+      const firstKey = Object.keys(errs)[0];
+      setErrorText(firstKey ? errs[firstKey] : t('reg.error.correctFields'));
+      focusOnErrors();
       return;
     }
 
     setInvalidFields({});
+    setFieldErrors({});
 
     try {
       const response = await companyRegister({
@@ -431,17 +448,18 @@ export default function Register() {
       }).unwrap();
 
       setIsRegisteredSuccess(true);
-      setToastMessage('कंपनी/नियोक्ता नोंदणी यशस्वी झाली! / Employer Registration completed successfully!');
+      setToastMessage(t('reg.toast.employerRegistered'));
     } catch (err: any) {
       const serverErr = typeof err?.data === 'string' ? err.data : (err?.data?.error?.message || err?.message);
-      setErrorText(serverErr || 'नोंदणी अयशस्वी. कृपया सर्व तपशील तपासा / Registration failed. Please check details.');
+      setErrorText(serverErr || t('reg.error.registrationFailedCheckDetails'));
+      focusOnErrors();
     }
   };
 
   const roleOptions = [
-    { value: UserRole.CANDIDATE, label: 'उमेदवार / Candidate (Job Seeker)' },
-    { value: UserRole.COMPANY, label: 'नियोक्ता / Employer (Recruiter)' },
-    { value: UserRole.SHG, label: 'बचतगट / SHG (Self Help Group)' }
+    { value: UserRole.CANDIDATE, label: t('reg.option.candidate') },
+    { value: UserRole.COMPANY, label: t('reg.option.recruiter') },
+    { value: UserRole.SHG, label: t('reg.option.shg') }
   ];
 
   return (
@@ -458,11 +476,11 @@ export default function Register() {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-black text-theme-darkViolet tracking-tight">
-            नवीन नोंदणी / Register New Account
+            {t('reg.heading.registerNewAccount')}
           </h1>
 
           <p className="text-xs text-theme-lavender font-extrabold uppercase tracking-wider bg-theme-lightViolet/60 inline-block px-4 py-1.5 rounded-full border border-theme-lightViolet">
-            श्री स्वामी समर्थ सेवा व आध्यात्मिक विकास मार्ग (दिंडोरी प्रणीत)
+            {t('reg.brand.tagline')}
           </p>
         </div>
 
@@ -476,23 +494,16 @@ export default function Register() {
                 </div>
 
                 <h3 className="text-xl font-bold text-theme-darkViolet mb-3">
-                  नोंदणी यशस्वी झाली! / Registration Successful!
+                  {t('reg.heading.registrationSuccessful')}
                 </h3>
 
                 <div className="bg-theme-cream/80 border border-theme-lightViolet/80 rounded-2xl p-5 text-left mb-6 max-w-xl w-full">
-                  <p className="text-xs text-theme-darkViolet font-bold leading-normal mb-1">
-                    पडताळणी आणि सक्रियकरण लिंक पाठविली आहे:
-                  </p>
-                  <p className="text-xs sm:text-sm text-theme-lavender font-bold leading-relaxed">
-                    Verification activation link sent to your registered email
+                  <p className="text-sm text-theme-darkViolet font-bold leading-normal mb-1">
+                    {t('reg.success.verificationSent')}
                   </p>
                   <div className="h-px bg-theme-lightViolet/60 my-3" />
-                  <p className="text-xs text-slate-600 leading-normal">
-                    कृपया तुमचा नोंदणीकृत मुख्य ईमेल आयडी (<span className="font-semibold text-theme-darkViolet">{registrationType === 'employer' ? empEmail : email}</span>) तपासा आणि तुमचे खाते सक्रिय करण्यासाठी ईमेल मधील दुव्यावर (Link) क्लिक करा.
-                    <br />
-                    <span className="text-[11px] text-slate-500 font-medium mt-1 block">
-                      Please check your registered main email ID (<span className="font-semibold text-theme-darkViolet">{registrationType === 'employer' ? empEmail : email}</span>) and click the activation link in the email to activate your account.
-                    </span>
+                  <p className="text-sm text-slate-700 leading-normal">
+                    {t('reg.success.emailPrefix')}<span className="font-semibold text-theme-darkViolet">{registrationType === 'employer' ? empEmail : email}</span>{t('reg.success.emailSuffix')}
                   </p>
                 </div>
 
@@ -501,13 +512,13 @@ export default function Register() {
                     to="/login"
                     className="btn-gloss flex-1 inline-flex items-center justify-center gap-2 bg-theme-lavender hover:bg-theme-lavender/90 text-white font-bold text-xs px-6 py-3 rounded-xl transition-all shadow-md active:scale-98"
                   >
-                    लॉगिन पृष्ठावर जा / Go to Login Page
+                    {t('reg.btn.goToLogin')}
                   </Link>
                   <Link
                     to="/"
                     className="flex-1 inline-flex items-center justify-center gap-2 bg-white border border-theme-lightViolet/80 hover:bg-theme-lightViolet/30 text-slate-700 font-bold text-xs px-6 py-3 rounded-xl transition-all active:scale-98"
                   >
-                    मुख्यपृष्ठ / Home
+                    {t('reg.btn.home')}
                   </Link>
                 </div>
               </div>
@@ -528,8 +539,7 @@ export default function Register() {
                   >
                     <User className="w-4 h-4" />
                     <div className="flex flex-col text-left">
-                      <span className="leading-tight text-[11px] block font-extrabold">नोकरी शोधक नोंदणी</span>
-                      <span className="text-[9px] opacity-75 font-bold block">Job Seeker</span>
+                      <span className="leading-tight text-[11px] block font-extrabold">{t('reg.tab.jobSeeker')}</span>
                     </div>
                   </button>
                   <button
@@ -545,67 +555,42 @@ export default function Register() {
                   >
                     <Building className="w-4 h-4" />
                     <div className="flex flex-col text-left">
-                      <span className="leading-tight text-[11px] block font-extrabold">नियोक्ता / उद्योजक</span>
-                      <span className="text-[9px] opacity-75 font-bold block">Employer</span>
+                      <span className="leading-tight text-[11px] block font-extrabold">{t('reg.tab.employer')}</span>
                     </div>
                   </button>
                 </div>
 
               {registrationType === 'employer' ? (
                 <form className="space-y-6" onSubmit={handleEmployerSubmit}>
-                  {errorText && <Alert type="danger" message={errorText} />}
-
                   {/* Step Title */}
                   <div className="border-b border-theme-lightViolet/60 pb-3 text-left">
                     <h3 className="text-xs sm:text-sm font-black text-theme-darkViolet uppercase tracking-wide flex items-center gap-2">
                       <Building className="w-4 h-4 text-theme-lavender" />
-                      <span>नियोक्ता नोंदणी माहिती / Employer Registration Details</span>
+                      <span>{t('reg.heading.employerRegistrationDetails')}</span>
                     </h3>
                   </div>
 
-                  {/* Row 1: Company Name & Mobile */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="text-left">
-                      <label className="block text-xs font-bold text-theme-darkViolet mb-1.5 flex items-center gap-1">
-                        <Building className="w-3.5 h-3.5 text-theme-lavender" />
-                        <span>कंपनीचे नाव / Company Full Name *</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="उदा. टाटा कन्सल्टन्सी सर्व्हिसेस / E.g. Tata Consultancy Services"
-                        className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['empFullName']
-                            ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
-                            : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
-                          }`}
-                        value={empFullName}
-                        onChange={(e) => {
-                          setEmpFullName(e.target.value);
-                          clearError('empFullName');
-                        }}
-                        maxLength={150}
-                      />
-                    </div>
-
-                    <div className="text-left">
-                      <label className="block text-xs font-bold text-theme-darkViolet mb-1.5 flex items-center gap-1">
-                        <Phone className="w-3.5 h-3.5 text-theme-lavender" />
-                        <span>मोबाईल नंबर / Mobile Number (10 Digits) *</span>
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="उदा. 9876543210"
-                        className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['empMobile']
-                            ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
-                            : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
-                          }`}
-                        value={empMobile}
-                        onChange={(e) => {
-                          setEmpMobile(e.target.value);
-                          clearError('empMobile');
-                        }}
-                        maxLength={10}
-                      />
-                    </div>
+                  {/* Row 1: Company Name */}
+                  <div className="text-left">
+                    <label className="block text-xs font-bold text-theme-darkViolet mb-1.5 flex items-center gap-1">
+                      <Building className="w-3.5 h-3.5 text-theme-lavender" />
+                      <span>{t('reg.form.companyFullName')}</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={t('reg.form.companyFullNamePlaceholder')}
+                      className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['empFullName']
+                          ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                          : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
+                        }`}
+                      value={empFullName}
+                      onChange={(e) => {
+                        setEmpFullName(e.target.value);
+                        clearError('empFullName');
+                      }}
+                      maxLength={150}
+                    />
+                    <FieldError message={fieldErrors['empFullName']} />
                   </div>
 
                   {/* Row 2: Address & Main Email */}
@@ -613,12 +598,12 @@ export default function Register() {
                     <div className="text-left">
                       <label className="block text-xs font-bold text-theme-darkViolet mb-1.5 flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5 text-theme-lavender" />
-                        <span>पत्ता / Address *</span>
+                        <span>{t('reg.form.address')}</span>
                       </label>
-                      <input
-                        type="text"
-                        placeholder="उदा. प्लॉट नं. १२, एमआयडीसी, नाशिक / E.g. Plot No 12, MIDC, Nashik"
-                        className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['empAddress']
+                      <textarea
+                        rows={2}
+                        placeholder={t('reg.form.addressPlaceholder')}
+                        className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium resize-y ${invalidFields['empAddress']
                             ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
                             : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
                           }`}
@@ -629,16 +614,17 @@ export default function Register() {
                         }}
                         maxLength={200}
                       />
+                      <FieldError message={fieldErrors['empAddress']} />
                     </div>
 
                     <div className="text-left">
                       <label className="block text-xs font-bold text-theme-darkViolet mb-1.5 flex items-center gap-1">
                         <Mail className="w-3.5 h-3.5 text-theme-lavender" />
-                        <span>मुख्य ईमेल आयडी / Main Email Address *</span>
+                        <span>{t('reg.form.mainEmail')}</span>
                       </label>
                       <input
                         type="email"
-                        placeholder="उदा. hr@company.com"
+                        placeholder={t('reg.form.mainEmailPlaceholder')}
                         className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['empEmail']
                             ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
                             : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
@@ -650,6 +636,7 @@ export default function Register() {
                         }}
                         maxLength={100}
                       />
+                      <FieldError message={fieldErrors['empEmail']} />
                     </div>
                   </div>
 
@@ -657,12 +644,12 @@ export default function Register() {
                   <div className="bg-theme-cream/80 border border-theme-lightViolet/80 rounded-2xl p-4 sm:p-5 space-y-4">
                     <h4 className="text-xs font-black text-theme-darkViolet uppercase tracking-wider flex items-center gap-1.5 text-left border-b border-theme-lightViolet/60 pb-2">
                       <MapPin className="w-4 h-4 text-theme-lavender" />
-                      <span>स्थान माहिती / Location Details *</span>
+                      <span>{t('reg.heading.locationDetailsRequired')}</span>
                     </h4>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="text-left">
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">१. राज्य / State *</label>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">{t('reg.form.empState')}</label>
                         <select
                           className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-slate-800 font-bold ${invalidFields['empStateId']
                               ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
@@ -677,16 +664,16 @@ export default function Register() {
                           }}
                           disabled={isLoadingStates}
                         >
-                          <option value="0">--- राज्य निवडा / State ---</option>
+                          <option value="0">{t('reg.option.state')}</option>
                           {states.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
+                            <option key={s.id} value={s.id}>{getLocalizedName(s)}</option>
                           ))}
                         </select>
                       </div>
 
                       <div className="text-left">
                         <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          २. जिल्हा / District * {isLoadingEmpDistricts && <span className="text-[9px] text-theme-lavender">(...)</span>}
+                          {t('reg.form.empDistrict')} {isLoadingEmpDistricts && <span className="text-[9px] text-theme-lavender">(...)</span>}
                         </label>
                         <select
                           className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-slate-800 font-bold ${invalidFields['empDistrictId']
@@ -701,16 +688,16 @@ export default function Register() {
                           }}
                           disabled={!empStateId || isLoadingEmpDistricts}
                         >
-                          <option value="0">--- जिल्हा निवडा / District ---</option>
+                          <option value="0">{t('reg.option.selectDistrict')}</option>
                           {empDistricts.map(d => (
-                            <option key={d.id} value={d.id}>{d.name}</option>
+                            <option key={d.id} value={d.id}>{getLocalizedName(d)}</option>
                           ))}
                         </select>
                       </div>
 
                       <div className="text-left">
                         <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          ३. तालुका / Taluka * {isLoadingEmpTalukas && <span className="text-[9px] text-theme-lavender">(...)</span>}
+                          {t('reg.form.empTaluka')} {isLoadingEmpTalukas && <span className="text-[9px] text-theme-lavender">(...)</span>}
                         </label>
                         <select
                           className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-slate-800 font-bold ${invalidFields['empTalukaId']
@@ -724,9 +711,9 @@ export default function Register() {
                           }}
                           disabled={!empDistrictId || isLoadingEmpTalukas}
                         >
-                          <option value="0">--- तालुका निवडा / Taluka ---</option>
+                          <option value="0">{t('reg.option.selectTaluka')}</option>
                           {empTalukas.map(t => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
+                            <option key={t.id} value={t.id}>{getLocalizedName(t)}</option>
                           ))}
                         </select>
                       </div>
@@ -737,15 +724,15 @@ export default function Register() {
                   <div className="bg-theme-lightViolet/20 border border-theme-lightViolet/80 rounded-2xl p-4 sm:p-5 space-y-4">
                     <h4 className="text-xs font-black text-theme-darkViolet uppercase tracking-wider flex items-center gap-1.5 text-left border-b border-theme-lightViolet/60 pb-2">
                       <User className="w-4 h-4 text-theme-lavender" />
-                      <span>संपर्क अधिकारी माहिती / Contact Person Details *</span>
+                      <span>{t('reg.heading.contactPersonDetails')}</span>
                     </h4>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="text-left">
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">१. मुख्य संपर्क व्यक्ती / Contact Person *</label>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">{t('reg.form.empContactPerson')}</label>
                         <input
                           type="text"
-                          placeholder="उदा. राहुल शर्मा / Rahul Sharma"
+                          placeholder={t('reg.form.contactPersonPlaceholder')}
                           className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['empContactPerson']
                               ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
                               : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
@@ -757,13 +744,33 @@ export default function Register() {
                           }}
                           maxLength={100}
                         />
+                        <FieldError message={fieldErrors['empContactPerson']} />
                       </div>
 
                       <div className="text-left">
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">२. पर्यायी संपर्क व्यक्ती / Alt Contact Person *</label>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">{t('reg.form.contactMobile')}</label>
+                        <input
+                          type="tel"
+                          placeholder={t('reg.form.contactMobilePlaceholder')}
+                          className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['empMobile']
+                              ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
+                              : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
+                            }`}
+                          value={empMobile}
+                          onChange={(e) => {
+                            setEmpMobile(e.target.value);
+                            clearError('empMobile');
+                          }}
+                          maxLength={10}
+                        />
+                        <FieldError message={fieldErrors['empMobile']} />
+                      </div>
+
+                      <div className="text-left">
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">{t('reg.form.empAltContactPerson')}</label>
                         <input
                           type="text"
-                          placeholder="उदा. अमित पाटील / Amit Patil"
+                          placeholder={t('reg.form.altContactPersonPlaceholder')}
                           className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['empAlternateContactPerson']
                               ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
                               : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
@@ -778,10 +785,10 @@ export default function Register() {
                       </div>
 
                       <div className="text-left">
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">३. पर्यायी संपर्क क्रमांक / Alt Mobile (10 Digits) *</label>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">{t('reg.form.empAltMobile')}</label>
                         <input
                           type="tel"
-                          placeholder="उदा. 9123456789"
+                          placeholder={t('reg.form.altMobilePlaceholder')}
                           className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['empAlternateContactNumber']
                               ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
                               : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
@@ -802,7 +809,7 @@ export default function Register() {
                     <div>
                       <label className="block text-xs font-bold text-theme-darkViolet mb-1.5 flex items-center gap-1">
                         <Layers className="w-3.5 h-3.5 text-theme-lavender" />
-                        <span>कंपनी प्रकार / Company Type *</span>
+                        <span>{t('reg.form.companyType')}</span>
                       </label>
                       <select
                         className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-bold ${invalidFields['empCompanyTypeId']
@@ -815,19 +822,19 @@ export default function Register() {
                           clearError('empCompanyTypeId');
                         }}
                       >
-                        <option value="1">खाजगी मर्यादित / Private Limited</option>
-                        <option value="2">भागीदारी / Partnership</option>
-                        <option value="3">एकल मालकी / Proprietorship</option>
-                        <option value="4">सार्वजनिक मर्यादित / Public Limited</option>
-                        <option value="5">सहकारी संस्था / Co-operative</option>
-                        <option value="6">इतर / Other</option>
+                        <option value="1">{t('reg.option.privateLimited')}</option>
+                        <option value="2">{t('reg.option.partnership')}</option>
+                        <option value="3">{t('reg.option.proprietorship')}</option>
+                        <option value="4">{t('reg.option.publicLimited')}</option>
+                        <option value="5">{t('reg.option.cooperative')}</option>
+                        <option value="6">{t('reg.option.other')}</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-theme-darkViolet mb-1.5 flex items-center gap-1">
                         <Layers className="w-3.5 h-3.5 text-theme-lavender" />
-                        <span>उद्योग प्रकार / Industry Type *</span>
+                        <span>{t('reg.form.industryType')}</span>
                       </label>
                       <select
                         className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-bold ${invalidFields['empIndustryTypeId']
@@ -840,13 +847,13 @@ export default function Register() {
                           clearError('empIndustryTypeId');
                         }}
                       >
-                        <option value="1">माहिती तंत्रज्ञान / Information Technology (IT)</option>
-                        <option value="2">उत्पादन आणि अभियांत्रिकी / Manufacturing & Engineering</option>
-                        <option value="3">किरकोळ आणि विपणन / Retail & Sales</option>
-                        <option value="4">शिक्षण आणि प्रशिक्षण / Education & Training</option>
-                        <option value="5">आरोग्य सेवा / Healthcare</option>
-                        <option value="6">बांधकाम आणि पायाभूत सुविधा / Construction & Infrastructure</option>
-                        <option value="7">इतर / Other</option>
+                        <option value="1">{t('reg.option.informationTechnology')}</option>
+                        <option value="2">{t('reg.option.manufacturingEngineering')}</option>
+                        <option value="3">{t('reg.option.retailSales')}</option>
+                        <option value="4">{t('reg.option.educationTraining')}</option>
+                        <option value="5">{t('reg.option.healthcare')}</option>
+                        <option value="6">{t('reg.option.constructionInfrastructure')}</option>
+                        <option value="7">{t('reg.option.other')}</option>
                       </select>
                     </div>
                   </div>
@@ -856,11 +863,11 @@ export default function Register() {
                     <div className="text-left">
                       <label className="block text-xs font-bold text-theme-darkViolet mb-1.5 flex items-center gap-1">
                         <Globe className="w-3.5 h-3.5 text-theme-lavender" />
-                        <span>कंपनी वेबसाईट / Company Website *</span>
+                        <span>{t('reg.form.companyWebsite')}</span>
                       </label>
                       <input
                         type="text"
-                        placeholder="उदा. www.company.com"
+                        placeholder={t('reg.form.websitePlaceholder')}
                         className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['empWebsite']
                             ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
                             : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
@@ -877,11 +884,11 @@ export default function Register() {
                     <div className="text-left">
                       <label className="block text-xs font-bold text-theme-darkViolet mb-1.5 flex items-center gap-1">
                         <Mail className="w-3.5 h-3.5 text-theme-lavender" />
-                        <span>पर्यायी ईमेल आयडी / Alternate Email Address *</span>
+                        <span>{t('reg.form.alternateEmail')}</span>
                       </label>
                       <input
                         type="email"
-                        placeholder="उदा. support@company.com"
+                        placeholder={t('reg.form.altEmailPlaceholder')}
                         className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['empAlternateEmail']
                             ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
                             : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
@@ -899,10 +906,10 @@ export default function Register() {
                   {/* Company Description */}
                   <div className="text-left">
                     <label className="block text-xs font-bold text-theme-darkViolet mb-1.5">
-                      कंपनीचे संक्षिप्त वर्णन / Company Description *
+                      {t('reg.form.companyDescription')}
                     </label>
                     <textarea
-                      placeholder="उदा. आमच्याकडे विविध तांत्रिक व सेवा क्षेत्रामध्ये रोजगाराच्या उत्तम संधी उपलब्ध आहेत. / Brief description about company profile..."
+                      placeholder={t('reg.form.companyDescriptionPlaceholder')}
                       rows={3}
                       className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['empDescription']
                           ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
@@ -931,23 +938,15 @@ export default function Register() {
                         }`}
                     />
                     <label htmlFor="IsTnCCheckedEmp" className="text-xs font-semibold text-slate-700 leading-snug select-none">
-                      मी सहमत आहे की वरील सर्व तपशील माझ्या सर्वोत्तम माहितीनुसार खरे आणि अचूक आहेत आणि मी{' '}
+                      {t('reg.tc.agreePrefix')}{' '}
                       <button
                         type="button"
                         onClick={() => setIsOpenEula(true)}
                         className="text-theme-lavender font-bold hover:underline inline focus:outline-none cursor-pointer"
                       >
-                        अटी आणि शर्ती (Terms and Conditions / Privacy Notice)
-                      </button>{' '}
-                      मान्य करतो/करते. / I agree that all details are accurate and I accept the{' '}
-                      <button
-                        type="button"
-                        onClick={() => setIsOpenEula(true)}
-                        className="text-theme-lavender font-bold hover:underline inline focus:outline-none cursor-pointer"
-                      >
-                        Terms and Conditions / Privacy Notice
+                        {t('reg.tc.link')}
                       </button>
-                      . *
+                      {t('reg.tc.agreeSuffix')}
                     </label>
                   </div>
 
@@ -956,31 +955,35 @@ export default function Register() {
                     disabled={isCompanyRegistering}
                     className="btn-gloss w-full py-3.5 px-6 rounded-xl bg-theme-lavender hover:bg-theme-lavender/90 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    {isCompanyRegistering ? 'नोंदणी प्रक्रिया सुरू आहे...' : 'नोंदणी पूर्ण करा / Submit Employer Registration'}
+                    {isCompanyRegistering ? t('reg.btn.submitting') : t('reg.btn.submitEmployer')}
                   </button>
+
+                  {errorText && (
+                        <div tabIndex={-1} data-error-banner className="outline-none">
+                          <Alert type="danger" message={errorText} />
+                        </div>
+                      )}
                 </form>
               ) : (
                 <>
                   <div className="border-b border-theme-lightViolet/60 pb-3 text-left">
                     <h3 className="text-xs sm:text-sm font-black text-theme-darkViolet uppercase tracking-wide flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-theme-deepTeal" />
-                      <span>पायरी १: आपली माहिती भरा / Step 1: Complete Seva Portal Profile Details</span>
+                      <User className="w-4 h-4 text-theme-lavender" />
+                      <span>{t('reg.heading.step1')}</span>
                     </h3>
                   </div>
 
                   <form className="space-y-6" onSubmit={handleRegisterSubmit}>
-                    {errorText && <Alert type="danger" message={errorText} />}
-
                     {/* Grid 1: Basic Information */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="text-left">
                         <label className="block text-xs font-bold text-theme-darkViolet mb-1.5 flex items-center gap-1">
                           <User className="w-3.5 h-3.5 text-theme-lavender" />
-                          <span>पूर्ण नाव / Full Name *</span>
+                          <span>{t('reg.form.fullName')}</span>
                         </label>
                         <input
                           type="text"
-                          placeholder="उदा. राजेश रमेश पाटील / E.g. Rajesh Patil"
+                          placeholder={t('reg.form.fullNamePlaceholder')}
                           className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['name']
                               ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
                               : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
@@ -992,16 +995,17 @@ export default function Register() {
                           }}
                           maxLength={100}
                         />
+                        <FieldError message={fieldErrors['name']} />
                       </div>
 
                       <div className="text-left">
                         <label className="block text-xs font-bold text-theme-darkViolet mb-1.5 flex items-center gap-1">
                           <Phone className="w-3.5 h-3.5 text-theme-lavender" />
-                          <span>मोबाईल नंबर / Mobile Number *</span>
+                          <span>{t('reg.form.mobileNumber')}</span>
                         </label>
                         <input
                           type="tel"
-                          placeholder="उदा. 9876543210"
+                          placeholder={t('reg.form.mobilePlaceholder')}
                           className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['phone']
                               ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
                               : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
@@ -1013,6 +1017,7 @@ export default function Register() {
                           }}
                           maxLength={15}
                         />
+                        <FieldError message={fieldErrors['phone']} />
                       </div>
                     </div>
 
@@ -1020,11 +1025,11 @@ export default function Register() {
                       <div className="text-left">
                         <label className="block text-xs font-bold text-theme-darkViolet mb-1.5 flex items-center gap-1">
                           <Mail className="w-3.5 h-3.5 text-theme-lavender" />
-                          <span>ईमेल आयडी / Email Address (पर्यायी / Optional)</span>
+                          <span>{t('reg.form.emailOptional')}</span>
                         </label>
                         <input
                           type="text"
-                          placeholder="उदा. name@domain.com"
+                          placeholder={t('reg.form.emailPlaceholder')}
                           className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-medium ${invalidFields['email']
                               ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
                               : 'border-theme-lightViolet/80 focus:border-theme-lavender focus:ring-theme-lavender/20'
@@ -1036,36 +1041,38 @@ export default function Register() {
                           }}
                           maxLength={100}
                         />
-                        <p className="text-[10px] text-slate-500 mt-1">रिकामे सोडू शकता. जर प्रविष्ट केले तर वैध ईमेल असावे.</p>
+                        <FieldError message={fieldErrors['email']} />
+                        <p className="text-[10px] text-slate-500 mt-1">{t('reg.form.emailOptionalHelper')}</p>
                       </div>
 
                       <div className="text-left">
                         <label className="block text-xs font-bold text-theme-darkViolet mb-1.5">
-                          लिंग / Gender *
+                          {t('reg.form.gender')}
                         </label>
-                        <div className="flex gap-4 pt-1">
-                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 bg-white hover:bg-theme-lightViolet/30 px-4 py-2.5 rounded-xl border border-theme-lightViolet/80 flex-1 transition-colors">
-                            <input
-                              type="radio"
-                              name="gender"
-                              value="M"
-                              checked={gender === 'M'}
-                              onChange={() => setGender('M')}
-                              className="accent-theme-lavender scale-110"
-                            />
-                            <span>पुरुष / Male</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 bg-white hover:bg-theme-lightViolet/30 px-4 py-2.5 rounded-xl border border-theme-lightViolet/80 flex-1 transition-colors">
-                            <input
-                              type="radio"
-                              name="gender"
-                              value="F"
-                              checked={gender === 'F'}
-                              onChange={() => setGender('F')}
-                              className="accent-theme-lavender scale-110"
-                            />
-                            <span>महिला / Female</span>
-                          </label>
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          {(
+                            [
+                              { value: 'M', labelKey: 'reg.option.male' },
+                              { value: 'F', labelKey: 'reg.option.female' },
+                              { value: 'O', labelKey: 'reg.option.otherGender' },
+                              { value: 'N', labelKey: 'reg.option.preferNotToSay' },
+                            ] as const
+                          ).map((opt) => (
+                            <label
+                              key={opt.value}
+                              className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 bg-white hover:bg-theme-lightViolet/30 px-3 py-2.5 rounded-xl border border-theme-lightViolet/80 transition-colors"
+                            >
+                              <input
+                                type="radio"
+                                name="gender"
+                                value={opt.value}
+                                checked={gender === opt.value}
+                                onChange={() => setGender(opt.value)}
+                                className="accent-theme-lavender scale-110"
+                              />
+                              <span className="truncate">{t(opt.labelKey)}</span>
+                            </label>
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -1074,12 +1081,12 @@ export default function Register() {
                     <div className="bg-theme-cream/80 border border-theme-lightViolet/80 rounded-2xl p-4 sm:p-5 space-y-4">
                       <h4 className="text-xs font-black text-theme-darkViolet uppercase tracking-wider flex items-center gap-1.5 text-left border-b border-theme-lightViolet/60 pb-2">
                         <MapPin className="w-4 h-4 text-theme-lavender" />
-                        <span>स्थान माहिती / Location Details</span>
+                        <span>{t('reg.heading.locationDetails')}</span>
                       </h4>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="text-left">
-                          <label className="block text-[11px] font-bold text-slate-700 mb-1">१. देश / Country *</label>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">{t('reg.form.country')}</label>
                           <select
                             className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-slate-800 font-bold ${invalidFields['countryId']
                                 ? 'border-red-500 focus:ring-red-200 ring-2 ring-red-105'
@@ -1096,7 +1103,7 @@ export default function Register() {
                             }}
                             disabled={isLoadingCountries}
                           >
-                            <option value="0">--- देश निवडा / Select Country ---</option>
+                            <option value="0">{t('reg.option.selectCountry')}</option>
                             {countries.map(c => (
                               <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
@@ -1105,7 +1112,7 @@ export default function Register() {
 
                         <div className="text-left">
                           <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                            २. राज्य / State * {isLoadingStates && <span className="text-[9px] text-theme-lavender">(Loading...)</span>}
+                            {t('reg.form.state')} {isLoadingStates && <span className="text-[9px] text-theme-lavender">(Loading...)</span>}
                           </label>
                           <select
                             className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-slate-800 font-bold ${invalidFields['stateId']
@@ -1122,9 +1129,9 @@ export default function Register() {
                             }}
                             disabled={!countryId || isLoadingStates}
                           >
-                            <option value="0">--- राज्य निवडा / Select State ---</option>
+                            <option value="0">{t('reg.option.selectState')}</option>
                             {states.map(s => (
-                              <option key={s.id} value={s.id}>{s.name}</option>
+                              <option key={s.id} value={s.id}>{getLocalizedName(s)}</option>
                             ))}
                           </select>
                         </div>
@@ -1133,7 +1140,7 @@ export default function Register() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="text-left">
                           <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                            ३. जिल्हा / District * {isLoadingDistricts && <span className="text-[9px] text-theme-lavender">(...)</span>}
+                            {t('reg.form.district')} {isLoadingDistricts && <span className="text-[9px] text-theme-lavender">(...)</span>}
                           </label>
                           <select
                             className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-slate-800 font-bold ${invalidFields['districtId']
@@ -1148,16 +1155,16 @@ export default function Register() {
                             }}
                             disabled={!stateId || isLoadingDistricts}
                           >
-                            <option value="0">--- जिल्हा निवडा / District ---</option>
+                          <option value="0">{t('reg.option.selectDistrict')}</option>
                             {districts.map(d => (
-                              <option key={d.id} value={d.id}>{d.name}</option>
+                              <option key={d.id} value={d.id}>{getLocalizedName(d)}</option>
                             ))}
                           </select>
                         </div>
 
                         <div className="text-left">
                           <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                            ४. तालुका / Taluka * {isLoadingTalukas && <span className="text-[9px] text-theme-lavender">(...)</span>}
+                            {t('reg.form.taluka')} {isLoadingTalukas && <span className="text-[9px] text-theme-lavender">(...)</span>}
                           </label>
                           <select
                             className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-slate-800 font-bold ${invalidFields['talukaId']
@@ -1171,9 +1178,9 @@ export default function Register() {
                             }}
                             disabled={!districtId || isLoadingTalukas}
                           >
-                            <option value="0">--- तालुका निवडा / Taluka ---</option>
+                          <option value="0">{t('reg.option.selectTaluka')}</option>
                             {talukas.map(t => (
-                              <option key={t.id} value={t.id}>{t.name}</option>
+                              <option key={t.id} value={t.id}>{getLocalizedName(t)}</option>
                             ))}
                           </select>
                         </div>
@@ -1184,13 +1191,13 @@ export default function Register() {
                     <div className="bg-theme-lightViolet/20 border border-theme-lightViolet/80 rounded-2xl p-4 sm:p-5 space-y-4">
                       <h4 className="text-xs font-black text-theme-darkViolet uppercase tracking-wider flex items-center gap-1.5 text-left border-b border-theme-lightViolet/60 pb-2">
                         <Award className="w-4 h-4 text-theme-deepTeal" />
-                        <span>शिक्षण आणि अनुभव माहिती / Education & Work Experience *</span>
+                        <span>{t('reg.heading.educationExperience')}</span>
                       </h4>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="text-left">
                           <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                            १. सर्वोच्च शिक्षण पात्रता / Educational Detail * {isLoadingEducations && <span className="text-[9px] text-theme-deepTeal">(...)</span>}
+                            {t('reg.form.education')} {isLoadingEducations && <span className="text-[9px] text-theme-deepTeal">(...)</span>}
                           </label>
                           <select
                             className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-slate-800 font-bold ${invalidFields['educationId']
@@ -1205,7 +1212,7 @@ export default function Register() {
                             }}
                             disabled={isLoadingEducations}
                           >
-                            <option value="0">--- शिक्षण निवडा / Educational Detail ---</option>
+                            <option value="0">{t('reg.option.selectEducation')}</option>
                             {educations.map(e => (
                               <option key={e.id} value={e.id}>{e.name}</option>
                             ))}
@@ -1214,7 +1221,7 @@ export default function Register() {
 
                         <div className="text-left">
                           <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                            २. उप-शिक्षण क्षेत्र / Specialization Course * {isLoadingSubEducations && <span className="text-[9px] text-theme-deepTeal">(...)</span>}
+                            {t('reg.form.specialization')} {isLoadingSubEducations && <span className="text-[9px] text-theme-deepTeal">(...)</span>}
                           </label>
                           <select
                             className={`w-full text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all disabled:opacity-60 text-slate-800 font-bold ${invalidFields['subEducationId']
@@ -1228,7 +1235,7 @@ export default function Register() {
                             }}
                             disabled={!educationId || isLoadingSubEducations}
                           >
-                            <option value="0">--- उप-प्रकार निवडा / Specialization ---</option>
+                            <option value="0">{t('reg.option.selectSpecialization')}</option>
                             {subEducations.map(se => (
                               <option key={se.id} value={se.id}>{se.name}</option>
                             ))}
@@ -1238,11 +1245,11 @@ export default function Register() {
 
                       <div className="text-left">
                         <label className="block text-xs font-bold text-theme-darkViolet mb-1.5">
-                          एकूण कामाचा अनुभव (वर्षे) / Experience (Years) *
+                          {t('reg.form.experience')}
                         </label>
                         <input
                           type="number"
-                          placeholder="उदा. 0 (नवीन असल्यास ० टाका) / E.g. 2"
+                          placeholder={t('reg.form.experiencePlaceholder')}
                           min="0"
                           max="60"
                           className={`w-full sm:w-1/2 text-xs p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 transition-all text-slate-800 font-bold ${invalidFields['experience']
@@ -1255,7 +1262,7 @@ export default function Register() {
                             clearError('experience');
                           }}
                         />
-                        <p className="text-[10px] text-slate-500 mt-1">नवीन उमेदवारांसाठी 0 भरा / Enter 0 if fresher</p>
+                        <p className="text-[10px] text-slate-500 mt-1">{t('reg.form.experienceFresherHelper')}</p>
                       </div>
                     </div>
 
@@ -1273,23 +1280,15 @@ export default function Register() {
                           }`}
                       />
                       <label htmlFor="IsTnCChecked" className="text-xs font-semibold text-slate-700 leading-snug select-none">
-                        मी सहमत आहे की वरील सर्व तपशील माझ्या सर्वोत्तम माहितीनुसार खरे आणि अचूक आहेत आणि मी{' '}
+                        {t('reg.tc.agreePrefix')}{' '}
                         <button
                           type="button"
                           onClick={() => setIsOpenEula(true)}
                           className="text-theme-lavender font-bold hover:underline inline focus:outline-none cursor-pointer"
                         >
-                          अटी आणि शर्ती (Terms and Conditions / Privacy Notice)
-                        </button>{' '}
-                        मान्य करतो/करते. / I agree that all details are accurate and I accept the{' '}
-                        <button
-                          type="button"
-                          onClick={() => setIsOpenEula(true)}
-                          className="text-theme-lavender font-bold hover:underline inline focus:outline-none cursor-pointer"
-                        >
-                          Terms and Conditions / Privacy Notice
+                          {t('reg.tc.link')}
                         </button>
-                        . *
+                        {t('reg.tc.agreeSuffix')}
                       </label>
                     </div>
 
@@ -1298,19 +1297,27 @@ export default function Register() {
                       disabled={isRegistering}
                       className="btn-gloss w-full py-3.5 px-6 rounded-xl bg-theme-lavender hover:bg-theme-lavender/90 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      {isRegistering ? 'नोंदणी प्रक्रिया सुरू आहे...' : (t('auth.submitRegister') || 'नोंदणी पूर्ण करा / Submit Registration')}
+                      {isRegistering ? t('reg.btn.submitting') : t('reg.btn.submitRegistration')}
                     </button>
+
+                    {errorText && (
+                        <div tabIndex={-1} data-error-banner className="outline-none">
+                          <Alert type="danger" message={errorText} />
+                        </div>
+                      )}
                   </form>
                 </>
               )}
             </>
           )}
 
-          <div className="text-center text-xs font-semibold text-slate-500 border-t border-theme-lightViolet/60 pt-4 cursor-pointer">
-            <Link to="/login" className="text-theme-lavender hover:underline font-bold">
-              आधीच खाते आहे? लॉगिन करा / {t('auth.hasAccount') || 'Already have an account? Login here'}
-            </Link>
-          </div>
+          {!isRegisteredSuccess && (
+            <div className="text-center text-xs font-semibold text-slate-500 border-t border-theme-lightViolet/60 pt-4 cursor-pointer">
+              <Link to="/login" className="text-theme-lavender hover:underline font-bold">
+                {t('reg.haveAccount')}
+              </Link>
+            </div>
+          )}
         </div>
       </div>
       </main>
@@ -1324,7 +1331,7 @@ export default function Register() {
             <div className="p-5 border-b border-theme-lightViolet/60 bg-linear-to-r from-theme-lightViolet/60 to-theme-cream flex justify-between items-center">
               <h3 className="font-bold text-theme-darkViolet text-sm sm:text-base flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-theme-lavender animate-pulse"></span>
-                अटी आणि शर्ती आणि गोपनीयता सूचना / Terms & Privacy Notice
+                {t('reg.heading.termsPrivacyNotice')}
               </h3>
               <button
                 type="button"
@@ -1340,7 +1347,7 @@ export default function Register() {
             <div className="p-6 overflow-y-auto space-y-4 text-left text-xs text-slate-600 leading-relaxed max-h-[50vh]">
               <div className="p-4 bg-theme-lightViolet/30 border border-theme-lightViolet/60 rounded-xl space-y-3 font-medium">
                 <p className="text-theme-darkViolet font-bold text-xs uppercase tracking-wider mb-1">
-                  महत्वाची गोपनीयता संमती / Privacy Content Notice:
+                  {t('reg.heading.privacyContentNotice')}
                 </p>
                 <p className="text-slate-700 italic font-bold">
                   "I further acknowledge that I have read and understand this Privacy Notice by checking the box.
@@ -1352,20 +1359,20 @@ export default function Register() {
 
               <div className="border-t border-theme-lightViolet/50 pt-3 space-y-2">
                 <p className="font-extrabold text-theme-darkViolet text-xs">
-                  मराठी भाषांतर / Marathi Translation:
+                  {t('reg.heading.marathiTranslation')}
                 </p>
                 <p className="text-slate-600">
-                  "मी याद्वारे मान्य करतो/करते की मी ही गोपनीयता नोटीस वाचली आहे आणि समजली आहे.
+                  {t('reg.consent.accuracy')}
                 </p>
                 <p className="text-slate-600 leading-normal">
-                  मी वरील नमूद केलेल्या पद्धतीने माझ्या माहितीच्या प्रक्रियेस सहमत आहे आणि माझ्या नोकरीच्या अर्जाच्या संदर्भात ईमेल, दूरध्वनी आणि एसएमएस द्वारे संप्रेषण करण्यासाठी कंपनीला माझ्या वैयक्तिक माहितीचा वापर करण्यास संमती देत आहे."
+                  {t('reg.consent.consent')}
                 </p>
               </div>
 
               <div className="border-t border-theme-lightViolet/50 pt-3 space-y-2 text-[11px] text-slate-500">
-                <h5 className="font-bold text-slate-700">१. माहिती संकलन आणि माहिती सुरक्षा / Information Collection & Security</h5>
+                <h5 className="font-bold text-slate-700">{t('reg.heading.infoCollectionSecurity')}</h5>
                 <p>
-                  आम्ही संकलित केलेली माहिती केवळ जॉब प्लेसमेंट, करिअर कौन्सिलिंग आणि कौशल्य वृद्धी उपक्रमांसाठी वापरली जाईल. आपली सर्व वैयक्तिक माहिती पूर्णपणे सुरक्षित ठेवली जाईल आणि अनधिकृत व्यक्तींसोबत सामायिक केली जाणार नाही.
+                  {t('reg.consent.privacy')}
                 </p>
                 <p>
                   All personal data including Contact information, Qualification details, and Placement history are governed by stringent confidentiality guidelines of Shri Swami Samarth Seva Marg recruitment portal.
@@ -1380,7 +1387,7 @@ export default function Register() {
                 onClick={() => setIsOpenEula(false)}
                 className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-theme-lightViolet/80 rounded-xl text-xs font-bold transition-colors cursor-pointer"
               >
-                रद्द करा / Cancel
+                {t('reg.btn.cancel')}
               </button>
               <button
                 type="button"
@@ -1390,7 +1397,7 @@ export default function Register() {
                 }}
                 className="btn-gloss px-5 py-2 bg-theme-lavender hover:bg-theme-lavender/90 text-white rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer"
               >
-                मी वाचले आणि सहमत आहे / I Have Read & Agree
+                {t('reg.btn.readAgree')}
               </button>
             </div>
 

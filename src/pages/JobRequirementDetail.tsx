@@ -14,9 +14,7 @@ import { ArrowLeft } from 'lucide-react';
 export function JobRequirementDetail() {
   const { requirementId } = useParams<{ requirementId: string }>();
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
-  const isMr = i18n.language === 'mr';
-  const L = (en: string, mr: string) => (isMr ? mr : en);
+  const { t } = useTranslation();
 
   const id = Number(requirementId || 0);
 
@@ -36,7 +34,7 @@ export function JobRequirementDetail() {
           }}
           className="inline-flex items-center gap-2 text-sm font-bold text-theme-darkViolet/70 hover:text-theme-lavender transition-colors mb-6 cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" /> {L('Back to Home', 'मुख्यपृष्ठावर परत जा')}
+          <ArrowLeft className="w-4 h-4" /> {t('jobs.detail.backToHome')}
         </button>
 
         <JobRequirementDetailView requirementId={id} />

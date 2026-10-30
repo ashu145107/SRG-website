@@ -10,6 +10,7 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import {
@@ -80,11 +81,17 @@ const formatDisplayDate = (value?: string): string => {
   return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+const todayInputDate = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
   profile,
   loading = false,
   onRefresh,
 }) => {
+  const { t } = useTranslation();
   const user = useSelector((state: RootState) => state.auth.user);
   const { data: industryTypes = [] } = useGetIndustryTypesQuery();
   const { data: jobTypes = [] } = useGetJobTypesQuery();
@@ -168,8 +175,17 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
       setValidationError('Please select the start date.');
       return;
     }
+    const today = todayInputDate();
+    if (form.startDate > today) {
+      setValidationError('Start date cannot be in the future.');
+      return;
+    }
     if (!form.isCurrentJob && form.endDate && form.endDate < form.startDate) {
       setValidationError('End date cannot be before the start date.');
+      return;
+    }
+    if (!form.isCurrentJob && form.endDate && form.endDate > today) {
+      setValidationError('End date cannot be in the future.');
       return;
     }
 
@@ -287,7 +303,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
-                  <label className={labelClass}>कंपनीचे नाव / Company Name *</label>
+                  <label className={labelClass}>{t('employment.form.companyName')}</label>
                   <input
                     type="text"
                     name="companyName"
@@ -299,7 +315,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                 </div>
 
                 <div>
-                  <label className={labelClass}>पदनाम / Designation *</label>
+                  <label className={labelClass}>{t('employment.form.designation')}</label>
                   <input
                     type="text"
                     name="designation"
@@ -311,7 +327,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                 </div>
 
                 <div>
-                  <label className={labelClass}>विभाग / Department</label>
+                  <label className={labelClass}>{t('employment.form.department')}</label>
                   <input
                     type="text"
                     name="department"
@@ -323,7 +339,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                 </div>
 
                 <div>
-                  <label className={labelClass}>उद्योगाचे क्षेत्र / Industry Type</label>
+                  <label className={labelClass}>{t('employment.form.industryType')}</label>
                   <select
                     name="companyIndustryId"
                     value={form.companyIndustryId}
@@ -340,7 +356,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                 </div>
 
                 <div>
-                  <label className={labelClass}>नोकरीचा प्रकार / Job Type</label>
+                  <label className={labelClass}>{t('employment.form.jobType')}</label>
                   <select
                     name="jobTypeId"
                     value={form.jobTypeId}
@@ -357,7 +373,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                 </div>
 
                 <div>
-                  <label className={labelClass}>कामाचे ठिकाण / Job Location</label>
+                  <label className={labelClass}>{t('employment.form.jobLocation')}</label>
                   <input
                     type="text"
                     name="jobLocation"
@@ -369,22 +385,25 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                 </div>
 
                 <div>
-                  <label className={labelClass}>प्रारंभ तारीख / Start Date *</label>
+                  <label className={labelClass}>{t('employment.form.startDate')}</label>
                   <input
                     type="date"
                     name="startDate"
                     value={form.startDate}
+                    max={todayInputDate()}
                     onChange={handleChange}
                     className={`${inputClass} cursor-pointer`}
                   />
                 </div>
 
                 <div>
-                  <label className={labelClass}>शेवटची तारीख / End Date {form.isCurrentJob ? '' : '(optional)'}</label>
+                  <label className={labelClass}>{t('employment.form.endDate')} {form.isCurrentJob ? '' : t('employment.form.optional')}</label>
                   <input
                     type="date"
                     name="endDate"
                     value={form.endDate}
+                    max={todayInputDate()}
+                    min={form.startDate || undefined}
                     onChange={handleChange}
                     disabled={form.isCurrentJob}
                     className={`${inputClass} cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed`}
@@ -403,7 +422,7 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
                       onChange={handleChange}
                       className="w-4 h-4 accent-orange-600 cursor-pointer"
                     />
-                    <span className="text-xs font-bold text-slate-700">सध्या कार्यरत / This is my current job</span>
+                    <span className="text-xs font-bold text-slate-700">{t('employment.form.currentJob')}</span>
                   </label>
                 </div>
               </div>

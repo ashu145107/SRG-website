@@ -19,9 +19,8 @@ export const TextBox = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={`input-txt-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
-          className={`w-full px-4 py-2.5 bg-gray-50 border ${
-            error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
-          } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900 placeholder-gray-400`}
+          className={`w-full px-4 py-2.5 bg-gray-50 border ${error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
+            } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900 placeholder-gray-400`}
           {...props}
         />
         {error && <span className="block text-xs text-red-500 mt-1">{error}</span>}
@@ -42,9 +41,8 @@ export const PasswordBox = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             type={show ? 'text' : 'password'}
             id={`input-pwd-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
-            className={`w-full pl-4 pr-11 py-2.5 bg-gray-50 border ${
-              error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
-            } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900 placeholder-gray-400`}
+            className={`w-full pl-4 pr-11 py-2.5 bg-gray-50 border ${error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
+              } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900 placeholder-gray-400`}
             {...props}
           />
           <button
@@ -85,22 +83,40 @@ SearchBox.displayName = 'SearchBox';
 interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: string;
+  showCount?: boolean;
 }
 
 export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  ({ label, error, className = '', ...props }, ref) => {
+  ({ label, error, className = '', showCount, maxLength, value, defaultValue, onChange, ...props }, ref) => {
+    const controlledValue = typeof value === 'string' ? value : undefined;
+    const [uncontrolledLen, setUncontrolledLen] = useState(() => (controlledValue ?? String(defaultValue ?? '')).length);
+    const currentLen = controlledValue !== undefined ? controlledValue.length : uncontrolledLen;
+    const max = typeof maxLength === 'number' ? maxLength : undefined;
     return (
       <div className="w-full text-left">
         {label && <label className="block text-xs font-semibold text-gray-700 mb-1.5">{label}</label>}
-        <textarea
-          ref={ref}
-          id={`input-area-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
-          rows={3}
-          className={`w-full px-4 py-2.5 bg-gray-50 border ${
-            error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
-          } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900 placeholder-gray-400`}
-          {...props}
-        />
+        <div className="relative">
+          <textarea
+            ref={ref}
+            id={`input-area-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
+            rows={3}
+            maxLength={maxLength}
+            value={value}
+            defaultValue={defaultValue}
+            onChange={(e) => {
+              setUncontrolledLen(e.target.value.length);
+              onChange?.(e);
+            }}
+            className={`w-full px-4 py-2.5 bg-gray-50 border ${error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
+              } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900 placeholder-gray-400`}
+            {...props}
+          />
+        </div>
+        {showCount && max !== undefined && (
+          <div className="mt-1 text-left text-[10px] font-semibold text-gray-400 tabular-nums">
+            {currentLen}/{max}
+          </div>
+        )}
         {error && <span className="block text-xs text-red-500 mt-1">{error}</span>}
       </div>
     );
@@ -136,9 +152,8 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, InputProps & { c
             ref={ref}
             type="text"
             id={`input-curr-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
-            className={`w-full pl-8 pr-4 py-2.5 bg-gray-50 border ${
-              error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
-            } rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900`}
+            className={`w-full pl-8 pr-4 py-2.5 bg-gray-50 border ${error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
+              } rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900`}
             {...props}
           />
         </div>
