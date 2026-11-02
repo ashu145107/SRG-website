@@ -7,7 +7,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { useSectionNav } from '../utils/sectionNav';
-import { Phone, Mail, MessageCircle, Play } from 'lucide-react';
+import { Phone, Mail, MessageCircle } from 'lucide-react';
 
 export interface SiteFooterHandlers {
   scrollTo?: (section: string) => void;
@@ -55,11 +55,23 @@ export function SiteFooter({ scrollTo, enterGateway }: SiteFooterHandlers) {
                 <a href="mailto:srg.dindori@gmail.com" className="hover:text-theme-lavender transition">srg.dindori@gmail.com</a>
               </span>
             </p>
-            <a href="https://play.google.com/store/apps/details?id=dindori.pranit.swayamrojgarapp" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-2 text-sm font-bold text-theme-lavender hover:underline">
-              <Play className="w-4 h-4 fill-current" /> {t('footer.getApp')}
+            <a
+              href="https://play.google.com/store/apps/details?id=dindori.pranit.swayamrojgarapp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 flex w-fit transition hover:-translate-y-0.5 hover:opacity-90"
+              aria-label={t('footer.getApp')}
+            >
+              <img src="/home/google-play-badge-official.png" alt={t('footer.getApp')} className="h-12 w-auto" />
             </a>
-            <a href="https://wa.me/917755941753" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-2 text-sm font-bold text-emerald-600 hover:underline">
-              <MessageCircle className="w-4 h-4" /> {t('footer.followWhatsApp')}
+            <a
+              href="https://wa.me/917755941753"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 flex w-fit items-center gap-2 text-sm font-bold text-emerald-600 hover:underline"
+            >
+              <MessageCircle className="w-4 h-4 shrink-0" />
+              <span>{t('footer.followWhatsApp')}</span>
             </a>
           </div>
 
@@ -87,15 +99,17 @@ export function SiteFooter({ scrollTo, enterGateway }: SiteFooterHandlers) {
               <li><button onClick={section('offices')} className="hover:text-theme-lavender transition cursor-pointer text-left">{t('footer.aboutUs')}</button></li>
               <li><button onClick={section('contact')} className="hover:text-theme-lavender transition cursor-pointer text-left">{t('footer.contactUs')}</button></li>
               <li><button onClick={section('contact')} className="hover:text-theme-lavender transition cursor-pointer text-left">{t('footer.faqHelp')}</button></li>
+              <li><Link to="/legal" className="hover:text-theme-lavender transition">{t('legal.hubTitle')}</Link></li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-theme-lightViolet pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-theme-darkViolet/50 font-semibold">
           <p className="text-center md:text-left leading-relaxed">{t('footer.copyright')}</p>
-          <div className="flex space-x-6">
-            <a href="#" className="hover:text-theme-lavender">{t('footer.privacy')}</a>
-            <a href="#" className="hover:text-theme-lavender">{t('footer.termsOfUse')}</a>
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+            <Link to="/legal/privacy-policy" className="hover:text-theme-lavender">{t('footer.privacy')}</Link>
+            <Link to="/legal/terms-candidate" className="hover:text-theme-lavender">{t('footer.termsOfUse')}</Link>
+            <Link to="/legal/grievance-officer" className="hover:text-theme-lavender">{t('legal.contactGrievance')}</Link>
           </div>
         </div>
       </div>

@@ -34,7 +34,6 @@ import {
   ChevronRight,
   Check,
   Star,
-  Search,
   Linkedin,
   Quote,
   Leaf,
@@ -43,7 +42,8 @@ import {
   MessageCircle,
   CircleHelp,
   X,
-  Building
+  Building,
+  Smartphone
 } from 'lucide-react';
 
 const KEYWORDS = [
@@ -106,7 +106,7 @@ const SUCCESS_STORIES: SuccessStory[] = [
     roleEn: 'Employer | Samarth MEP Consultant',
     roleMr: 'नियोक्ता | समर्थ MEP कन्सल्टंट',
     storyEn: "In the technical consulting field, having people with the right skills and practical knowledge is essential. At Samarth MEP Consultant, we were looking for employees with specific technical skills to support our work requirements. Through the Self-Employment Department, we were able to find suitable candidates for our team. Getting access to relevant talent through this initiative helped us address our manpower requirements. I appreciate the department's efforts in connecting skilled individuals with businesses that need their expertise.",
-    storyMr: 'श्री स्वामी समर्थ सेवा व आध्यात्मिक विकास मार्ग यांच्या १८ विभागांपैकी एक असलेल्या स्वयंरोजगार विभागामार्फत राबविण्यात येणारा रोजगार उपक्रम आमच्या कंपनीसाठी अत्यंत उपयुक्त ठरला. आमची कंपनी समर्थ MEP कन्सल्टंट यांच्यासाठी आवश्यक तांत्रिक कौशल्ये आणि पात्रता असलेले कर्मचारी या विभागाच्या माध्यमातून उपलब्ध करून देण्यात आले. त्यामुळे योग्य कौशल्य असलेले मनुष्यबळ शोधण्याची प्रक्रिया सुलभ झाली आणि कंपनीच्या कामकाजासाठी आवश्यक मनुष्यबळ मिळण्यास मदत झाली. नियोक्त्यांच्या गरजा समजून घेऊन योग्य उमेदवार उपलब्ध करून देणाऱ्या स्वयंरोजगार विभागाचे मी मनःपूर्वक आभार मानतो.'
+    storyMr: 'श्री स्वामी समर्थ सेवा मार्ग, दिंडोरी प्रणीत यांच्या १८ विभागांपैकी एक असलेल्या स्वयंरोजगार विभागामार्फत राबविण्यात येणारा रोजगार उपक्रम आमच्या कंपनीसाठी अत्यंत उपयुक्त ठरला. आमची कंपनी समर्थ MEP कन्सल्टंट यांच्यासाठी आवश्यक तांत्रिक कौशल्ये आणि पात्रता असलेले कर्मचारी या विभागाच्या माध्यमातून उपलब्ध करून देण्यात आले. त्यामुळे योग्य कौशल्य असलेले मनुष्यबळ शोधण्याची प्रक्रिया सुलभ झाली आणि कंपनीच्या कामकाजासाठी आवश्यक मनुष्यबळ मिळण्यास मदत झाली. नियोक्त्यांच्या गरजा समजून घेऊन योग्य उमेदवार उपलब्ध करून देणाऱ्या स्वयंरोजगार विभागाचे मी मनःपूर्वक आभार मानतो.'
   },
   {
     id: 's-5',
@@ -384,11 +384,15 @@ export default function Home() {
 
             {/* LEFT */}
             <div className="text-center lg:text-left relative z-10">
-              <div className="inline-flex items-center space-x-3 mb-8">
-                <span className="w-8 h-8 rounded-lg bg-theme-terracotta text-white flex items-center justify-center shrink-0"><Check className="text-sm w-4 h-4" /></span>
-                <span className="text-sm font-semibold text-theme-darkViolet/80">
-                  {t('home.hero.badgePrefix')}{' '}
-                  <em className="not-italic font-extrabold text-theme-lavender">{t('home.hero.badgeBrand')}</em>
+              <div className="mb-8 flex justify-center lg:justify-start">
+                <span className="inline-flex max-w-full items-center gap-2.5 rounded-full border border-theme-lightViolet/80 bg-white/70 px-3 py-1.5 text-left shadow-sm">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-theme-terracotta text-white">
+                    <Check className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="text-xs font-semibold leading-snug text-theme-darkViolet/80 sm:text-sm">
+                    {t('home.hero.badgePrefix')}{' '}
+                    <em className="not-italic font-extrabold text-theme-lavender">{t('home.hero.badgeBrand')}</em>
+                  </span>
                 </span>
               </div>
 
@@ -802,6 +806,76 @@ export default function Home() {
               <span className="btn-gloss inline-flex items-center gap-2 bg-theme-lavender text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md shadow-theme-lavender/30 whitespace-nowrap cursor-default select-none">
                 {t('home.franchise.beBoss')} <ArrowRight className="text-[10px] w-3.5 h-3" />
               </span>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* APP DOWNLOAD */}
+      <section id="app" className="scroll-mt-20 sm:scroll-mt-24 relative overflow-hidden bg-theme-cream py-16 sm:py-20">
+        <div className="absolute -left-24 top-10 h-56 w-56 rounded-full bg-theme-lavender/10 blur-3xl" />
+        <div className="absolute -right-20 bottom-0 h-64 w-64 rounded-full bg-theme-mint/20 blur-3xl" />
+
+        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-10">
+            <Reveal direction="l">
+              <div className="text-center lg:text-left">
+                <span className="inline-flex items-center gap-2 rounded-full bg-theme-lightViolet px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-widest text-theme-lavender">
+                  <Smartphone className="h-3.5 w-3.5" /> {t('home.app.badge')}
+                </span>
+                <h2 className="mt-4 text-3xl font-extrabold leading-tight text-theme-darkViolet lg:text-4xl">
+                  {t('home.app.titlePrefix')} <span className="gloss">{t('home.app.titleGloss')}</span>
+                </h2>
+                <p className="mt-3 text-lg font-extrabold text-theme-darkViolet/80">{t('home.app.subtitle')}</p>
+                <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-theme-darkViolet/60 lg:mx-0">
+                  {t('home.app.desc')}
+                </p>
+
+                <div className="mt-6 grid max-w-md gap-2.5 text-left mx-auto lg:mx-0">
+                  {[t('home.app.feature1'), t('home.app.feature2'), t('home.app.feature3')].map((feature) => (
+                    <div key={feature} className="flex items-center gap-2.5 text-sm font-bold text-theme-darkViolet/75">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-theme-mint/25 text-theme-darkViolet">
+                        <Check className="h-3 w-3" />
+                      </span>
+                      {feature}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
+                  <a
+                    href="https://play.google.com/store/apps/details?id=dindori.pranit.swayamrojgarapp"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex transition hover:-translate-y-0.5 hover:opacity-90"
+                    aria-label={t('home.app.availableOn')}
+                  >
+                    <img src="/home/google-play-badge-official.png" alt={t('home.app.downloadOn')} className="h-12 w-auto sm:h-14" />
+                  </a>
+                  <div className="text-center sm:text-left">
+                    <p className="text-sm font-extrabold text-theme-darkViolet">{t('home.app.downloadOn')}</p>
+                    <p className="mt-0.5 text-[11px] font-semibold text-theme-darkViolet/50">{t('home.app.freeNote')}</p>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+
+            <Reveal direction="r">
+              <div className="relative mx-auto w-[266px] sm:w-[300px]">
+                <div className="absolute -inset-10 rounded-full bg-theme-lavender/15 blur-2xl" />
+                <span className="absolute -right-4 top-14 h-16 w-16 rounded-2xl bg-theme-gold/20 blur-sm" />
+                <span className="absolute -bottom-3 -left-5 h-20 w-20 rounded-full bg-theme-mint/30 blur-sm" />
+
+                <div className="relative rounded-[2.6rem] border-[9px] border-theme-darkViolet bg-theme-darkViolet shadow-2xl shadow-theme-darkViolet/25">
+                  <div className="relative overflow-hidden rounded-[2rem] bg-theme-cream">
+                    <img
+                      src="/home/mobileview.png"
+                      alt={t('home.app.badge')}
+                      className="block h-auto w-full object-cover"
+                    />
+                  </div>
+                </div>
+              </div>
             </Reveal>
           </div>
         </div>

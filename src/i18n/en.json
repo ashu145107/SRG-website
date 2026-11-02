@@ -11,7 +11,7 @@
     "jobs": "Jobs",
     "shgProducts": "SHG & Products",
     "notifications": "Notifications",
-    "orgName": "Shree Swami Samarth Seva va Adhyatmik Vikas Marg (Dindori Pranit)",
+    "orgName": "Shree Swami Samarth Seva Marg, Dindori Pranit",
     "department": "Swayamrojgar Vibhag",
     "postRequirement": "Post a Requirement",
     "candidateRegistration": "Candidate Registration",
@@ -22,7 +22,7 @@
   },
   "hero": {
     "headline": "Spritual foundation paired with paths to self-employment!",
-    "subHeadline": "Shree Swami Samarth Seva & Adhyatmik Vikas Marg (Dindori Pranit) - Self Employment Department",
+    "subHeadline": "Shree Swami Samarth Seva Marg, Dindori Pranit - Self Employment Department",
     "candidate": {
       "title": "Candidate / Job Seeker",
       "desc": "Jobs, placements, and spiritual career counseling",
@@ -79,13 +79,13 @@
     "button": "Register Now"
   },
   "footer": {
-    "aboutText": "Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag Dedicated to elevated social economic welfare.",
+    "aboutText": "Shree Swami Samarth Seva Marg, Dindori Pranit - Swayamrojgar Vibhag Dedicated to elevated social economic welfare.",
     "quickLinks": "Quick Links",
     "contact": "Contact Info",
     "address": "Dindori Darbar, Nashik, Maharashtra",
     "phone": "0253-253XXXX",
     "email": "info@dindoripranit.org",
-    "rights": "© 2026 Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag. All Rights Reserved.",
+    "rights": "© 2026 Shree Swami Samarth Seva Marg, Dindori Pranit - Swayamrojgar Vibhag. All Rights Reserved.",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "noFeeNotice": "The Swayamrojgar Vibhag never charges any fee from a candidate or a self-help group.",
@@ -110,8 +110,97 @@
     "aboutUs": "About us",
     "contactUs": "Contact us",
     "faqHelp": "FAQ & Help",
-    "copyright": "© 2026 Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag. All Rights Reserved.",
+    "copyright": "© 2026 Shree Swami Samarth Seva Marg, Dindori Pranit - Swayamrojgar Vibhag. All Rights Reserved.",
     "termsOfUse": "Terms of Use"
+  },
+  "legal": {
+    "badge": "Legal centre",
+    "hubTitle": "Legal & Policies",
+    "hubSubtitle": "Everything you need to know about using the Dindori Pranit Job Portal.",
+    "hubIntro": "These documents explain your rights, our obligations, and how we handle your data. They are available in English and Marathi.",
+    "hubFooterNote": "These policies apply to the Dindori Pranit Job Portal operated by Dindoree Pranit Seva Marg Foundation.",
+    "effectiveDate": "Effective date",
+    "onThisPage": "On this page",
+    "readDocument": "Read document",
+    "backToLegal": "All legal documents",
+    "backHome": "Back to home",
+    "needHelp": "Questions or concerns?",
+    "needHelpText": "Our grievance officer is available Monday to Saturday, 10:00 AM to 7:00 PM.",
+    "contactGrievance": "Contact grievance officer",
+    "requestData": "Make a data request",
+    "languagesTitle": "Available in English and Marathi",
+    "languagesText": "Switch language from the menu at any time. Both versions carry the same meaning.",
+    "notFoundTitle": "Document not found",
+    "notFoundText": "The legal document you are looking for does not exist or has moved.",
+    "docLinks": {
+      "candidateTerms": "Candidate terms",
+      "consent": "Consent form"
+    },
+    "groups": {
+      "everyone": "For everyone",
+      "candidates": "For candidates",
+      "employers": "For employers"
+    },
+    "docs": {
+      "privacy": {
+        "description": "How we collect, use, store and protect your personal data."
+      },
+      "termsCandidate": {
+        "description": "Rules for candidates using the job portal, including the no-fee promise."
+      },
+      "termsEmployer": {
+        "description": "KYC, ethical hiring and data obligations for employers."
+      },
+      "consent": {
+        "description": "The exact consents we ask for, in plain language, and how to withdraw them."
+      },
+      "disclaimer": {
+        "description": "What the platform does and does not guarantee, and the limits of our responsibility."
+      },
+      "cookies": {
+        "description": "The cookies we use, why we use them, and how you can control them."
+      },
+      "codeOfConduct": {
+        "description": "How our staff, volunteers and representatives must behave."
+      },
+      "grievance": {
+        "description": "Contact our grievance officer and see how complaints are resolved."
+      },
+      "dataRequest": {
+        "description": "Ask to access, correct, erase or withdraw consent for your data."
+      }
+    },
+    "form": {
+      "dsarTitle": "Submit a data request",
+      "dsarIntro": "Use this form to access, correct or erase your data, withdraw consent, or nominate someone to act for you. Submitting opens your email app with the details filled in.",
+      "grievanceTitle": "File a grievance",
+      "grievanceIntro": "Tell us what went wrong. Submitting opens your email app with the details filled in so you can send it to our grievance officer.",
+      "fullName": "Full name",
+      "email": "Email",
+      "phone": "Mobile number",
+      "role": "I am a",
+      "requestType": "Request type",
+      "subject": "Subject",
+      "details": "Details",
+      "validation": "Please fill in your name, email and details.",
+      "mailtoNote": "This form opens your email app with the details prefilled. You can also email admin@dindoripranit.org directly.",
+      "submitDsar": "Send request via email",
+      "submitGrievance": "Send grievance via email",
+      "dsarMailSubject": "Data request - Dindori Pranit Job Portal",
+      "grievanceMailSubject": "Grievance - Dindori Pranit Job Portal",
+      "roles": {
+        "candidate": "Candidate",
+        "employer": "Employer",
+        "other": "Other"
+      },
+      "requests": {
+        "access": "Access my data",
+        "correction": "Correct my data",
+        "erasure": "Erase my data",
+        "withdraw": "Withdraw my consent",
+        "nominate": "Nominate someone"
+      }
+    }
   },
   "auth": {
     "loginTitle": "Portal Login",
@@ -165,7 +254,7 @@
     "loginFailed": "Invalid login details. Please check your credentials.",
     "mismatch": "This is a {{role}} account. Please use the {{correct}} tab to log in.",
     "accountLoginTitle": "Account Login",
-    "brandSevaMarg": "Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag",
+    "brandSevaMarg": "Shree Swami Samarth Seva Marg, Dindori Pranit - Swayamrojgar Vibhag",
     "usernameEmailMobile": "Username / Email / Mobile",
     "usernameEmailMobilePlaceholder": "Enter username, email or mobile",
     "loggingIn": "Logging in...",
@@ -300,7 +389,7 @@
   "dash": {
     "header": {
       "dashboard": "Dashboard",
-      "brandName": "Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag"
+      "brandName": "Shree Swami Samarth Seva Marg, Dindori Pranit - Swayamrojgar Vibhag"
     },
     "menu": {
       "sevaOverview": "Seva (Overview)",
@@ -629,7 +718,9 @@
     "menu": {
       "dashboard": "Dashboard",
       "companyProfile": "Profile Settings",
-      "changePassword": "Change Password"
+      "changePassword": "Change Password",
+      "myProfile": "My Profile",
+      "logout": "Logout"
     },
     "logoff": "Log Off",
     "header": {
@@ -664,7 +755,7 @@
       "invalidType": "{{name}} is not an accepted file type."
     },
     "brand": {
-      "name": "Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag"
+      "name": "Shree Swami Samarth Seva Marg, Dindori Pranit - Swayamrojgar Vibhag"
     }
   },
   "profileView": {
@@ -942,7 +1033,7 @@
       "employerRegistered": "Employer Registration completed successfully!"
     },
     "brand": {
-      "tagline": "Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag"
+      "tagline": "Shree Swami Samarth Seva Marg, Dindori Pranit - Swayamrojgar Vibhag"
     },
     "haveAccount": "Already have an account? Login here",
     "consent": {
@@ -1060,6 +1151,32 @@
       "brandSatvikMilk": "Satvik Milk",
       "brandSatvikMart": "Satvik Mart",
       "beBoss": "Be Your Own Boss!"
+    },
+    "app": {
+      "badge": "Swayamrojgar App",
+      "titlePrefix": "Apply on the",
+      "titleGloss": "go",
+      "subtitle": "Get real-time job updates on our App.",
+      "desc": "Find jobs near you, apply in one tap and never miss a new opportunity. Free for every candidate.",
+      "feature1": "Instant job alerts",
+      "feature2": "One-tap applications",
+      "feature3": "Track your applications",
+      "downloadOn": "Download the app",
+      "freeNote": "Free to download. No candidate fees, ever.",
+      "availableOn": "Available on Google Play",
+      "phoneTagline": "Jobs near you",
+      "phoneSearch": "Search jobs, skills, location",
+      "job1Title": "Field Sales Executive",
+      "job1Company": "Dindori · Full time",
+      "job2Title": "Tailoring Unit Supervisor",
+      "job2Company": "Nashik · Part time",
+      "job3Title": "Accounts Assistant",
+      "job3Company": "Trimbak · Full time",
+      "apply": "Apply",
+      "tabHome": "Home",
+      "tabJobs": "Jobs",
+      "tabAlerts": "Alerts",
+      "tabProfile": "Profile"
     },
     "contact": {
       "badge": "Where to find us",

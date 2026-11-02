@@ -245,10 +245,10 @@ export default function DashboardHub() {
               >
                 {navMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
-              <Link to="/" className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform">
+              <Link to="/" className="hidden lg:flex w-10 h-10 rounded-full items-center justify-center shrink-0 hover:scale-105 transition-transform">
                 <img src="/home/logo.png" alt="SRG Logo" className="w-10 h-10 object-contain drop-shadow" />
               </Link>
-              <div className="text-left min-w-0">
+              <div className="hidden lg:block text-left min-w-0">
                 <span className="font-extrabold text-xs sm:text-sm tracking-tight block text-white truncate">{t('dash.header.brandName')}</span>
                 <span className="text-[10px] text-theme-gold block font-bold uppercase tracking-wide truncate">
                   {t('dash.header.dashboard')} / {user.role === UserRole.CANDIDATE ? 'CANDIDATE' : user.role === UserRole.COMPANY ? 'EMPLOYER' : user.role}
@@ -318,7 +318,7 @@ export default function DashboardHub() {
                       }}
                       className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-theme-lightViolet/40 hover:text-theme-darkViolet flex items-center gap-2.5 transition-colors cursor-pointer"
                     >
-                      <UserCircle className="w-4 h-4 text-theme-lavender" /> My Profile
+                      <UserCircle className="w-4 h-4 text-theme-lavender" /> {t('profile.menu.myProfile')}
                     </button>
                     <button
                       onClick={() => {
@@ -327,7 +327,7 @@ export default function DashboardHub() {
                       }}
                       className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-theme-lightViolet/40 hover:text-theme-darkViolet flex items-center gap-2.5 transition-colors cursor-pointer"
                     >
-                      <LockKeyhole className="w-4 h-4 text-theme-lavender" /> Change Password
+                      <LockKeyhole className="w-4 h-4 text-theme-lavender" /> {t('profile.menu.changePassword')}
                     </button>
                     <div className="border-t border-theme-lightViolet/60 my-1"></div>
                     <button
@@ -338,7 +338,7 @@ export default function DashboardHub() {
                       }}
                       className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition-colors cursor-pointer"
                     >
-                      <LogOut className="w-4 h-4" /> Logout
+                      <LogOut className="w-4 h-4" /> {t('profile.menu.logout')}
                     </button>
                   </div>
                 )}

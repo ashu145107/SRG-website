@@ -945,7 +945,13 @@ export default function Register() {
                         className="text-theme-lavender font-bold hover:underline inline focus:outline-none cursor-pointer"
                       >
                         {t('reg.tc.link')}
-                      </button>
+                      </button>{' '}
+                      <Link to="/legal/terms-candidate" target="_blank" rel="noopener noreferrer" className="text-theme-lavender font-bold hover:underline">
+                        ({t('legal.docLinks.candidateTerms')})
+                      </Link>{' '}
+                      & <Link to="/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-theme-lavender font-bold hover:underline">
+                        {t('footer.privacy')}
+                      </Link>
                       {t('reg.tc.agreeSuffix')}
                     </label>
                   </div>
@@ -1381,7 +1387,13 @@ export default function Register() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 bg-theme-cream/60 border-t border-theme-lightViolet/60 flex flex-col sm:flex-row gap-2 justify-end">
+            <div className="p-4 bg-theme-cream/60 border-t border-theme-lightViolet/60 flex flex-col sm:flex-row gap-2 sm:items-center justify-end">
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] font-bold text-theme-lavender sm:mr-auto">
+                <Link to="/legal/privacy-policy" className="hover:underline">{t('footer.privacy')}</Link>
+                <Link to="/legal/terms-candidate" className="hover:underline">{t('footer.termsOfUse')}</Link>
+                <Link to="/legal/consent-forms" className="hover:underline">{t('legal.docLinks.consent')}</Link>
+                <Link to="/legal/data-request" className="hover:underline">{t('legal.requestData')}</Link>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsOpenEula(false)}

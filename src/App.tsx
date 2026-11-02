@@ -21,6 +21,8 @@ import CompanyProfileView from './pages/CompanyProfileView';
 import ActivateAccount from './pages/ActivateAccount';
 import { JobRequirementDetail } from './pages/JobRequirementDetail';
 import ChangePassword from './pages/ChangePassword';
+import LegalHub from './pages/legal/LegalHub';
+import LegalDocumentPage from './pages/legal/LegalDocumentPage';
 import { ProtectedRoute } from './components/ui/UtilityComponents';
 import { ScrollToTop } from './components/ScrollToTop';
 
@@ -65,6 +67,12 @@ export default function App() {
             <Route path="/activateaccount" element={<ActivateAccount />} />
 
             <Route path="/job/:requirementId" element={<JobRequirementDetail />} />
+
+            <Route path="/legal" element={<LegalHub />} />
+            <Route path="/legal/:slug" element={<LegalDocumentPage />} />
+            <Route path="/privacy-policy" element={<Navigate to="/legal/privacy-policy" replace />} />
+            <Route path="/terms" element={<Navigate to="/legal/terms-candidate" replace />} />
+            <Route path="/terms-and-conditions" element={<Navigate to="/legal/terms-candidate" replace />} />
             
             <Route
               path="/dashboard"

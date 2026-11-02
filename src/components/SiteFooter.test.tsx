@@ -40,7 +40,7 @@ describe('SiteFooter', () => {
     expect(screen.getByText('Information')).toBeInTheDocument();
     expect(
       screen.getByText(
-        '© 2026 Shree Swami Samarth Seva Marg (Dindori Pranit) - Swayamrojgar Vibhag. All Rights Reserved.'
+        '© 2026 Shree Swami Samarth Seva Marg, Dindori Pranit - Swayamrojgar Vibhag. All Rights Reserved.'
       )
     ).toBeInTheDocument();
     expect(screen.getByText('admin@dindoripranit.org')).toHaveAttribute(
