@@ -12,13 +12,18 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const TextBox = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className = '', ...props }, ref) => {
+  ({ label, error, className = '', id, ...props }, ref) => {
+    const inputId = id || `input-txt-${Math.random().toString(36).substr(2, 5)}`;
     return (
       <div className="w-full text-left">
-        {label && <label className="block text-xs font-semibold text-gray-700 mb-1.5">{label}</label>}
+        {label && (
+          <label htmlFor={inputId} className="block text-xs font-semibold text-gray-700 mb-1.5">
+            {label}
+          </label>
+        )}
         <input
           ref={ref}
-          id={`input-txt-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
+          id={inputId}
           className={`w-full px-4 py-2.5 bg-gray-50 border ${error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
             } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900 placeholder-gray-400`}
           {...props}
@@ -31,16 +36,21 @@ export const TextBox = React.forwardRef<HTMLInputElement, InputProps>(
 TextBox.displayName = 'TextBox';
 
 export const PasswordBox = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className = '', ...props }, ref) => {
+  ({ label, error, className = '', id, ...props }, ref) => {
     const [show, setShow] = useState(false);
+    const inputId = id || `input-pwd-${Math.random().toString(36).substr(2, 5)}`;
     return (
       <div className="w-full text-left">
-        {label && <label className="block text-xs font-semibold text-gray-700 mb-1.5">{label}</label>}
+        {label && (
+          <label htmlFor={inputId} className="block text-xs font-semibold text-gray-700 mb-1.5">
+            {label}
+          </label>
+        )}
         <div className="relative">
           <input
             ref={ref}
             type={show ? 'text' : 'password'}
-            id={`input-pwd-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
+            id={inputId}
             className={`w-full pl-4 pr-11 py-2.5 bg-gray-50 border ${error ? 'border-red-500 bg-red-50/10' : 'border-theme-lightViolet/60 focus:border-theme-lavender'
               } rounded-xl text-sm transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender text-gray-900 placeholder-gray-400`}
             {...props}
@@ -61,15 +71,20 @@ export const PasswordBox = React.forwardRef<HTMLInputElement, InputProps>(
 PasswordBox.displayName = 'PasswordBox';
 
 export const SearchBox = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className = '', ...props }, ref) => {
+  ({ label, error, className = '', id, ...props }, ref) => {
+    const inputId = id || `input-search-${Math.random().toString(36).substr(2, 5)}`;
     return (
       <div className="w-full text-left">
-        {label && <label className="block text-xs font-semibold text-gray-700 mb-1.5">{label}</label>}
+        {label && (
+          <label htmlFor={inputId} className="block text-xs font-semibold text-gray-700 mb-1.5">
+            {label}
+          </label>
+        )}
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4.5 h-4.5" />
           <input
             ref={ref}
-            id={`input-search-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
+            id={inputId}
             className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender focus:border-theme-lavender text-gray-900 placeholder-gray-400"
             {...props}
           />
@@ -87,18 +102,23 @@ interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 }
 
 export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  ({ label, error, className = '', showCount, maxLength, value, defaultValue, onChange, ...props }, ref) => {
+  ({ label, error, className = '', showCount, maxLength, value, defaultValue, onChange, id, ...props }, ref) => {
     const controlledValue = typeof value === 'string' ? value : undefined;
     const [uncontrolledLen, setUncontrolledLen] = useState(() => (controlledValue ?? String(defaultValue ?? '')).length);
     const currentLen = controlledValue !== undefined ? controlledValue.length : uncontrolledLen;
     const max = typeof maxLength === 'number' ? maxLength : undefined;
+    const inputId = id || `input-area-${Math.random().toString(36).substr(2, 5)}`;
     return (
       <div className="w-full text-left">
-        {label && <label className="block text-xs font-semibold text-gray-700 mb-1.5">{label}</label>}
+        {label && (
+          <label htmlFor={inputId} className="block text-xs font-semibold text-gray-700 mb-1.5">
+            {label}
+          </label>
+        )}
         <div className="relative">
           <textarea
             ref={ref}
-            id={`input-area-${props.id || props.name || Math.random().toString(36).substr(2, 5)}`}
+            id={inputId}
             rows={3}
             maxLength={maxLength}
             value={value}

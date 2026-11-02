@@ -150,10 +150,11 @@ export default function ChangePassword() {
         </div>
 
         <div className="bg-white rounded-3xl border border-theme-lightViolet/80 shadow-2xl px-6 sm:px-10 py-8 space-y-6">
-          <form className="space-y-5" onSubmit={handleSubmit}>
+          <form className="space-y-5" onSubmit={handleSubmit} noValidate>
             {errorText && <Alert type="danger" message={errorText} />}
 
             <PasswordBox
+              id="old-password"
               label={t('auth.oldPassword')}
               value={oldPassword}
               onChange={(e) => setOldPassword(e.target.value)}
@@ -162,6 +163,7 @@ export default function ChangePassword() {
             />
 
             <PasswordBox
+              id="new-password"
               label={t('auth.newPassword')}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
@@ -222,6 +224,7 @@ export default function ChangePassword() {
             </div>
 
             <PasswordBox
+              id="confirm-password"
               label={t('auth.confirmPassword')}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}

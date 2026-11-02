@@ -62,12 +62,12 @@ export default function Login() {
             </div>
 
             {/* Login Form */}
-            <form className="space-y-4" onSubmit={handleLoginSubmit}>
+            <form className="space-y-4" onSubmit={handleLoginSubmit} noValidate>
               {formError && <Alert type="danger" message={formError} />}
 
               {/* Username/Email/Mobile */}
               <div className="space-y-1.5 text-left">
-                <label className="block text-xs font-bold text-theme-darkViolet">
+                <label htmlFor="login-identifier" className="block text-xs font-bold text-theme-darkViolet">
                   {t('auth.usernameEmailMobile')} *
                 </label>
                 <div className="relative">
@@ -75,6 +75,7 @@ export default function Login() {
                     <User className="w-4 h-4" />
                   </span>
                   <input
+                    id="login-identifier"
                     type="text"
                     required
                     placeholder={t('auth.usernameEmailMobilePlaceholder')}
@@ -88,7 +89,7 @@ export default function Login() {
               {/* Password */}
               <div className="space-y-1.5 text-left">
                 <div className="flex items-baseline justify-between gap-2">
-                  <label className="block text-xs font-bold text-theme-darkViolet">
+                  <label htmlFor="login-password" className="block text-xs font-bold text-theme-darkViolet">
                     {t('auth.password')} *
                   </label>
                   <Link
@@ -103,6 +104,7 @@ export default function Login() {
                     <Lock className="w-4 h-4" />
                   </span>
                   <input
+                    id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     required
                     placeholder="••••••••"

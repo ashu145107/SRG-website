@@ -108,12 +108,12 @@ export default function ForgotPassword() {
             </div>
 
             {/* Forgot Password Form */}
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-4" onSubmit={handleSubmit} noValidate>
               {errorText && <Alert type="danger" message={errorText} />}
 
               {/* Email */}
               <div className="space-y-1.5 text-left">
-                <label className="block text-xs font-bold text-theme-darkViolet">
+                <label htmlFor="forgot-email" className="block text-xs font-bold text-theme-darkViolet">
                   {t('auth.email')}
                 </label>
                 <div className="relative">
@@ -121,7 +121,8 @@ export default function ForgotPassword() {
                     <Mail className="w-4 h-4" />
                   </span>
                   <input
-                    type="email"
+                    id="forgot-email"
+                    type="text"
                     placeholder="name@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -132,7 +133,7 @@ export default function ForgotPassword() {
 
               {/* Mobile */}
               <div className="space-y-1.5 text-left">
-                <label className="block text-xs font-bold text-theme-darkViolet">
+                <label htmlFor="forgot-mobile" className="block text-xs font-bold text-theme-darkViolet">
                   {t('auth.mobile')}
                 </label>
                 <div className="relative">
@@ -140,7 +141,8 @@ export default function ForgotPassword() {
                     <Phone className="w-4 h-4" />
                   </span>
                   <input
-                    type="tel"
+                    id="forgot-mobile"
+                    type="text"
                     inputMode="numeric"
                     maxLength={10}
                     placeholder="10-digit mobile number"
