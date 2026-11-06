@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useEditJobRequirementMutation, useJobDetailsQuery } from '../../hooks/useJobQueries';
+import { useGetJobRequirementByCodeQuery } from '../../services/adminApi';
 import { JobRequirement } from '../../services/jobTypes';
 import {
   useGetCompanyTypesQuery,
@@ -20,11 +21,16 @@ import {
   useGetSubEducationsQuery,
 } from '../../services/jobMasterApi';
 import { Alert, Toast } from '../ui/FeedbackComponents';
+import { DatePicker } from '../ui/DatePicker';
 
 const MAX_JOB_DESCRIPTION_LENGTH = 4000;
 
+const FieldError: React.FC<{ message?: string }> = ({ message }) =>
+  message ? <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{message}</p> : null;
+
 interface EditJobFormProps {
   jobId: number;
+  jobCode?: string;
   onSuccess?: (updatedJob: JobRequirement) => void;
   onCancel?: () => void;
 }
@@ -45,13 +51,30 @@ const formatDateForInput = (dateValue: unknown): string => {
     return '';
   }
 
-  const date = new Date(String(dateValue));
+  const dateText = String(dateValue);
+  const dateOnly = dateText.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (dateOnly) return dateOnly[1];
+
+  const date = new Date(dateText);
 
   if (Number.isNaN(date.getTime())) {
     return '';
   }
 
   return date.toISOString().split('T')[0];
+};
+
+const resolveMasterId = (
+  id: unknown,
+  label: unknown,
+  options: Array<{ id: number; label: string }>,
+  fallback: number
+): number => {
+  const parsedId = getNumber(id, 0);
+  if (parsedId) return parsedId;
+
+  const normalizedLabel = String(label ?? '').trim().toLocaleLowerCase();
+  return options.find((option) => option.label.trim().toLocaleLowerCase() === normalizedLabel)?.id ?? fallback;
 };
 
 const getErrorMessage = (error: any): string => {
@@ -109,15 +132,30 @@ const initialForm: EditJobFormData = {
 
 export const EditJobForm: React.FC<EditJobFormProps> = ({
   jobId,
+  jobCode,
   onSuccess,
   onCancel,
 }) => {
   const {
-    data: jobData,
-    isLoading: isLoadingDetails,
-    error: loadError,
-    refetch,
-  } = useJobDetailsQuery(jobId);
+    data: legacyJobData,
+    isLoading: isLegacyLoading,
+    error: legacyLoadError,
+    refetch: refetchLegacy,
+  } = useJobDetailsQuery(jobId, undefined, !jobCode);
+  const {
+    data: jobCodeData,
+    isLoading: isJobCodeLoading,
+    isFetching: isJobCodeFetching,
+    error: jobCodeError,
+    refetch: refetchJobCode,
+  } = useGetJobRequirementByCodeQuery(jobCode || '', {
+    skip: !jobCode,
+    refetchOnMountOrArgChange: true,
+  });
+  const jobData = jobCode ? jobCodeData : legacyJobData;
+  const isLoadingDetails = jobCode ? isJobCodeLoading || isJobCodeFetching : isLegacyLoading;
+  const loadError = jobCode ? jobCodeError : legacyLoadError;
+  const refetch = jobCode ? refetchJobCode : refetchLegacy;
 
   const editJobMutation = useEditJobRequirementMutation();
 
@@ -137,9 +175,30 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
     skip: !form.educationId,
   });
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const validationSummaryRef = useRef<HTMLDivElement>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const fieldLabels: Record<string, string> = {
+    profileHeader: 'Profile header',
+    jobDesignation: 'Designation',
+    noOfVacancy: 'Number of vacancies',
+    experiance: 'Minimum experience',
+    experianceTo: 'Maximum experience',
+    salary: 'Minimum salary',
+    salaryTo: 'Maximum salary',
+    jobLocation: 'Job location',
+    expiryDate: 'Expiry date',
+    skill: 'Required skills',
+    jobDiscription: 'Job description',
+  };
+
+  useEffect(() => {
+    if (!validationError || Object.keys(fieldErrors).length === 0) return;
+    validationSummaryRef.current?.focus({ preventScroll: true });
+    validationSummaryRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  }, [validationError, fieldErrors]);
 
   useEffect(() => {
     if (!jobData) {
@@ -150,7 +209,7 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
       userId: getNumber(jobData.userId),
       profileHeader: jobData.profileHeader ?? '',
       skill: jobData.skill ?? '',
-      specialization: getNumber(jobData.specialization, 0),
+      specialization: getNumber(jobData.specializationId ?? jobData.specialization, 0),
       experiance: getNumber(jobData.experiance, 0),
       experianceTo: getNumber(jobData.experianceTo, 1),
       noOfVacancy: getNumber(jobData.noOfVacancy, 1),
@@ -163,10 +222,10 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
       salaryTo: getNumber(jobData.salaryTo, 1),
 
       expiryDate: formatDateForInput(jobData.expiryDate),
-      educationId: getNumber(jobData.educationId, 0),
+      educationId: resolveMasterId(jobData.educationId, jobData.education, educations, 0),
       createdBy: getNumber(jobData.createdBy),
       roleTypeId: getNumber(jobData.roleTypeId, 1),
-      interviewModeId: getNumber(jobData.interviewModeId, 1),
+      interviewModeId: resolveMasterId(jobData.interviewModeId, jobData.interviewMode, interviewModes, 0),
       interviewLocation: jobData.interviewLocation ?? '',
       postingNotes: jobData.postingNotes ?? '',
       jobDiscription: jobData.jobDiscription ?? '',
@@ -174,20 +233,37 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
       certificationsRequired: jobData.certificationsRequired ?? '',
       genderPreference: jobData.genderPreference ?? 'Any',
       ageRange: jobData.ageRange ?? '18-45',
-      shiftTypeId: getNumber(jobData.shiftTypeId, 1),
-      workModeId: getNumber(jobData.workModeId, 1),
+      shiftTypeId: resolveMasterId(jobData.shiftTypeId, jobData.shiftType, shiftTypes, 0),
+      workModeId: resolveMasterId(jobData.workModeId, jobData.workMode, workModes, 0),
       jobLocation: jobData.jobLocation ?? '',
-      salaryPeriodId: getNumber(jobData.salaryPeriodId, 1),
+      salaryPeriodId: resolveMasterId(jobData.salaryPeriodId, jobData.salaryPeriod, salaryPeriods, 0),
       benefits: jobData.benefits ?? '',
-      weeklyOffId: getNumber(jobData.weeklyOffId, 1),
+      weeklyOffId: resolveMasterId(jobData.weeklyOffId, jobData.weeklyOff, weeklyOffs, 0),
       jobCode: jobData.jobCode ?? '',
-      companyTypeId: getNumber(jobData.companyTypeId, 0),
-      industryTypeId: getNumber(jobData.industryTypeId, 0),
-      jobTypeId: getNumber(jobData.jobTypeId, 0),
+      companyTypeId: resolveMasterId(jobData.companyTypeId, jobData.companyType, companyTypes, 0),
+      industryTypeId: resolveMasterId(
+        jobData.industryTypeId ?? jobData.specializationId,
+        jobData.specialization,
+        industryTypes,
+        getNumber(jobData.specialization, 0)
+      ),
+      jobTypeId: resolveMasterId(jobData.jobTypeId ?? jobData.roleTypeId, jobData.jobType ?? jobData.roleType, jobTypes, 0),
+      subEducationId: getNumber(jobData.subEducationId, 0),
     };
 
     setForm(loadedForm);
-  }, [jobData]);
+  }, [
+    jobData,
+    companyTypes,
+    industryTypes,
+    jobTypes,
+    interviewModes,
+    shiftTypes,
+    workModes,
+    salaryPeriods,
+    weeklyOffs,
+    educations,
+  ]);
 
   const handleChange = (
     event: React.ChangeEvent<
@@ -220,81 +296,53 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
       ...previous,
       [name]: numericFields.includes(name) ? Number(value) : value,
     }));
+    setFieldErrors((previous) => {
+      if (!previous[name]) return previous;
+      const next = { ...previous };
+      delete next[name];
+      return next;
+    });
+    setValidationError(null);
   };
 
-  const validateForm = (): string | null => {
-    if (!form.profileHeader.trim()) {
-      return 'Please enter the profile header.';
-    }
-
-    if (!form.jobDesignation.trim()) {
-      return 'Please enter the job designation.';
-    }
-
-    if (!form.skill.trim()) {
-      return 'Please enter the required skills.';
-    }
-
+  const validateForm = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    if (!form.profileHeader.trim()) errors.profileHeader = 'Please enter the profile header.';
+    if (!form.jobDesignation.trim()) errors.jobDesignation = 'Please enter the job designation.';
+    if (!form.skill.trim()) errors.skill = 'Please enter the required skills.';
     if (!form.jobDiscription.trim()) {
-      return 'Please enter the job description.';
+      errors.jobDiscription = 'Please enter the job description.';
+    } else if (form.jobDiscription.trim().length < 10) {
+      errors.jobDiscription = 'Job description must contain at least 10 characters.';
     }
-
-    if (form.jobDiscription.trim().length < 10) {
-      return 'Job description must contain at least 10 characters.';
-    }
-
-    if (!form.noOfVacancy || form.noOfVacancy < 1) {
-      return 'Number of vacancies must be at least 1.';
-    }
-
-    if (form.experiance < 0 || form.experianceTo < 0) {
-      return 'Experience cannot be negative.';
-    }
-
+    if (!form.noOfVacancy || form.noOfVacancy < 1) errors.noOfVacancy = 'Number of vacancies must be at least 1.';
+    if (form.experiance < 0) errors.experiance = 'Experience cannot be negative.';
+    if (form.experianceTo < 0) errors.experianceTo = 'Experience cannot be negative.';
     if (form.experianceTo < form.experiance) {
-      return 'Maximum experience must be greater than or equal to minimum experience.';
+      errors.experianceTo = 'Maximum experience must be greater than or equal to minimum experience.';
     }
-
-    // Important backend validation
-    if (!Number.isFinite(form.salary) || form.salary <= 0) {
-      return 'Minimum salary must be greater than 0.';
+    if (!Number.isFinite(form.salary) || form.salary <= 0) errors.salary = 'Minimum salary must be greater than 0.';
+    if (!Number.isFinite(form.salaryTo) || form.salaryTo <= 0) errors.salaryTo = 'Maximum salary must be greater than 0.';
+    if (form.salaryTo < form.salary) errors.salaryTo = 'Maximum salary must be greater than or equal to minimum salary.';
+    if (!form.jobLocation.trim()) errors.jobLocation = 'Please enter the job location.';
+    if (!form.expiryDate || Number.isNaN(new Date(form.expiryDate).getTime())) {
+      errors.expiryDate = 'Please select a valid expiry date.';
     }
-
-    if (!Number.isFinite(form.salaryTo) || form.salaryTo <= 0) {
-      return 'Maximum salary must be greater than 0.';
-    }
-
-    if (form.salaryTo < form.salary) {
-      return 'Maximum salary must be greater than or equal to minimum salary.';
-    }
-
-    if (!form.jobLocation.trim()) {
-      return 'Please enter the job location.';
-    }
-
-    if (!form.expiryDate) {
-      return 'Please select an expiry date.';
-    }
-
-    const expiryDate = new Date(form.expiryDate);
-
-    if (Number.isNaN(expiryDate.getTime())) {
-      return 'Please enter a valid expiry date.';
-    }
-
-    return null;
+    return errors;
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setValidationError(null);
 
-    const validationMessage = validateForm();
+    const errors = validateForm();
+    setFieldErrors(errors);
 
-    if (validationMessage) {
-      setValidationError(validationMessage);
+    if (Object.keys(errors).length > 0) {
+      setValidationError('Please fix the highlighted fields before saving.');
       return;
     }
+    setFieldErrors({});
 
     try {
       const payload = {
@@ -370,7 +418,7 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
         </h3>
 
         <p className="text-xs text-slate-500 mt-2">
-          Job Requirement ID #{jobId} could not be loaded.
+          {jobCode ? `Job requirement ${jobCode} could not be loaded.` : 'Job requirement details could not be loaded.'}
         </p>
 
         <div className="flex justify-center gap-2 mt-5">
@@ -405,7 +453,7 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
           </h2>
 
           <p className="text-xs text-slate-500 mt-1">
-            Job Code: {form.jobCode || `JOB-${jobId}`} | ID: #{jobId}
+            Job Code: {form.jobCode || jobCode || `JOB-${jobId}`}
           </p>
         </div>
 
@@ -420,27 +468,7 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
         )}
       </div>
 
-      {validationError && (
-        <div className="mb-5">
-          <Alert
-            type="error"
-            title="Validation Error"
-            message={validationError}
-          />
-        </div>
-      )}
-
-      {editJobMutation.error && (
-        <div className="mb-5">
-          <Alert
-            type="error"
-            title="Backend Error"
-            message={getErrorMessage(editJobMutation.error)}
-          />
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form noValidate onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
             <label className="form-label">Profile Header *</label>
@@ -448,9 +476,11 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               name="profileHeader"
               value={form.profileHeader}
               onChange={handleChange}
-              className="form-input"
+              aria-invalid={Boolean(fieldErrors.profileHeader)}
+              className={`form-input ${fieldErrors.profileHeader ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
               required
             />
+            <FieldError message={fieldErrors.profileHeader} />
           </div>
 
           <div>
@@ -471,9 +501,11 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               name="jobDesignation"
               value={form.jobDesignation}
               onChange={handleChange}
-              className="form-input"
+              aria-invalid={Boolean(fieldErrors.jobDesignation)}
+              className={`form-input ${fieldErrors.jobDesignation ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
               required
             />
+            <FieldError message={fieldErrors.jobDesignation} />
           </div>
 
           <div>
@@ -484,9 +516,11 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               min="1"
               value={form.noOfVacancy}
               onChange={handleChange}
-              className="form-input"
+              aria-invalid={Boolean(fieldErrors.noOfVacancy)}
+              className={`form-input ${fieldErrors.noOfVacancy ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
               required
             />
+            <FieldError message={fieldErrors.noOfVacancy} />
           </div>
 
           <div>
@@ -522,8 +556,10 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
                   min="0"
                   value={form.experiance}
                   onChange={handleChange}
-                  className="form-input"
+                  aria-invalid={Boolean(fieldErrors.experiance)}
+                  className={`form-input ${fieldErrors.experiance ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
                 />
+                <FieldError message={fieldErrors.experiance} />
               </div>
 
               <div>
@@ -534,8 +570,10 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
                   min="0"
                   value={form.experianceTo}
                   onChange={handleChange}
-                  className="form-input"
+                  aria-invalid={Boolean(fieldErrors.experianceTo)}
+                  className={`form-input ${fieldErrors.experianceTo ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
                 />
+                <FieldError message={fieldErrors.experianceTo} />
               </div>
             </div>
           </div>
@@ -557,9 +595,11 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
                   step="1"
                   value={form.salary}
                   onChange={handleChange}
-                  className="form-input"
+                  aria-invalid={Boolean(fieldErrors.salary)}
+                  className={`form-input ${fieldErrors.salary ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
                   required
                 />
+                <FieldError message={fieldErrors.salary} />
               </div>
 
               <div>
@@ -573,9 +613,11 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
                   step="1"
                   value={form.salaryTo}
                   onChange={handleChange}
-                  className="form-input"
+                  aria-invalid={Boolean(fieldErrors.salaryTo)}
+                  className={`form-input ${fieldErrors.salaryTo ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
                   required
                 />
+                <FieldError message={fieldErrors.salaryTo} />
               </div>
             </div>
 
@@ -620,9 +662,11 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               name="jobLocation"
               value={form.jobLocation}
               onChange={handleChange}
-              className="form-input"
+              aria-invalid={Boolean(fieldErrors.jobLocation)}
+              className={`form-input ${fieldErrors.jobLocation ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
               required
             />
+            <FieldError message={fieldErrors.jobLocation} />
           </div>
         </div>
 
@@ -667,14 +711,23 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
 
           <div>
             <label className="form-label">Expiry Date *</label>
-            <input
-              type="date"
+            <DatePicker
               name="expiryDate"
               value={form.expiryDate}
-              onChange={handleChange}
-              className="form-input"
+              onChange={(value) => {
+                setForm((previous) => ({ ...previous, expiryDate: value }));
+                setFieldErrors((previous) => {
+                  if (!previous.expiryDate) return previous;
+                  const next = { ...previous };
+                  delete next.expiryDate;
+                  return next;
+                });
+              }}
+              aria-invalid={Boolean(fieldErrors.expiryDate)}
+              className={`form-input ${fieldErrors.expiryDate ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
               required
             />
+            <FieldError message={fieldErrors.expiryDate} />
           </div>
         </div>
 
@@ -750,9 +803,11 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               name="skill"
               value={form.skill}
               onChange={handleChange}
-              className="form-input"
+              aria-invalid={Boolean(fieldErrors.skill)}
+              className={`form-input ${fieldErrors.skill ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
               required
             />
+            <FieldError message={fieldErrors.skill} />
           </div>
 
           <div>
@@ -870,9 +925,11 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
             maxLength={MAX_JOB_DESCRIPTION_LENGTH}
             value={form.jobDiscription}
             onChange={handleChange}
-            className="form-input resize-none"
+            aria-invalid={Boolean(fieldErrors.jobDiscription)}
+            className={`form-input resize-none ${fieldErrors.jobDiscription ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
             required
           />
+          <FieldError message={fieldErrors.jobDiscription} />
           <div className={`mt-1 text-[10px] font-semibold text-right ${form.jobDiscription.length >= MAX_JOB_DESCRIPTION_LENGTH ? 'text-rose-600' : 'text-slate-400'}`}>
             {MAX_JOB_DESCRIPTION_LENGTH - form.jobDiscription.length} characters left ({form.jobDiscription.length}/{MAX_JOB_DESCRIPTION_LENGTH})
           </div>
@@ -887,6 +944,30 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
             className="form-input"
           />
         </div>
+
+        {(validationError || editJobMutation.error) && (
+          <div
+            ref={validationSummaryRef}
+            tabIndex={-1}
+            className="space-y-2 rounded-lg outline-none focus:ring-2 focus:ring-red-200"
+            role="alert"
+            aria-live="polite"
+          >
+            {validationError && (
+              <Alert type="danger" title="Please review these fields" message={validationError} />
+            )}
+            {editJobMutation.error && (
+              <Alert type="danger" title="Backend Error" message={getErrorMessage(editJobMutation.error)} />
+            )}
+            {Object.entries(fieldErrors).length > 0 && (
+              <ul className="list-disc space-y-1 pl-5 text-xs font-semibold text-red-700">
+                {Object.entries(fieldErrors).map(([field, message]) => (
+                  <li key={field}><span className="font-bold">{fieldLabels[field] || field}:</span> {message}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
           {onCancel && (

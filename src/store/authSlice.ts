@@ -13,19 +13,49 @@ interface AuthState {
   lastLogin: string | null;
 }
 
+export const getTokenExpiration = (token: string | null): number | null => {
+  if (!token) return null;
+
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+
+  try {
+    const base64Payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(base64Payload.padEnd(Math.ceil(base64Payload.length / 4) * 4, '=')));
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+};
+
+export const isTokenExpired = (token: string | null, now = Date.now()): boolean => {
+  const expiresAt = getTokenExpiration(token);
+  return expiresAt !== null && expiresAt <= now;
+};
+
 const getInitialState = (): AuthState => {
   const savedAuth = localStorage.getItem('srg_auth_state');
   if (savedAuth) {
     try {
       const parsed = JSON.parse(savedAuth);
+      if (!parsed.user || !parsed.token || isTokenExpired(parsed.token)) {
+        localStorage.removeItem('srg_auth_state');
+        return {
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          lastLogin: null,
+        };
+      }
+
       return {
-        user: parsed.user || null,
-        token: parsed.token || null,
-        isAuthenticated: !!parsed.user,
+        user: parsed.user,
+        token: parsed.token,
+        isAuthenticated: true,
         lastLogin: parsed.lastLogin || null,
       };
-    } catch (_) {
-      // Fallback
+    } catch {
+      localStorage.removeItem('srg_auth_state');
     }
   }
   return {
@@ -53,6 +83,7 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.lastLogin = null;
       localStorage.removeItem('srg_auth_state');
+      localStorage.removeItem('srg_auth');
     },
     updateHandlerPermissions: (state, action: PayloadAction<HandlerPermissions>) => {
       if (state.user && state.user.role === 'HANDLER') {

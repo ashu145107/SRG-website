@@ -15,20 +15,12 @@ export const jobApi = baseApi.injectEndpoints({
     getJobs: builder.query<Job[], { approvedOnly?: boolean; companyId?: string; search?: string } | void>({
       queryFn: async (params) => {
         try {
-          let user: any = null;
-          try {
-            user = store.getState().auth?.user;
-            if (!user) {
-              const saved = localStorage.getItem('srg_auth_state');
-              if (saved) user = JSON.parse(saved)?.user;
-            }
-          } catch (e) {}
-
-          const role = user?.role;
+          const user = store.getState().auth?.user;
+          const role = String(user?.role || '').toUpperCase();
           const isEmployer =
-            role === 3 || role === '3' ||
-            String(role).toUpperCase() === 'COMPANY' ||
-            String(role).toUpperCase() === 'EMPLOYER';
+            role === '3' ||
+            role === 'COMPANY' ||
+            role === 'EMPLOYER';
 
           let list: any[] = [];
 
@@ -56,22 +48,30 @@ export const jobApi = baseApi.injectEndpoints({
           }
 
           if (list && list.length > 0) {
-            let mappedJobs: Job[] = list.map((item: any, idx: number) => ({
-              id: String(item.id || item.jobRequirementId || `job-${idx}`),
-              title: item.jobDesignation || item.profileHeader || item.title || 'Untitled Job',
-              companyName: item.companyName || item.postingNotes || 'Employer',
-              companyId: String(item.companyId || item.userId || ''),
-              location: item.jobLocation || item.workPlace || 'Nashik',
-              salary: item.salary ? `â‚¹${item.salary} - â‚¹${item.salaryTo || item.salary}` : 'Negotiable',
-              description: item.jobDiscription || item.profileHeader || 'No description provided.',
-              requirements: item.skill ? item.skill.split(',').map((s: string) => s.trim()) : [],
-              type: item.workModeId === 1 ? 'Full-time' : item.workModeId === 2 ? 'Part-time' : 'Contract',
-              category: 'General',
-              isApproved: true,
-              createdAt: item.expiryDate || new Date().toISOString().split('T')[0],
-              jobCode: item.jobCode || '',
-              userJobStatus: item.userJobStatus || item.applicationStatus || ''
-            }));
+            let mappedJobs: Job[] = list.map((item: any) => {
+              const profileHeader = item.profileHeader || item.ProfileHeader || item.profileheader || item.profile_header || '';
+              const jobDesignation = item.jobDesignation || item.jobdesignation || item.job_designation || '';
+              const skill = item.skill || item.skills || item.requiredSkills || '';
+              return {
+                apiData: item,
+                id: String(item.id || item.jobRequirementId || item.requirementId || ''),
+                title: profileHeader || jobDesignation || item.title || '',
+                profileHeader,
+                jobDesignation,
+                companyName: item.companyName || '',
+                companyId: String(item.companyId || item.userId || ''),
+                location: item.jobLocation || item.workPlace || '',
+                salary: item.salary != null ? String(item.salary) : '',
+                description: item.jobDiscription || item.jobDescription || '',
+                requirements: Array.isArray(skill) ? skill : String(skill).split(',').map((s: string) => s.trim()).filter(Boolean),
+                type: item.type || '',
+                category: item.category || '',
+                isApproved: item.isApproved !== false,
+                createdAt: item.createdDate || item.createdAt || '',
+                jobCode: item.jobCode || '',
+                userJobStatus: item.userJobStatus || item.applicationStatus || ''
+              };
+            });
 
             if (params) {
               if (params.approvedOnly) {

@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useSearchJobsQuery, useApplyJobMutation } from '../../hooks/useJobQueries';
+import { useDateOnly } from '../../hooks/useDateOnly';
 import {
   Search,
   RefreshCw,
@@ -18,7 +19,6 @@ import {
   ChevronRight,
   SlidersHorizontal,
   MapPin,
-  Briefcase,
   IndianRupee,
   Building2,
   CalendarDays,
@@ -27,12 +27,12 @@ import {
   List as ListIcon,
   Table2,
 } from 'lucide-react';
-import { Alert } from '../ui/FeedbackComponents';
+import { Alert, Toast } from '../ui/FeedbackComponents';
 import { Job } from '../../types';
 
 interface JobListingViewProps {
   onViewDetails: (id: number, jobCode?: string) => void;
-  onEditJob?: (id: number) => void;
+  onEditJob?: (id: number, jobCode?: string) => void;
   onAddNewJob?: () => void;
   appliedJobIds?: number[];
   /** When provided, component uses this data instead of fetching internally */
@@ -42,6 +42,21 @@ interface JobListingViewProps {
   externalIsFetching?: boolean;
   externalRefetch?: () => void;
 }
+
+const getJobPostedTimestamp = (job: any): number | undefined => {
+  const rawDate = job.createdAt
+    || job.createdDate
+    || job.createdOn
+    || job.postedAt
+    || job.postedDate
+    || job.postedOn
+    || job.postingDate
+    || job.dateCreated
+    || job.requirementDate;
+  if (!rawDate) return undefined;
+  const timestamp = new Date(rawDate).getTime();
+  return Number.isNaN(timestamp) ? undefined : timestamp;
+};
 
 export const JobListingView: React.FC<JobListingViewProps> = ({
   onViewDetails,
@@ -55,6 +70,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
   externalRefetch,
 }) => {
   const { t, i18n } = useTranslation();
+  const formatDateOnly = useDateOnly();
 
   const user = useSelector((state: any) => state.auth?.user);
   const userRole = String(user?.role || '').toUpperCase();
@@ -86,13 +102,24 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
   // Quick Apply state
   const applyJobMutation = useApplyJobMutation();
   const [applyingIds, setApplyingIds] = useState<Set<number>>(new Set());
+  const [applyErrorMessage, setApplyErrorMessage] = useState('');
 
   const handleQuickApply = async (id: number) => {
     setApplyingIds((prev) => new Set(prev).add(id));
+    setApplyErrorMessage('');
     try {
-      await applyJobMutation.mutateAsync([String(id)]);
-    } catch (_) {
-      // toast handled globally; nothing else to do
+      const response = await applyJobMutation.mutateAsync([String(id)]);
+      if (response?.isSuccess === false || response?.success === false) {
+        throw new Error(response.message || 'Your application could not be submitted.');
+      }
+    } catch (error: any) {
+      const responseData = error?.response?.data ?? error?.data;
+      const message = responseData?.error?.message
+        || responseData?.message
+        || (typeof responseData === 'string' ? responseData : '')
+        || error?.message
+        || 'Unable to submit your application. Please try again.';
+      setApplyErrorMessage(String(message));
     } finally {
       setApplyingIds((prev) => {
         const next = new Set(prev);
@@ -114,7 +141,8 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
   } = useSearchJobsQuery(
     useExternal
       ? undefined
-      : { searchPhrase: searchPhrase || undefined, page: pageNumber, limit: pageSize }
+      : { searchPhrase: searchPhrase || undefined, page: pageNumber, limit: pageSize },
+    { enabled: !useExternal }
   );
 
   const jobs = useExternal ? externalJobs! : (searchData?.jobs || []);
@@ -181,13 +209,19 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
       result.sort((a: any, b: any) => String(a.workPlace || a.jobLocation || '').localeCompare(String(b.workPlace || b.jobLocation || '')));
     } else if (sortKey === 'salary') {
       result.sort((a: any, b: any) => (Number(b.salaryTo) || 0) - (Number(a.salaryTo) || 0));
-    } else {
-      // recent — newest posted first
-      result.sort((a: any, b: any) => Number(b.id) - Number(a.id));
+    } else if (!useExternal) {
+      result.sort((a: any, b: any) => {
+        const dateA = getJobPostedTimestamp(a);
+        const dateB = getJobPostedTimestamp(b);
+        if (dateA !== undefined && dateB !== undefined && dateA !== dateB) return dateB - dateA;
+        if (dateA !== undefined && dateB === undefined) return -1;
+        if (dateA === undefined && dateB !== undefined) return 1;
+        return Number(b.id) - Number(a.id);
+      });
     }
 
     return result;
-  }, [jobs, searchPhrase, filterSkill, filterWorkPlace, sortKey]);
+  }, [jobs, searchPhrase, filterSkill, filterWorkPlace, sortKey, useExternal]);
 
   // Derived display rows shared by the list and table layouts
   const mappedJobs = React.useMemo(() => {
@@ -197,33 +231,39 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
       return n >= 100000 ? `${n / 100000} L` : `${n}`;
     };
     return filteredAndSortedJobs.map((job: any, index: number) => {
-      const jobIdNum = Number(job.id || index);
+      const jobIdNum = Number(job.id);
+      const hasValidJobId = Number.isSafeInteger(jobIdNum) && jobIdNum > 0;
+      const jobKey = job.jobCode || String(job.id || `job-row-${index}`);
       const salaryFrom = fmt(job.salary);
       const salaryTo = fmt(job.salaryTo);
       const salaryText = salaryFrom && salaryTo
         ? `₹${salaryFrom} - ₹${salaryTo}`
         : salaryFrom
           ? `₹${salaryFrom}`
-          : 'Salary Negotiable';
-      const expiry = job.expiryDate
-        ? (() => {
-            const d = new Date(job.expiryDate);
-            return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-IN');
-          })()
-        : '';
+          : '—';
+      const expiry = formatDateOnly(job.expiryDate);
+      const apiStatus = String(job.userJobStatus || '').trim();
+      const isApplied = apiStatus
+        ? !/^(apply|not\s*applied)$/i.test(apiStatus)
+        : appliedJobIds.includes(jobIdNum);
       return {
         job,
         jobIdNum,
-        isApplied: appliedJobIds.includes(jobIdNum),
+        hasValidJobId,
+        jobKey,
+        isApplied,
+        applicationStatus: apiStatus || 'Applied',
         isApplying: applyingIds.has(jobIdNum),
         designation: job.profileHeader || job.jobDesignation || 'N/A',
-        workPlace: job.workPlace || job.jobLocation || 'N/A',
-        experience: `${job.experiance ?? 0} - ${job.experianceTo ?? 2} yrs`,
+        workPlace: job.workPlace || job.jobLocation || '—',
+        experience: job.experiance != null || job.experianceTo != null
+          ? `${job.experiance ?? ''} - ${job.experianceTo ?? ''} yrs`
+          : '—',
         salaryText,
         expiry,
       };
     });
-  }, [filteredAndSortedJobs, appliedJobIds, applyingIds]);
+  }, [filteredAndSortedJobs, appliedJobIds, applyingIds, formatDateOnly]);
 
   return (
     <div className="space-y-6 animate-fade-in text-left">
@@ -267,7 +307,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
           <button
             onClick={handleRefresh}
             disabled={isFetching}
-            className="p-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 text-xs font-bold bg-white"
+            className="min-h-10 min-w-10 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-1 text-xs font-bold bg-white"
             title="Refresh list"
           >
             <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
@@ -347,10 +387,17 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
       </div>
 
       {/* Error */}
+      {applyErrorMessage && (
+        <Toast
+          message={applyErrorMessage}
+          type="error"
+          onClose={() => setApplyErrorMessage('')}
+        />
+      )}
       {error && (
         <div className="my-4">
           <Alert
-            type="error"
+            type="danger"
             title="API Error"
             message="Failed to load job details. Please check your connection and retry."
           />
@@ -411,14 +458,15 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {mappedJobs.map((row) => (
-                      <tr key={row.jobIdNum} className="hover:bg-slate-50/70 transition-colors">
+                      <tr key={row.jobKey} className="hover:bg-slate-50/70 transition-colors">
                         <td className="px-4 py-3 font-mono text-[10px] text-slate-400 font-bold whitespace-nowrap">
-                          {row.job.jobCode || `JOB-${row.jobIdNum}`}
+                          {row.job.jobCode || '—'}
                         </td>
                         <td className="px-4 py-3 font-bold text-slate-900">
                           <button
                             onClick={() => onViewDetails(row.jobIdNum, row.job.jobCode)}
-                            className="hover:text-orange-600 transition-colors text-left cursor-pointer"
+                            disabled={!row.hasValidJobId}
+                            className="cursor-pointer rounded-sm text-left transition-colors hover:text-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed"
                             title="View job details"
                           >
                             {row.designation}
@@ -438,13 +486,15 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                               <>
                                 <button
                                   onClick={() => onViewDetails(row.jobIdNum, row.job.jobCode)}
-                                  className="py-1.5 px-3 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-lg text-[11px] font-bold transition-all inline-flex items-center gap-1 cursor-pointer text-slate-700 whitespace-nowrap"
+                                  disabled={!row.hasValidJobId}
+                                  className="py-1.5 px-3 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-lg text-[11px] font-bold transition-all inline-flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 text-slate-700 whitespace-nowrap"
                                 >
                                   <Eye className="w-3.5 h-3.5" /><span>View</span>
                                 </button>
                                 <button
-                                  onClick={() => onEditJob(Number(row.job.id))}
-                                  className="py-1.5 px-3 bg-orange-50 border border-orange-100 text-orange-900 hover:bg-orange-100 hover:text-orange-950 rounded-lg text-[11px] font-bold transition-all inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                                  onClick={() => onEditJob(Number(row.job.id), row.job.jobCode)}
+                                  disabled={!row.hasValidJobId}
+                                  className="py-1.5 px-3 bg-orange-50 border border-orange-100 text-orange-900 hover:bg-orange-100 hover:text-orange-950 rounded-lg text-[11px] font-bold transition-all inline-flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
                                 >
                                   <Edit className="w-3.5 h-3.5" /><span>Edit</span>
                                 </button>
@@ -453,12 +503,12 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                               <>
                                 {row.isApplied ? (
                                   <span className="inline-flex items-center justify-center gap-1 py-1.5 px-3 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-lg text-[11px] font-bold whitespace-nowrap">
-                                    <Check className="w-3.5 h-3.5 text-emerald-600" /><span>Applied</span>
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" /><span>{row.applicationStatus}</span>
                                   </span>
                                 ) : (
                                   <button
                                     onClick={() => handleQuickApply(row.jobIdNum)}
-                                    disabled={row.isApplying}
+                                    disabled={!row.hasValidJobId || row.isApplying}
                                     className="py-1.5 px-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[11px] font-bold shadow-xs transition-all inline-flex items-center gap-1 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
                                   >
                                     {row.isApplying
@@ -484,66 +534,79 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
               </div>
             </div>
           ) : (
-          <div className="bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-xs divide-y divide-slate-100">
-            {mappedJobs.map(({ job, jobIdNum, isApplied, isApplying, designation, workPlace, experience, salaryText, expiry }) => {
+          <div className="space-y-3">
+            {mappedJobs.map(({ job, jobIdNum, jobKey, hasValidJobId, isApplied, applicationStatus, isApplying, designation, workPlace, experience, salaryText, expiry }) => {
               return (
                 <div
-                  key={jobIdNum}
-                  className="group p-4 lg:p-5 flex flex-col lg:flex-row lg:items-center gap-4 transition-colors hover:bg-slate-50/70"
+                  key={jobKey}
+                className="group grid min-w-0 grid-cols-1 gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-orange-200 hover:shadow-md sm:p-5 md:grid-cols-[minmax(0,1fr)_auto]"
                 >
-                  <div
-                    className="flex-1 min-w-0 cursor-pointer"
-                    onClick={() => onViewDetails(jobIdNum, job.jobCode)}
-                    title="View job details"
-                  >
-                    <span className="font-mono text-[9px] text-slate-400 font-bold">
-                      {job.jobCode || `JOB-${jobIdNum}`}
+                <div className="min-w-0">
+                  <span className="inline-flex max-w-full items-center rounded-md bg-slate-50 px-2 py-1 font-mono text-[10px] font-bold text-slate-500 ring-1 ring-inset ring-slate-200">
+                    {job.jobCode || '—'}
+                  </span>
+                  <h3 className="mt-2 text-base font-extrabold leading-snug text-slate-900 transition-colors group-hover:text-orange-700 sm:text-lg">
+                    <button
+                      type="button"
+                      onClick={() => onViewDetails(jobIdNum, job.jobCode)}
+                      disabled={!hasValidJobId}
+                      className="cursor-pointer rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 enabled:hover:text-orange-700 disabled:cursor-not-allowed"
+                      title="View job details"
+                    >
+                    {designation}
+                    </button>
+                  </h3>
+                  <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-slate-600">
+                    <span className="inline-flex min-w-0 items-center gap-1.5">
+                      <Building2 className="h-4 w-4 shrink-0 text-slate-400" />
+                      <span className="truncate font-semibold text-slate-700">{job.companyName || 'N/A'}</span>
                     </span>
-                    <h3 className="mt-0.5 text-[15px] lg:text-base font-bold text-slate-900 leading-snug group-hover:text-orange-600 transition-colors">
-                      {designation}
-                    </h3>
-                    <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
-                      <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="font-semibold text-slate-700">{job.companyName || 'N/A'}</span>
-                    </div>
-                    {job.skill && (
-                      <p className="mt-1.5 text-xs italic text-slate-500 line-clamp-1">{job.skill}</p>
-                    )}
-                    <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] font-semibold text-slate-600">
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                        {workPlace}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Briefcase className="w-3 h-3 text-slate-400 shrink-0" />
-                        {experience}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <IndianRupee className="w-3 h-3 text-slate-400 shrink-0" />
-                        {salaryText}
-                      </span>
-                      {expiry && (
-                        <span className="inline-flex items-center gap-1">
-                          <CalendarDays className="w-3 h-3 text-slate-400 shrink-0" />
-                          Last date: {expiry}
-                        </span>
-                      )}
-                    </div>
+                    <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-slate-700">
+                      <MapPin className="h-4 w-4 shrink-0 text-orange-600" />
+                      <span className="break-words">{workPlace}</span>
+                    </span>
                   </div>
+                  {job.skill && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {String(job.skill).split(',').map((skill) => skill.trim()).filter(Boolean).slice(0, 5).map((skill) => (
+                        <span key={skill} className="max-w-full truncate rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-semibold text-orange-800">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 border-t border-slate-100 pt-3 text-xs sm:grid-cols-3">
+                    <span className="flex min-w-0 items-center gap-1.5 font-semibold text-slate-700">
+                      <span className="truncate">{experience}</span>
+                    </span>
+                    <span className="flex min-w-0 items-center gap-1.5 font-semibold text-slate-700">
+                      <IndianRupee className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span className="truncate">{salaryText}</span>
+                    </span>
+                    {expiry && (
+                      <span className="flex min-w-0 items-center gap-1.5 font-semibold text-slate-700">
+                        <CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                        <span className="truncate">Last date: {expiry}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-                  <div className="flex items-center gap-2 lg:flex-col lg:items-stretch shrink-0">
-                    {isEmployerOrStaff && onEditJob ? (
-                      <>
-                        <button
-                          onClick={() => onViewDetails(jobIdNum, job.jobCode)}
-                          className="py-2 px-4 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer text-slate-700 flex-1 lg:w-40"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>View Details</span>
+                <div className="grid grid-cols-2 gap-2 md:min-w-36 md:grid-cols-1 md:content-center">
+                  {isEmployerOrStaff && onEditJob ? (
+                    <>
+                      <button
+                        onClick={() => onViewDetails(jobIdNum, job.jobCode)}
+                        disabled={!hasValidJobId}
+                        className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition-all hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View Details</span>
                         </button>
                         <button
-                          onClick={() => onEditJob(Number(job.id))}
-                          className="py-2 px-4 bg-orange-50 border border-orange-100 text-orange-900 hover:bg-orange-100 hover:text-orange-950 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-1 lg:w-40"
+                          onClick={() => onEditJob(Number(job.id), job.jobCode)}
+                          disabled={!hasValidJobId}
+                          className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-bold text-orange-900 transition-all hover:bg-orange-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <Edit className="w-3.5 h-3.5" />
                           <span>Edit</span>
@@ -552,15 +615,15 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                     ) : (
                       <>
                         {isApplied ? (
-                          <span className="inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl text-xs font-bold shadow-2xs flex-1 lg:w-40">
+                          <span className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
                             <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Applied</span>
+                            <span>{applicationStatus}</span>
                           </span>
                         ) : (
                           <button
                             onClick={() => handleQuickApply(jobIdNum)}
-                            disabled={isApplying}
-                            className="py-2 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex-1 lg:w-40"
+                            disabled={!hasValidJobId || isApplying}
+                            className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-orange-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {isApplying
                               ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -570,7 +633,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                         )}
                         <button
                           onClick={() => onViewDetails(jobIdNum, job.jobCode)}
-                          className="py-2 px-4 bg-white border border-slate-200 hover:border-orange-500 hover:text-orange-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer text-slate-700 flex-1 lg:w-40"
+                          className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition-all hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>View Details</span>
@@ -597,7 +660,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
             <button
               onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
               disabled={pageNumber === 1 || isFetching}
-              className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition-all cursor-pointer flex items-center justify-center"
+              className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent transition-all cursor-pointer flex items-center justify-center"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -610,7 +673,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                 key={page}
                 onClick={() => setPageNumber(page!)}
                 disabled={isFetching}
-                className={`min-w-[32px] h-8 rounded-lg font-bold border transition-all cursor-pointer ${
+                className={`min-w-[32px] h-8 rounded-lg font-bold border transition-all cursor-pointer disabled:cursor-not-allowed ${
                   pageNumber === page
                     ? 'bg-blue-950 border-blue-950 text-white shadow-2xs'
                     : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -626,7 +689,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
               <button
                 onClick={() => setPageNumber(Math.ceil(totalCount / pageSize))}
                 disabled={isFetching}
-                className="min-w-[32px] h-8 rounded-lg font-bold border bg-white border-slate-200 text-slate-600 hover:bg-slate-50 transition-all cursor-pointer"
+                className="min-w-[32px] h-8 rounded-lg font-bold border bg-white border-slate-200 text-slate-600 hover:bg-slate-50 transition-all cursor-pointer disabled:cursor-not-allowed"
               >
                 {Math.ceil(totalCount / pageSize)}
               </button>
@@ -634,7 +697,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
             <button
               onClick={() => setPageNumber(prev => Math.min(prev + 1, Math.ceil(totalCount / pageSize)))}
               disabled={pageNumber === Math.ceil(totalCount / pageSize) || isFetching}
-              className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition-all cursor-pointer flex items-center justify-center"
+              className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent transition-all cursor-pointer flex items-center justify-center"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

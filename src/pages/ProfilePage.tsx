@@ -18,6 +18,7 @@ import { useGetJobTypesQuery, useGetShiftTypesQuery, useGetWorkModesQuery } from
 import { useGetStatesQuery, useGetDistrictsQuery, useGetTalukasQuery, useGetEducationsListQuery, useGetSubEducationsListQuery, GenericMasterItem, getLocalizedName } from '../services/masterApi';
 import { Toast } from '../components/ui/FeedbackComponents';
 import { Loader } from '../components/ui/FeedbackComponents';
+import { DatePicker } from '../components/ui/DatePicker';
 import { DashboardMenu, DashboardMenuContext } from './DashboardHub';
 import {
   UserCircle,
@@ -1026,7 +1027,13 @@ export default function ProfilePage() {
                         </div>
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.dob')}</label>
-                          <input type="date" name="dob" value={detailsForm.dob} onChange={handleDetailsChange} className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white cursor-pointer" />
+                          <DatePicker
+                            name="dob"
+                            value={detailsForm.dob}
+                            onChange={(value) => setDetailsForm((previous) => ({ ...previous, dob: value }))}
+                            className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs transition-all focus:border-orange-500 focus:outline-none"
+                            aria-label={t('profile.personal.dob')}
+                          />
                         </div>
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('profile.personal.gender')}</label>

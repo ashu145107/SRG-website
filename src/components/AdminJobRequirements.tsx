@@ -4,15 +4,28 @@
  */
 
 import React, { useState } from 'react';
-import { useGetAdminJobRequirementsQuery } from '../services/adminApi';
+import {
+  useGetAdminJobRequirementsQuery,
+  useGetJobRequirementByCodeQuery,
+} from '../services/adminApi';
 import { JobRequirement } from '../services/jobTypes';
 import { Briefcase, Eye, Edit, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
 import { Loader } from './ui/FeedbackComponents';
 import { EditJobForm } from './jobs/EditJobForm';
+import { JobRequirementDetailsDialog } from './jobs/JobRequirementDetailsDialog';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
+import { useDateOnly } from '../hooks/useDateOnly';
+import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { RootState } from '../store';
+import { navigateToEncryptedRoute } from '../utils/secureDetailRoute';
 
 export function AdminJobRequirements() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { token } = useSelector((state: RootState) => state.auth);
+  const formatDateOnly = useDateOnly();
   const [pageSize, setPageSize] = useState(15);
   const [pageNumber, setPageNumber] = useState(1);
   const [searchPhrase, setSearchPhrase] = useState('');
@@ -26,6 +39,18 @@ export function AdminJobRequirements() {
 
   // Edit Modal state (popup form)
   const [editingJobId, setEditingJobId] = useState<number | null>(null);
+  const [editingJobCode, setEditingJobCode] = useState<string | undefined>();
+
+  const {
+    data: selectedJobDetails,
+    isLoading: isSelectedJobLoading,
+    isFetching: isSelectedJobFetching,
+    error: selectedJobError,
+    refetch: refetchSelectedJob,
+  } = useGetJobRequirementByCodeQuery(selectedJob?.jobCode || '', {
+    skip: !selectedJob?.jobCode,
+    refetchOnMountOrArgChange: true,
+  });
 
   // Fetch paginated data
   const { data, isLoading, isFetching, error, refetch } = useGetAdminJobRequirementsQuery({
@@ -35,7 +60,6 @@ export function AdminJobRequirements() {
 
   const jobsList = data?.items || [];
   const totalCount = data?.totalCount || 0;
-
   // Handle Sort
   const handleSort = (column: keyof JobRequirement | 'id') => {
     if (sortColumn === column) {
@@ -220,17 +244,31 @@ export function AdminJobRequirements() {
                 </tr>
               ) : (
                 filteredAndSortedList.map((job, index) => (
-                  <tr key={job.id || index} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={job.id || job.jobCode || index} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3.5 font-black text-blue-900 whitespace-nowrap">
-                      <a
-                        href={`#/dashboard?view=jobRequirement&id=${job.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Open job details in new tab"
-                        className="underline decoration-blue-300 underline-offset-2 hover:text-blue-600 hover:decoration-blue-600 transition-colors cursor-pointer"
-                      >
-                        {job.jobCode || `RG${String((job.id || index) + 5700).padStart(5, '0')}`}
-                      </a>
+                      {job.id ? (
+                        <Link
+                          to="/dashboard"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            void navigateToEncryptedRoute('/dashboard', {
+                              view: 'jobRequirement',
+                              id: String(job.id),
+                              jobCode: job.jobCode || '',
+                            }, token || '', navigate).catch((error: unknown) => {
+                              window.alert(error instanceof Error ? error.message : 'Unable to open requirement details.');
+                            });
+                          }}
+                          title="Open job details"
+                          className="underline decoration-blue-300 underline-offset-2 hover:text-blue-600 hover:decoration-blue-600 transition-colors cursor-pointer"
+                        >
+                          {job.jobCode || job.id}
+                        </Link>
+                      ) : (
+                        <span title="Requirement ID is missing from the API response">
+                          {job.jobCode || 'N/A'}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 font-extrabold text-slate-800 break-words max-w-[200px]">
                       {job.profileHeader || job.jobDesignation}
@@ -247,7 +285,11 @@ export function AdminJobRequirements() {
                     <td className="px-4 py-3.5 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
-                          onClick={() => setEditingJobId(Number(job.id))}
+                          onClick={() => {
+                            setEditingJobId(Number(job.id));
+                            setEditingJobCode(job.jobCode || undefined);
+                          }}
+                          disabled={!job.id}
                           className="p-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors inline-flex items-center justify-center cursor-pointer"
                           title="Edit Requirements"
                         >
@@ -288,7 +330,7 @@ export function AdminJobRequirements() {
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               const startPage = Math.max(1, pageNumber - 2);
               return startPage + i <= totalPages ? startPage + i : null;
-            }).filter(Boolean).map((page) => (
+            }).filter((page): page is number => page !== null).map((page) => (
               <button
                 key={page}
                 onClick={() => setPageNumber(page)}
@@ -329,88 +371,14 @@ export function AdminJobRequirements() {
 
       {/* Details Dialog Modal */}
       {selectedJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden flex flex-col text-left">
-            <div className="bg-blue-950 text-white p-4.5 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-orange-400" />
-                <h3 className="font-extrabold text-sm sm:text-base">
-                  {t('adm.requirements.detailTitle')}
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedJob(null)}
-                className="p-1 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-all cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4 text-xs sm:text-sm overflow-y-auto max-h-[70vh]">
-              {selectedJob.jobCode && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
-                  <span className="font-bold text-slate-400 col-span-1">Job Code:</span>
-                  <span className="font-extrabold text-blue-900 col-span-2">{selectedJob.jobCode}</span>
-                </div>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
-                <span className="font-bold text-slate-400 col-span-1">Profile Header:</span>
-                <span className="font-extrabold text-slate-900 col-span-2">{selectedJob.profileHeader || selectedJob.jobDesignation || 'N/A'}</span>
-              </div>
-              {selectedJob.companyName && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
-                  <span className="font-bold text-slate-400 col-span-1">Company:</span>
-                  <span className="font-extrabold text-slate-900 col-span-2">{selectedJob.companyName}</span>
-                </div>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
-                <span className="font-bold text-slate-400 col-span-1">Work Place:</span>
-                <span className="font-bold text-slate-900 col-span-2">{selectedJob.workPlace || selectedJob.jobLocation || 'N/A'}</span>
-              </div>
-              {selectedJob.skill && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
-                  <span className="font-bold text-slate-400 col-span-1">Required Skills:</span>
-                  <span className="font-medium text-slate-700 col-span-2 break-words leading-relaxed">{selectedJob.skill}</span>
-                </div>
-              )}
-              {selectedJob.noOfVacancy && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
-                  <span className="font-bold text-slate-400 col-span-1">Vacancy Count:</span>
-                  <span className="font-extrabold text-slate-800 col-span-2">{selectedJob.noOfVacancy} Positions</span>
-                </div>
-              )}
-              {(selectedJob.experiance !== undefined || selectedJob.experianceTo !== undefined) && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
-                  <span className="font-bold text-slate-400 col-span-1">Experience Needed:</span>
-                  <span className="font-medium text-slate-800 col-span-2">{selectedJob.experiance || 0} to {selectedJob.experianceTo || 'N/A'} Years</span>
-                </div>
-              )}
-              {(selectedJob.salary !== undefined || selectedJob.salaryTo !== undefined) && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-100 pb-2.5">
-                  <span className="font-bold text-slate-400 col-span-1">Salary Range:</span>
-                  <span className="font-extrabold text-emerald-700 col-span-2">
-                    ₹{selectedJob.salary?.toLocaleString() || '0'} - ₹{selectedJob.salaryTo?.toLocaleString() || '0'} Monthly
-                  </span>
-                </div>
-              )}
-              {selectedJob.jobDiscription && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 pb-1">
-                  <span className="font-bold text-slate-400 col-span-1">Description:</span>
-                  <span className="font-medium text-slate-600 col-span-2 leading-relaxed break-words">{selectedJob.jobDiscription}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-slate-50 px-6 py-4 flex justify-end border-t border-slate-100">
-              <button
-                onClick={() => setSelectedJob(null)}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-350 text-slate-700 font-bold text-xs rounded-lg transition-all cursor-pointer"
-              >
-                {t('adm.common.close')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <JobRequirementDetailsDialog
+          requirement={selectedJobDetails}
+          isLoading={isSelectedJobLoading || isSelectedJobFetching}
+          error={selectedJobError}
+          onRetry={() => { void refetchSelectedJob(); }}
+          onClose={() => setSelectedJob(null)}
+          closeLabel={t('adm.common.close')}
+        />
       )}
 
       {/* Edit Job Requirement Popup Modal */}
@@ -425,7 +393,10 @@ export function AdminJobRequirements() {
                 </h3>
               </div>
               <button
-                onClick={() => setEditingJobId(null)}
+                onClick={() => {
+                  setEditingJobId(null);
+                  setEditingJobCode(undefined);
+                }}
                 className="p-1 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-all cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -435,9 +406,14 @@ export function AdminJobRequirements() {
             <div className="flex-1 overflow-y-auto">
               <EditJobForm
                 jobId={editingJobId}
-                onCancel={() => setEditingJobId(null)}
+                jobCode={editingJobCode}
+                onCancel={() => {
+                  setEditingJobId(null);
+                  setEditingJobCode(undefined);
+                }}
                 onSuccess={() => {
                   setEditingJobId(null);
+                  setEditingJobCode(undefined);
                   refetch();
                 }}
               />

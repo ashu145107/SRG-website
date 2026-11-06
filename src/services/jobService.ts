@@ -18,9 +18,18 @@ import {
 } from './jobTypes';
 
 // Helper function to normalize job requirement fields from any API response format
-const normalizeJob = (item: any, idx: number): JobRequirement => {
-  const rawId = item.id || item.jobRequirementId || item.jobId || (idx + 1);
-  const numId = typeof rawId === 'number' ? rawId : (parseInt(String(rawId).replace(/\D/g, '')) || (idx + 1));
+const normalizeJob = (item: any, fallbackId?: number): JobRequirement => {
+  const rawId = item.id
+    ?? item.jobRequirementId
+    ?? item.requirementId
+    ?? item.requirementID
+    ?? item.jobRequirementID
+    ?? item.JobRequirementId
+    ?? item.jobrequirementid
+    ?? item.jobId
+    ?? fallbackId;
+  const parsedId = rawId === undefined || rawId === null || rawId === '' ? NaN : Number(rawId);
+  const numId = Number.isSafeInteger(parsedId) && parsedId > 0 ? parsedId : undefined;
 
   const designation = item.jobDesignation || item.profileHeader || item.title || item.designation || item.roleName || 'Job Vacancy';
   const profileHeader = item.profileHeader || item.jobDesignation || item.title || item.companyName || 'Job Requirement';
@@ -52,7 +61,7 @@ const normalizeJob = (item: any, idx: number): JobRequirement => {
     experiance: item.experiance !== undefined ? item.experiance : (item.experience || 0),
     experianceTo: item.experianceTo !== undefined ? item.experianceTo : (item.experienceTo || 2),
     jobDiscription: item.jobDiscription || item.jobDescription || item.description || profileHeader || 'Detailed job vacancy description',
-    jobCode: item.jobCode || `JOB-${numId}`
+    jobCode: item.jobCode || undefined
   };
 };
 
@@ -112,9 +121,9 @@ export const jobService = {
 
         if (companyId && list.length > 0) {
           const filtered = list.filter((j: any) => String(j.companyId || j.userId) === String(companyId));
-          if (filtered.length > 0) return { jobs: filtered.map((item, idx) => normalizeJob(item, idx)), totalCount: filtered.length };
+          if (filtered.length > 0) return { jobs: filtered.map((item) => normalizeJob(item)), totalCount: filtered.length };
         }
-        if (list.length > 0) return { jobs: list.map((item, idx) => normalizeJob(item, idx)), totalCount };
+        if (list.length > 0) return { jobs: list.map((item) => normalizeJob(item)), totalCount };
       } catch (err) {
         console.warn('[jobService] Employer jobrequirements fetch notice:', err);
       }
@@ -124,10 +133,10 @@ export const jobService = {
     console.log('[jobService] searchJobs for JOB SEEKER / ADMIN | role=', role, '| searchPhrase=', searchPhrase);
 
     const attempts: Array<{ url: string; params: any }> = [
-      { url: '/api/v1/jobsearch', params: { page, limit } },
+      { url: '/api/v1/jobsearch', params: {} },
       ...(searchPhrase ? [
-        { url: '/api/v1/jobsearch', params: { searchPhrase, page, limit } },
-        { url: '/api/v1/jobsearch', params: { search: searchPhrase, page, limit } },
+        { url: '/api/v1/jobsearch', params: { searchPhrase } },
+        { url: '/api/v1/jobsearch', params: { search: searchPhrase } },
       ] : []),
     ];
 
@@ -156,7 +165,7 @@ export const jobService = {
         else if (data?.jobRequirements && Array.isArray(data.jobRequirements)) { list = data.jobRequirements; totalCount = data.totalCount || data.jobRequirements.length; }
 
         if (list.length > 0) {
-          const normalized = list.map((item, idx) => normalizeJob(item, idx));
+          const normalized = list.map((item) => normalizeJob(item));
           console.log(`[jobService] ✅ Success → ${normalized.length} jobs fetched & normalized from /api/v1/jobsearch`);
           return { jobs: normalized, totalCount: totalCount || normalized.length };
         }

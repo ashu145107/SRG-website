@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { configureStore, Middleware } from '@reduxjs/toolkit';
+import { configureStore, isRejectedWithValue, Middleware } from '@reduxjs/toolkit';
 import { baseApi } from '../services/baseApi';
 import authReducer, { logout } from './authSlice';
 
@@ -15,6 +15,15 @@ const resetApiCacheOnLogout: Middleware = (storeApi) => (next) => (action) => {
   const result = next(action);
   if (logout.match(action)) {
     storeApi.dispatch(baseApi.util.resetApiState());
+  } else if (
+    isRejectedWithValue(action) &&
+    typeof action.payload === 'object' &&
+    action.payload !== null &&
+    'status' in action.payload &&
+    action.payload.status === 401 &&
+    storeApi.getState().auth.token
+  ) {
+    storeApi.dispatch(logout());
   }
   return result;
 };

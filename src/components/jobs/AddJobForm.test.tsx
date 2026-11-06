@@ -126,7 +126,12 @@ describe('AddJobForm', () => {
 
     fireEvent.submit(container.querySelector('form') as HTMLFormElement);
 
-    expect(await screen.findByText(/Please enter Designation/)).toBeInTheDocument();
+    expect((await screen.findAllByText(/Please enter Designation/)).length).toBeGreaterThan(0);
+    expect(container.querySelector('[name="profileHeader"]')).toHaveAttribute('aria-invalid', 'true');
+    expect(container.querySelector('[name="jobDesignation"]')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText('Please fix the highlighted fields before saving.')).toBeInTheDocument();
+    expect(screen.getByText('Designation:', { exact: false })).toBeInTheDocument();
+    expect(document.activeElement).toHaveAttribute('aria-live', 'polite');
     expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 

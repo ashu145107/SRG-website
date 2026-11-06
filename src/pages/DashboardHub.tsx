@@ -17,7 +17,6 @@ import {
   useUpdateJobMutation,
   useDeleteJobMutation
 } from '../services/jobApi';
-import { useSearchJobsQuery } from '../hooks/useJobQueries';
 import {
   useGetCompaniesQuery,
   useUpdateCompanyMutation
@@ -25,11 +24,10 @@ import {
 import {
   useGetCandidatesQuery,
   useUpdateCandidateMutation,
-  useGetApplicationsQuery,
-  useApplyToJobMutation
+  useGetApplicationsQuery
 } from '../services/candidateApi';
 import { useGetMyJobApplicationsQuery, useGetMyRequirementsQuery, useGetApplicationStatusListQuery, updateJobApplicationStatus, UpdateApplicationStatusPayload, updateCompanyProfile } from '../services/employerApi';
-import { setApplicationStatusOverride, getApplicationStatusOverride, subscribeApplicationStatusOverrides } from '../services/applicationStatusStore';
+import { setApplicationStatusOverride } from '../services/applicationStatusStore';
 import { useGetMyProfileQuery, uploadProfilePic, bustProfileImageCache } from '../services/profileApi';
 import {
   useGetTrainingsQuery,
@@ -40,7 +38,6 @@ import {
 } from '../services/trainingApi';
 import {
   useGetLocationsQuery,
-  useGetJobCategoriesQuery,
   useGetCountriesQuery,
   useGetStatesQuery,
   useGetDistrictsQuery,
@@ -58,6 +55,7 @@ import {
   IconButton
 } from '../components/ui/Buttons';
 import { TextBox, TextArea } from '../components/ui/Inputs';
+import { DatePicker } from '../components/ui/DatePicker';
 import { Checkbox, Dropdown } from '../components/ui/SelectionControls';
 import {
   DataTable,
@@ -71,10 +69,13 @@ import { PermissionGuard, LanguageSwitcher } from '../components/ui/UtilityCompo
 import { AddJobForm } from '../components/jobs/AddJobForm';
 import { EditJobForm } from '../components/jobs/EditJobForm';
 import { JobDetailsView } from '../components/jobs/JobDetailsView';
+import { JobRequirementDetailsDialog } from '../components/jobs/JobRequirementDetailsDialog';
 import { NotificationBell } from '../components/NotificationBell';
 import { SupportTicketsView } from '../components/SupportTicketsView';
+import { decryptDetailRoute, encryptDetailRoute, navigateToEncryptedRoute, SecureDetailRoute } from '../utils/secureDetailRoute';
 import { JobListingView } from '../components/jobs/JobListingView';
 import { JobRequirementDetailView } from '../components/jobs/JobRequirementDetailView';
+import { useGetJobRequirementByCodeQuery } from '../services/adminApi';
 import { UserRole, Job, JobApplication, JobApplicationStatus, SHGProfile, CompanyProfile, CandidateProfile, Training } from '../types';
 import {
   LogOut,
@@ -124,7 +125,7 @@ export default function DashboardHub() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user, lastLogin } = useSelector((state: RootState) => state.auth);
+  const { user, lastLogin, token } = useSelector((state: RootState) => state.auth);
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-theme-cream text-slate-800 antialiased font-sans">
@@ -136,21 +137,97 @@ export default function DashboardHub() {
     );
   }
   const [toastMsg, setToastMsg] = useState('');
-  // Job requirement detail mode: open via #/dashboard?view=jobRequirement&id=<id>
-  // Candidate detail mode:       open via #/dashboard?view=candidate&id=<id>
-  // Company detail mode:         open via #/dashboard?view=company&id=<id>
+  // Requirement and candidate detail routes carry encrypted payloads.
+  // Company detail mode also uses the encrypted detail route.
   const [searchParams] = useSearchParams();
+  const encryptedDetailData = searchParams.get('data') || '';
+  const [decodedDetailRoute, setDecodedDetailRoute] = useState<SecureDetailRoute | null>(null);
+  const [detailRouteError, setDetailRouteError] = useState('');
+  useEffect(() => {
+    if (!encryptedDetailData) {
+      setDecodedDetailRoute(null);
+      setDetailRouteError('');
+      return;
+    }
+    if (!token) {
+      setDecodedDetailRoute(null);
+      setDetailRouteError('Please sign in again to open this detail link.');
+      return;
+    }
+    let active = true;
+    decryptDetailRoute(encryptedDetailData, token)
+      .then((route) => {
+        if (active) {
+          setDecodedDetailRoute(route);
+          setDetailRouteError('');
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setDecodedDetailRoute(null);
+          setDetailRouteError('This detail link is invalid or has expired.');
+        }
+      });
+    return () => { active = false; };
+  }, [encryptedDetailData, token]);
   const isAdminBoard = user.role === UserRole.SUPER_ADMIN || user.role === UserRole.ADMIN;
-  const urlView = searchParams.get('view');
-  const urlReqId = Number(searchParams.get('id') || 0);
-  const urlCandidateId = searchParams.get('id') || '';
-  const urlCompanyId = searchParams.get('id') || '';
-  const urlOriginView = searchParams.get('from') || '';
-  const urlOriginReqId = Number(searchParams.get('fromId') || 0);
+  const urlView = decodedDetailRoute?.view || searchParams.get('view');
+  const urlReqId = Number(decodedDetailRoute?.view === 'jobRequirement' ? decodedDetailRoute.id : searchParams.get('id') || 0);
+  const urlReqCode = decodedDetailRoute?.view === 'jobRequirement' ? decodedDetailRoute.jobCode || '' : searchParams.get('jobCode') || '';
+  const urlCandidateId = decodedDetailRoute?.view === 'candidate' ? decodedDetailRoute.id : searchParams.get('id') || '';
+  const urlCompanyId = decodedDetailRoute?.view === 'company' ? decodedDetailRoute.id : searchParams.get('id') || '';
+  const urlOriginView = decodedDetailRoute?.from || searchParams.get('from') || '';
+  const urlOriginReqId = Number(decodedDetailRoute?.fromId || searchParams.get('fromId') || 0);
+  const urlOriginReqCode = decodedDetailRoute?.fromCode || searchParams.get('fromCode') || '';
+  const legacyDetailView = !encryptedDetailData ? searchParams.get('view') : null;
+  const legacyDetailId = searchParams.get('id') || '';
+  const isLegacyDetailUrl = isAdminBoard
+    && (legacyDetailView === 'jobRequirement' || legacyDetailView === 'candidate' || legacyDetailView === 'company')
+    && Boolean(legacyDetailId);
+  useEffect(() => {
+    if (!isLegacyDetailUrl) return;
+    if (!token) {
+      setDetailRouteError('Please sign in again to secure this detail link.');
+      return;
+    }
+    const route: SecureDetailRoute = legacyDetailView === 'jobRequirement'
+      ? {
+          view: 'jobRequirement',
+          id: legacyDetailId,
+          jobCode: searchParams.get('jobCode') || '',
+        }
+      : legacyDetailView === 'candidate' ? {
+          view: 'candidate',
+          id: legacyDetailId,
+          ...(searchParams.get('from') === 'jobRequirement' ? {
+            from: 'jobRequirement' as const,
+            fromId: searchParams.get('fromId') || '',
+            fromCode: searchParams.get('fromCode') || '',
+          } : {}),
+        }
+        : { view: 'company', id: legacyDetailId };
+    let active = true;
+    encryptDetailRoute(route, token)
+      .then((encrypted) => {
+        if (active) navigate(`/dashboard?data=${encodeURIComponent(encrypted)}`, { replace: true });
+      })
+      .catch(() => {
+        if (active) setDetailRouteError('Unable to secure this detail link. Please reopen it from the dashboard.');
+      });
+    return () => { active = false; };
+  }, [isLegacyDetailUrl, legacyDetailView, legacyDetailId, searchParams, token, navigate]);
   const isReqDetailMode =
-    isAdminBoard && urlView === 'jobRequirement' && !Number.isNaN(urlReqId) && urlReqId > 0;
-  const isCandidateDetailMode = isAdminBoard && urlView === 'candidate' && urlCandidateId !== '';
-  const isCompanyDetailMode = isAdminBoard && urlView === 'company' && urlCompanyId !== '';
+    isAdminBoard && urlView === 'jobRequirement' && !Number.isNaN(urlReqId) && urlReqId > 0
+    && (!encryptedDetailData || decodedDetailRoute !== null) && !isLegacyDetailUrl;
+  const isCandidateDetailMode = isAdminBoard && urlView === 'candidate' && urlCandidateId !== ''
+    && (!encryptedDetailData || decodedDetailRoute !== null) && !isLegacyDetailUrl;
+  const isEmployerCandidateDetailMode = user.role === UserRole.COMPANY
+    && urlView === 'candidate'
+    && urlCandidateId !== ''
+    && Boolean(encryptedDetailData)
+    && decodedDetailRoute !== null;
+  const isCompanyDetailMode = isAdminBoard && urlView === 'company' && urlCompanyId !== ''
+    && (!encryptedDetailData || decodedDetailRoute !== null) && !isLegacyDetailUrl;
   const defaultTab =
     user.role === UserRole.SHG
       ? 'trainings'
@@ -163,6 +240,7 @@ export default function DashboardHub() {
             : 'overview';
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [detailReqId, setDetailReqId] = useState<number>(isReqDetailMode ? urlReqId : 0);
+  const [detailReqCode, setDetailReqCode] = useState<string>(isReqDetailMode ? urlReqCode : '');
   const [detailCandidateId, setDetailCandidateId] = useState<string>(isCandidateDetailMode ? urlCandidateId : '');
   const [detailCompanyId, setDetailCompanyId] = useState<string>(isCompanyDetailMode ? urlCompanyId : '');
   // When a candidate was opened from a job requirement's applications, remember
@@ -175,31 +253,38 @@ export default function DashboardHub() {
     if (isReqDetailMode) {
       setActiveTab('job_requirements');
       setDetailReqId(urlReqId);
+      setDetailReqCode(urlReqCode);
       setDetailCandidateId('');
       setDetailCompanyId('');
       setCandidateFromReqId(0);
     } else if (isCandidateDetailMode) {
       setActiveTab('registered_users');
       setDetailReqId(0);
+      setDetailReqCode('');
       setDetailCandidateId(urlCandidateId);
       setDetailCompanyId('');
       setCandidateFromReqId(urlOriginView === 'jobRequirement' ? urlOriginReqId : 0);
     } else if (isCompanyDetailMode) {
       setActiveTab('registered_companies');
       setDetailReqId(0);
+      setDetailReqCode('');
       setDetailCandidateId('');
       setDetailCompanyId(urlCompanyId);
       setCandidateFromReqId(0);
     } else {
       setDetailReqId(0);
+      setDetailReqCode('');
       setDetailCandidateId('');
       setDetailCompanyId('');
       setCandidateFromReqId(0);
     }
-  }, [isReqDetailMode, isCandidateDetailMode, isCompanyDetailMode, urlReqId, urlCandidateId, urlCompanyId, urlOriginView, urlOriginReqId]);
+  }, [isReqDetailMode, isCandidateDetailMode, isCompanyDetailMode, urlReqId, urlReqCode, urlCandidateId, urlCompanyId, urlOriginView, urlOriginReqId]);
   // Leaving a detail-bearing tab closes its detail view.
   useEffect(() => {
-    if (activeTab !== 'job_requirements') setDetailReqId(0);
+    if (activeTab !== 'job_requirements') {
+      setDetailReqId(0);
+      setDetailReqCode('');
+    }
     if (activeTab !== 'registered_users') setDetailCandidateId('');
     if (activeTab !== 'registered_companies') setDetailCompanyId('');
   }, [activeTab]);
@@ -216,7 +301,7 @@ export default function DashboardHub() {
   const [navMenuOpen, setNavMenuOpen] = useState(false);
   const toggleNavMenu = useCallback(() => setNavMenuOpen((v) => !v), []);
   const closeNavMenu = useCallback(() => setNavMenuOpen(false), []);
-  // Fetch profile for pic display in navbar
+  // Fetch profile for pic display in navbar (candidates only load it on demand)
   const { data: navProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   // Close dropdown on outside click
   useEffect(() => {
@@ -348,6 +433,11 @@ export default function DashboardHub() {
         </nav>
         {/* Primary Layout and Shell wrapper */}
         <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-5 lg:px-6 py-4 lg:py-8 2xl:max-w-app w-full text-slate-800 overflow-y-auto overscroll-contain">
+          {detailRouteError && (
+            <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              {detailRouteError}
+            </div>
+          )}
           {/* -------------------- 1. SUPER ADMIN / ADMIN BOARD -------------------- */}
           {(user.role === UserRole.SUPER_ADMIN || user.role === UserRole.ADMIN) && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start">
@@ -374,7 +464,7 @@ export default function DashboardHub() {
                   <Users className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.registeredUser')}</span>
                 </button>
                 <button
-                  onClick={() => { setActiveTab('job_requirements'); setDetailReqId(0); }}
+                  onClick={() => { setActiveTab('job_requirements'); setDetailReqId(0); setDetailReqCode(''); }}
                   className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'job_requirements' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
                     }`}
                 >
@@ -412,18 +502,30 @@ export default function DashboardHub() {
                   <>
                     <Link
                       to="/dashboard"
-                      onClick={() => setDetailReqId(0)}
+                      onClick={() => { setDetailReqId(0); setDetailReqCode(''); }}
                       className="inline-flex items-center gap-2 text-xs font-bold text-theme-darkViolet/60 hover:text-theme-lavender transition-colors cursor-pointer"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" /> {t('dashboard.backToRequirements')}
                     </Link>
-                    <JobRequirementDetailView requirementId={detailReqId} />
+                    <JobRequirementDetailView requirementId={detailReqId} jobCode={detailReqCode} />
                   </>
                 ) : activeTab === 'registered_users' && detailCandidateId ? (
                   <>
                     <Link
-                      to={candidateFromReqId > 0 ? `/dashboard?view=jobRequirement&id=${candidateFromReqId}` : '/dashboard'}
-                      onClick={() => setDetailCandidateId('')}
+                      to="/dashboard"
+                      onClick={(event) => {
+                        if (candidateFromReqId > 0) {
+                          event.preventDefault();
+                          void navigateToEncryptedRoute('/dashboard', {
+                            view: 'jobRequirement',
+                            id: String(candidateFromReqId),
+                            jobCode: urlOriginReqCode,
+                          }, token || '', navigate).catch((error: unknown) => {
+                            window.alert(error instanceof Error ? error.message : 'Unable to return to the requirement.');
+                          });
+                        }
+                        setDetailCandidateId('');
+                      }}
                       className="inline-flex items-center gap-2 text-xs font-bold text-theme-darkViolet/60 hover:text-theme-lavender transition-colors cursor-pointer"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />{' '}
@@ -435,7 +537,15 @@ export default function DashboardHub() {
                       candidateId={detailCandidateId}
                       onBack={() => {
                         setDetailCandidateId('');
-                        if (candidateFromReqId > 0) navigate(`/dashboard?view=jobRequirement&id=${candidateFromReqId}`);
+                        if (candidateFromReqId > 0) {
+                          void navigateToEncryptedRoute('/dashboard', {
+                            view: 'jobRequirement',
+                            id: String(candidateFromReqId),
+                            jobCode: urlOriginReqCode,
+                          }, token || '', navigate).catch((error: unknown) => {
+                            window.alert(error instanceof Error ? error.message : 'Unable to return to the requirement.');
+                          });
+                        }
                       }}
                     />
                   </>
@@ -594,7 +704,11 @@ export default function DashboardHub() {
           )}
           {/* -------------------- 3. RECRUITER / COMPANY EMPLOYER DASHBOARD -------------------- */}
           {user.role === UserRole.COMPANY && (
-            <CompanyEmployerDashboard companyId={user.companyId || ''} setToastMsg={setToastMsg} />
+            <CompanyEmployerDashboard
+              companyId={user.companyId || ''}
+              setToastMsg={setToastMsg}
+              applicantDetailId={isEmployerCandidateDetailMode ? urlCandidateId : ''}
+            />
           )}
           {/* -------------------- 4. CANDIDATE / JOB SEEKER PORTAL -------------------- */}
           {user.role === UserRole.CANDIDATE && (
@@ -1551,19 +1665,31 @@ function HandlerSHGTab({ setToastMsg }: { setToastMsg: (msg: string) => void }) 
 // ==========================================
 // INTEGRATED SUB-BOARD: COMPANY RECRUITER / EMPLOYER PORTAL
 // ==========================================
-function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: string; setToastMsg: (msg: string) => void }) {
+function CompanyEmployerDashboard({
+  companyId,
+  setToastMsg,
+  applicantDetailId = '',
+}: {
+  companyId: string;
+  setToastMsg: (msg: string) => void;
+  applicantDetailId?: string;
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, token } = useSelector((state: RootState) => state.auth);
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<string>(() => {
     const tab = searchParams.get('tab') || 'overview';
     return ['overview', 'pipeline', 'listings', 'post', 'profile', 'support_tickets'].includes(tab) ? tab : 'overview';
   });
+  useEffect(() => {
+    if (applicantDetailId) setActiveTab('pipeline');
+  }, [applicantDetailId]);
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
   const [selectedJobCode, setSelectedJobCode] = useState<string | undefined>(undefined);
   const [selectedJobIdForEdit, setSelectedJobIdForEdit] = useState<number | null>(null);
+  const [selectedJobCodeForEdit, setSelectedJobCodeForEdit] = useState<string | undefined>(undefined);
   const [isPostingNewJob, setIsPostingNewJob] = useState<boolean>(false);
   // Pipeline search & filter state
   const [pipelineSearch, setPipelineSearch] = useState('');
@@ -1576,41 +1702,26 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   // Immediate local overrides so the pipeline dropdown + badge reflect a saved
   // status even if the list endpoint has not caught up with the status history.
   const [localStatusOverrides, setLocalStatusOverrides] = useState<Record<string, { statusId: number; statusName: string }>>({});
-  // Bumped whenever the shared status store changes so both the employer
-  // pipeline and candidate applied list re-render with the latest status.
-  const [statusStoreVersion, setStatusStoreVersion] = useState(0);
-  useEffect(() => subscribeApplicationStatusOverrides(() => setStatusStoreVersion(v => v + 1)), []);
-  const { data: locations = [] } = useGetLocationsQuery(undefined, { skip: !user });
-  const { data: jobCategories = [] } = useGetJobCategoriesQuery(undefined, { skip: !user });
   // Load recruiter profile from unified endpoint
   const { data: profile, refetch: refetchProfile } = useGetMyProfileQuery(undefined, { skip: !user });
+  // List endpoints are loaded lazily so the overview only calls the dashboard API.
+  const isPipelineTab = activeTab === 'pipeline';
+  const isListingsTab = activeTab === 'listings';
+  const {
+    data: selectedRequirementDetails,
+    isLoading: isSelectedRequirementLoading,
+    isFetching: isSelectedRequirementFetching,
+    error: selectedRequirementError,
+    refetch: refetchSelectedRequirement,
+  } = useGetJobRequirementByCodeQuery(selectedJobCode || '', {
+    skip: !selectedJobCode || !isListingsTab,
+    refetchOnMountOrArgChange: true,
+  });
   // Load applicants pipelines & jobs (employer-specific endpoints with Bearer token)
-  const { data: pipelineApps = [], refetch: refetchApps } = useGetMyJobApplicationsQuery(undefined, { skip: !user });
-  const { data: jobsList = [], refetch: refetchJobs } = useGetMyRequirementsQuery(undefined, { skip: !user });
+  const { data: pipelineApps = [], refetch: refetchApps } = useGetMyJobApplicationsQuery(undefined, { skip: !user || !isPipelineTab });
+  const { data: jobsList = [], refetch: refetchJobs } = useGetMyRequirementsQuery(undefined, { skip: !user || !isListingsTab });
   // Master list of application statuses → resolve the numeric statusId for the edit API.
-  const { data: statusList = [] } = useGetApplicationStatusListQuery(undefined, { skip: !user });
-  // Seed the pipeline badge/dropdown with the last saved status from the shared
-  // store so a reload never falls back to a stale ("Submitted") API value.
-  useEffect(() => {
-    if (!pipelineApps.length) return;
-    setLocalStatusOverrides(prev => {
-      let changed = false;
-      const next = { ...prev };
-      for (const app of pipelineApps) {
-        const ov = getApplicationStatusOverride({
-          applicationId: app.applicationId,
-          id: app.id,
-          jobId: app.jobId,
-          jobCode: app.jobCode,
-        });
-        if (ov && next[app.id]?.statusId !== ov.statusId) {
-          next[app.id] = { statusId: ov.statusId, statusName: ov.statusName };
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [pipelineApps, statusStoreVersion]);
+  const { data: statusList = [] } = useGetApplicationStatusListQuery(undefined, { skip: !user || !isPipelineTab });
   // Default master statuses aligned with /api/v1/jobapplicationstatuslist
   const defaultStatusOptions: JobApplicationStatus[] = React.useMemo(() => [
     { id: 1, statusId: 1, statusCode: 'APPLIED', name: 'Applied', statusName: 'Applied', description: 'Application submitted', sortOrder: 1, isFinalStatus: false },
@@ -1671,7 +1782,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
       const filterNum = Number(pipelineStatusFilter);
       result = result.filter(a => {
         if (filterNum) {
-          const appStatusId = localStatusOverrides[a.id]?.statusId || a.statusId || resolveStatusId(a.status);
+          const appStatusId = localStatusOverrides[a.id]?.statusId || resolveStatusId(a.status) || a.statusId;
           return appStatusId === filterNum;
         }
         return a.status.toLowerCase() === pipelineStatusFilter.toLowerCase();
@@ -1864,6 +1975,13 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
   };
   const resolveChangedBy = (): number => toNumId(user?.id);
   const resolveAppNumericId = (app: JobApplication): number => {
+    // The status API expects the job application id in the applicationId field.
+    if (app.rawItem && typeof app.rawItem === 'object') {
+      const fromJobApplicationId = toNumId(
+        app.rawItem.jobApplicationId ?? app.rawItem.JobApplicationId ?? app.rawItem.jobapplicationid
+      );
+      if (fromJobApplicationId > 0) return fromJobApplicationId;
+    }
     if (app.applicationId && Number.isFinite(app.applicationId) && app.applicationId > 0) {
       return Math.trunc(app.applicationId);
     }
@@ -2054,14 +2172,14 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'pipeline' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <Compass className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.pipeline')} ({pipelineApps.length})</span>
+          <Compass className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.pipeline')}</span>
         </button>
         <button
           onClick={() => setActiveTab('listings')}
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'listings' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <Briefcase className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.vacancies')} ({jobsList.length})</span>
+          <Briefcase className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.vacancies')}</span>
         </button>
         <button
           onClick={() => setActiveTab('post')}
@@ -2102,19 +2220,26 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
         {activeTab === 'overview' && (
           <LiveDashboardStats />
         )}
-        {/* Verification Alert status banner if unapproved recruiter */}
-        {profile && !profile.isApproved && (
-          <Alert
-            type="warning"
-            title={t('dash.employer.reviewPending')}
-            message="Your employer recruiter profile verification is actively pending review by Shree Swami Samarth self-employment staff handlers. Once verified, your posted vacancies will instantly receive high-priority visibility!"
-          />
-        )}
         {/* 1. Job application Pipelines tab */}
         {activeTab === 'pipeline' && (
+          applicantDetailId ? (
+            <div className="space-y-4">
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard?tab=pipeline')}
+                className="inline-flex items-center gap-2 text-xs font-bold text-theme-darkViolet/60 hover:text-theme-lavender transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" /> Back to Applicants
+              </button>
+              <AdminCandidateProfileView
+                candidateId={applicantDetailId}
+                onBack={() => navigate('/dashboard?tab=pipeline')}
+              />
+            </div>
+          ) : (
           <Card title={t('dash.employer.pipelineTitle')}>
             {pipelineApps.length === 0 ? (
-              <EmptyState title="No Applicants Found" desc="Vacancies you post will gather seekers applied pipelines here." />
+              <EmptyState title="No Applicants Found" desc="Applicants for jobs you post will appear here." />
             ) : (
               <>
                 {/* Search & Filter bar */}
@@ -2177,7 +2302,19 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200/50 pb-2.5">
                           <div className="space-y-1">
                             <button
-                              onClick={() => app.candidateId && navigate(`/candidate/${app.candidateId}`)}
+                              onClick={() => {
+                                if (!app.candidateId) return;
+                                void encryptDetailRoute({
+                                  view: 'candidate',
+                                  id: String(app.candidateId),
+                                }, token || '')
+                                  .then((encrypted) => {
+                                    navigate(`/dashboard?tab=pipeline&data=${encodeURIComponent(encrypted)}`);
+                                  })
+                                  .catch((error: unknown) => {
+                                    window.alert(error instanceof Error ? error.message : 'Unable to open applicant details.');
+                                  });
+                              }}
                               className="text-xs text-orange-600 font-extrabold uppercase tracking-wide hover:text-orange-800 hover:underline transition-colors text-left cursor-pointer"
                             >
                               {t('dash.employer.applicant', { name: app.candidateName })}
@@ -2190,9 +2327,9 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                           <div>
                             {(() => {
                               const override = localStatusOverrides[app.id];
-                              const sId = override?.statusId || app.statusId || resolveStatusId(app.status);
+                              const sId = override?.statusId || resolveStatusId(app.status) || app.statusId;
                               const currentStatusObj = pipelineStatusOptions.find(s => s.id === sId);
-                              const displayName = override?.statusName || currentStatusObj?.name || app.status || 'Applied';
+                              const displayName = override?.statusName || app.status || currentStatusObj?.name || 'Applied';
                               const code = currentStatusObj?.statusCode || '';
                               if (code === 'INTERVIEW' || displayName.toLowerCase().includes('interview')) {
                                 return (
@@ -2218,7 +2355,7 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                         <div className="flex flex-wrap gap-2 items-center">
                           <label className="text-[10px] font-bold text-slate-500 uppercase">Status:</label>
                           <select
-                            value={localStatusOverrides[app.id]?.statusId || app.statusId || resolveStatusId(app.status) || pipelineStatusOptions[0]?.id || 1}
+                            value={localStatusOverrides[app.id]?.statusId || resolveStatusId(app.status) || app.statusId || pipelineStatusOptions[0]?.id || 1}
                             onChange={(e) => handleStatusSelectChange(app, e.target.value)}
                             className="px-2.5 py-1 bg-white border border-slate-200 text-slate-800 text-[10px] font-bold rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer shadow-sm hover:border-slate-300"
                           >
@@ -2231,7 +2368,6 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
                               Note: {app.remarks}
                             </span>
                           )}
-                          {/* Resume download mock button */}
                           <button
                             onClick={() => setToastMsg('Mock Resume Download complete! (Rahul_Resume.pdf)')}
                             className="ml-auto flex items-center gap-1 px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-850 text-[10px] font-bold rounded-lg cursor-pointer"
@@ -2268,38 +2404,77 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
               </>
             )}
           </Card>
+          )
         )}
         {/* 2. Job Listings tab */}
         {activeTab === 'listings' && (
-          selectedJobIdForDetail ? (
-            <JobDetailsView jobId={selectedJobIdForDetail} jobCode={selectedJobCode} onBack={() => { setSelectedJobIdForDetail(null); setSelectedJobCode(undefined); }} />
-          ) : isPostingNewJob ? (
+          isPostingNewJob ? (
             <AddJobForm onCancel={() => setIsPostingNewJob(false)} onSuccess={() => { setIsPostingNewJob(false); refetchJobs(); }} />
           ) : (
             <>
               <JobListingView
                 onViewDetails={(id, jobCode) => { setSelectedJobIdForDetail(id); setSelectedJobCode(jobCode); }}
-                onEditJob={(id) => setSelectedJobIdForEdit(id)}
+                onEditJob={(id, jobCode) => {
+                  setSelectedJobIdForEdit(id);
+                  setSelectedJobCodeForEdit(jobCode);
+                }}
                 onAddNewJob={() => setIsPostingNewJob(true)}
                 externalJobs={jobsList}
                 externalTotalCount={jobsList.length}
                 externalRefetch={refetchJobs}
               />
-              {/* Edit Job popup modal */}
-              <Modal
-                isOpen={selectedJobIdForEdit !== null}
-                onClose={() => setSelectedJobIdForEdit(null)}
-                title={t('dash.admin.editJobTitle')}
-                maxWidthClass="max-w-3xl"
-              >
-                {selectedJobIdForEdit !== null && (
-                  <EditJobForm
-                    jobId={selectedJobIdForEdit}
-                    onCancel={() => setSelectedJobIdForEdit(null)}
-                    onSuccess={() => { setSelectedJobIdForEdit(null); refetchJobs(); }}
-                  />
-                )}
-              </Modal>
+              {selectedJobIdForDetail !== null && (
+                <JobRequirementDetailsDialog
+                  requirement={selectedRequirementDetails}
+                  isLoading={isSelectedRequirementLoading || isSelectedRequirementFetching}
+                  error={selectedRequirementError}
+                  onRetry={() => { void refetchSelectedRequirement(); }}
+                  onClose={() => {
+                    setSelectedJobIdForDetail(null);
+                    setSelectedJobCode(undefined);
+                  }}
+                  closeLabel={t('adm.common.close')}
+                />
+              )}
+              {selectedJobIdForEdit !== null && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-xs p-4 animate-fade-in">
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-3xl overflow-hidden flex flex-col text-left max-h-[92vh]">
+                    <div className="bg-blue-950 text-white px-5 py-4 flex justify-between items-center shrink-0">
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="w-5 h-5 text-orange-400" />
+                        <h3 className="font-extrabold text-sm sm:text-base">
+                          {t('adm.requirements.editTitle')}
+                        </h3>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedJobIdForEdit(null);
+                          setSelectedJobCodeForEdit(undefined);
+                        }}
+                        className="p-1 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-all cursor-pointer"
+                        aria-label="Close edit job requirement"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto">
+                      <EditJobForm
+                        jobId={selectedJobIdForEdit}
+                        jobCode={selectedJobCodeForEdit}
+                        onCancel={() => {
+                          setSelectedJobIdForEdit(null);
+                          setSelectedJobCodeForEdit(undefined);
+                        }}
+                        onSuccess={() => {
+                          setSelectedJobIdForEdit(null);
+                          setSelectedJobCodeForEdit(undefined);
+                          refetchJobs();
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )
         )}
@@ -2461,13 +2636,29 @@ function CompanyEmployerDashboard({ companyId, setToastMsg }: { companyId: strin
           <p className="text-xs text-gray-500 leading-relaxed font-semibold">
             Choose a suitable date and coordinates timing setup. An automated notification will sync to the applicant tracking panel.
           </p>
-          <TextBox
-            label={t('dash.form.interviewDate')}
-            type="datetime-local"
-            value={interviewDate}
-            onChange={(e) => setInterviewDate(e.target.value)}
-            required
-          />
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-gray-700">
+              {t('dash.form.interviewDate')}
+            </label>
+            <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-2">
+              <DatePicker
+                name="interviewDate"
+                value={interviewDate.slice(0, 10)}
+                onChange={(date) => setInterviewDate(`${date}T${interviewDate.slice(11, 16) || '09:00'}`)}
+                required
+                className="w-full rounded-xl border border-theme-lightViolet/60 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 transition-all focus:border-theme-lavender focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender"
+                aria-label={t('dash.form.interviewDate')}
+              />
+              <input
+                type="time"
+                aria-label="Interview time"
+                value={interviewDate.slice(11, 16)}
+                onChange={(event) => setInterviewDate(`${interviewDate.slice(0, 10)}T${event.target.value}`)}
+                required
+                className="w-full rounded-xl border border-theme-lightViolet/60 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 transition-all focus:border-theme-lavender focus:bg-white focus:outline-none focus:ring-1 focus:ring-theme-lavender"
+              />
+            </div>
+          </div>
           <div className="flex justify-end gap-2.5 pt-4">
             <SecondaryButton onClick={() => setShowInterviewModal(false)}>
               {t('dash.form.close')}
@@ -2556,20 +2747,38 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedJobIdForDetail, setSelectedJobIdForDetail] = useState<number | null>(null);
   const [selectedJobCode, setSelectedJobCode] = useState<string | undefined>(undefined);
+  const [selectedApplication, setSelectedApplication] = useState<JobApplication | null>(null);
   // Optimistic tracking of newly applied job IDs for instant UI updates
   const [recentlyAppliedIds, setRecentlyAppliedIds] = useState<Set<string>>(new Set());
-  // Load seeker profile from unified endpoint
+  // Load the candidate profile as soon as the dashboard mounts for the header and profile form.
   const { data: profile, refetch: refetchProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   const [updateProfile] = useUpdateCandidateMutation();
-  // Load jobs lists (Approved only!) — skip until user/token are ready
-  const { data: availableJobs = [], refetch: refetchJobs } = useGetJobsQuery({ approvedOnly: true }, { skip: !user });
-  // Load jobs from TanStack Query (same source as JobListingView, has userJobStatus)
-  const { data: searchJobsData, refetch: refetchSearchJobs } = useSearchJobsQuery(undefined, { enabled: !!user });
-  const searchJobs = searchJobsData?.jobs || [];
-  // Load applications history tracking
-  const { data: myApps = [], refetch: refetchMyApps } = useGetApplicationsQuery({ candidateId }, { skip: !user || !candidateId });
-  // Load options metadata
-  const { data: locations = [] } = useGetLocationsQuery();
+  // Each candidate tab loads only its own API.
+  const isSearchTab = activeTab === 'search';
+  const isHistoryTab = activeTab === 'history';
+  const isProfileTab = activeTab === 'profile';
+  const isApplicationsTab = isSearchTab || isHistoryTab;
+  // Find Jobs → GET /api/v1/jobsearch
+  const {
+    data: availableJobs = [],
+    refetch: refetchJobs,
+    isLoading: jobsLoading,
+    isFetching: jobsFetching
+  } = useGetJobsQuery(
+    { approvedOnly: true },
+    { skip: !user || !isSearchTab, refetchOnMountOrArgChange: true }
+  );
+  // Applied Jobs → GET /api/v1/user/myjobapplications
+  const {
+    data: myApps = [],
+    isLoading: applicationsLoading,
+    error: applicationsError,
+  } = useGetApplicationsQuery(
+    { candidateId },
+    { skip: !user || !candidateId || !isHistoryTab, refetchOnMountOrArgChange: true }
+  );
+  // Load options metadata only for the profile form
+  const { data: locations = [] } = useGetLocationsQuery(undefined, { skip: !isProfileTab });
   // Profile data forms state
   const [fullName, setFullName] = useState('');
   const [seekerCity, setSeekerCity] = useState('Nashik');
@@ -2585,13 +2794,13 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
   const [liveSevaKendraId, setLiveSevaKendraId] = useState<number>(159);
   const [liveEducationId, setLiveEducationId] = useState<number>(12); // Default to B.Tech/B.E. (12)
   const [liveSubEducationId, setLiveSubEducationId] = useState<number>(0);
-  const { data: liveCountries = [] } = useGetCountriesQuery();
-  const { data: liveStates = [] } = useGetStatesQuery(liveCountryId, { skip: !liveCountryId });
-  const { data: liveDistricts = [] } = useGetDistrictsQuery(liveStateId, { skip: !liveStateId });
-  const { data: liveTalukas = [] } = useGetTalukasQuery(liveDistrictId, { skip: !liveDistrictId });
-  const { data: liveSevaKendras = [] } = useGetSevaKendrasQuery(liveTalukaId, { skip: !liveTalukaId });
-  const { data: liveEducationsList = [] } = useGetEducationsListQuery();
-  const { data: liveSubEducationsList = [] } = useGetSubEducationsListQuery(liveEducationId, { skip: !liveEducationId });
+  const { data: liveCountries = [] } = useGetCountriesQuery(undefined, { skip: !isProfileTab });
+  const { data: liveStates = [] } = useGetStatesQuery(liveCountryId, { skip: !liveCountryId || !isProfileTab });
+  const { data: liveDistricts = [] } = useGetDistrictsQuery(liveStateId, { skip: !liveStateId || !isProfileTab });
+  const { data: liveTalukas = [] } = useGetTalukasQuery(liveDistrictId, { skip: !liveDistrictId || !isProfileTab });
+  const { data: liveSevaKendras = [] } = useGetSevaKendrasQuery(liveTalukaId, { skip: !liveTalukaId || !isProfileTab });
+  const { data: liveEducationsList = [] } = useGetEducationsListQuery(undefined, { skip: !isProfileTab });
+  const { data: liveSubEducationsList = [] } = useGetSubEducationsListQuery(liveEducationId, { skip: !liveEducationId || !isProfileTab });
   const handleAutofillLiveSelections = () => {
     const countryObj = liveCountries.find(c => c.id === Number(liveCountryId));
     const stateObj = liveStates.find(s => s.id === Number(liveStateId));
@@ -2614,9 +2823,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
     }
     setToastMsg(t('dash.toast.selectionsPopulated'));
   };
-  // Search parameters filter state
-  const [searchPhrase, setSearchPhrase] = useState('');
-  const [applyToJob, { isLoading: isApplying }] = useApplyToJobMutation();
   // Prefill candidate on data load
   React.useEffect(() => {
     if (profile) {
@@ -2628,23 +2834,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
       setResumeName(profile.resumeName || '');
     }
   }, [profile]);
-  const handleApplyNow = async (job: Job) => {
-    try {
-      await applyToJob({
-        jobId: job.id,
-        jobTitle: job.title,
-        companyName: job.companyName,
-        companyId: job.companyId,
-        candidateId,
-        candidateName: fullName || fullName || "",
-        candidatePhone: profile?.phone || profile?.phone || ""
-      }).unwrap();
-      setToastMsg(t('dash.toast.appliedRole'));
-      refetchMyApps();
-    } catch (err: any) {
-      setToastMsg(err.data || 'Duplicated applications blocked.');
-    }
-  };
   const handleSaveSeekerProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -2673,47 +2862,103 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
   };
   const hasAppliedStatus = (status?: string): boolean => {
     const s = (status || '').trim();
-    return !!s && !/^not\s*applied$/i.test(s);
+    return !!s && !/^(apply|not\s*applied)$/i.test(s);
   };
   const displayAppliedStatus = (status?: string): string => {
     const s = (status || '').trim();
     return !s || /^already\s*applied$/i.test(s) ? 'Applied' : s;
   };
+  const applicationDetailEntries = (app: JobApplication): Array<{ label: string; value: string }> => {
+    const labels: Record<string, string> = {
+      applicationdate: 'Application Date',
+      applicationid: 'Application ID',
+      applicationstatus: 'Application Status',
+      candidateemail: 'Candidate Email',
+      candidatename: 'Candidate Name',
+      companyname: 'Company',
+      jobapplicationid: 'Job Application ID',
+      jobcode: 'Job Code',
+      jobdesignation: 'Job Title',
+      jobid: 'Job ID',
+      jobtitle: 'Job Title',
+      mobile: 'Mobile',
+      phone: 'Mobile',
+      profileheader: 'Job Title',
+      requirementid: 'Requirement ID',
+      status: 'Status',
+      userid: 'User ID',
+      workplace: 'Work Place'
+    };
+    const formatValue = (value: unknown, key: string): string => {
+      if (value === null || value === undefined || value === '') return '';
+      if (Array.isArray(value)) return value.map((item) => String(item)).join(', ');
+      if (typeof value === 'object') return JSON.stringify(value);
+      if (/date/i.test(key) && typeof value === 'string') {
+        const date = new Date(value);
+        if (!Number.isNaN(date.getTime())) return date.toLocaleString();
+      }
+      return String(value);
+    };
+    const labelFor = (key: string): string => {
+      const normalizedKey = key.replace(/[^a-z0-9]/gi, '').toLowerCase();
+      return labels[normalizedKey] || key
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .replace(/[_-]+/g, ' ')
+        .replace(/^./, (character) => character.toUpperCase());
+    };
+
+    const raw = app.rawItem && typeof app.rawItem === 'object' && !Array.isArray(app.rawItem)
+      ? app.rawItem as Record<string, unknown>
+      : null;
+    if (raw) {
+      return Object.entries(raw)
+        .map(([key, value]) => ({ label: labelFor(key), value: formatValue(value, key) }))
+        .filter((entry) => entry.value !== '');
+    }
+
+    return [
+      ['applicationDate', app.appliedAt],
+      ['candidateName', app.candidateName],
+      ['jobCode', app.jobCode],
+      ['jobApplicationId', app.applicationId],
+      ['mobile', app.candidatePhone],
+      ['profileHeader', app.jobTitle],
+      ['requirementId', app.jobId],
+      ['status', app.status],
+      ['userId', app.candidateId]
+    ].map(([key, value]) => ({
+      label: labelFor(String(key)),
+      value: formatValue(value, String(key))
+    })).filter((entry) => entry.value !== '');
+  };
+  const applicationDetailSummaryKeys = new Set([
+    'applicationdate', 'appliedat', 'company', 'companyname', 'jobcode',
+    'jobdesignation', 'jobtitle', 'profileheader', 'status', 'applicationstatus', 'title'
+  ]);
+  const selectedApplicationDetails = selectedApplication
+    ? applicationDetailEntries(selectedApplication).filter(
+      (entry) => !applicationDetailSummaryKeys.has(entry.label.replace(/[^a-z0-9]/gi, '').toLowerCase())
+    )
+    : [];
+  const formatApplicationDate = (value: string): string => {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+  };
   const isJobApplied = (jobId: number, job?: Job): boolean => {
     if (recentlyAppliedIds.has(String(jobId))) return true;
     if (job?.jobCode && recentlyAppliedIds.has(job.jobCode)) return true;
-    if (hasAppliedStatus(job?.userJobStatus)) return true;
-    const sj = searchJobs.find((j: any) => Number(j.id) === jobId);
-    if (sj && hasAppliedStatus(sj.userJobStatus)) return true;
-    return false;
+    return hasAppliedStatus(job?.userJobStatus);
   };
   const appliedJobIds = React.useMemo(() => {
     const ids = new Set<number>();
-    const addFrom = (list: any[]) =>
-      list.forEach((j: any) => {
-        if (isJobApplied(Number(j.id), j)) ids.add(Number(j.id));
-      });
-    addFrom(availableJobs);
-    addFrom(searchJobs);
+    availableJobs.forEach((j) => {
+      const jobId = Number(j.id);
+      if (Number.isSafeInteger(jobId) && jobId > 0 && isJobApplied(jobId, j)) ids.add(jobId);
+    });
     return [...ids];
-  }, [availableJobs, searchJobs, recentlyAppliedIds]);
-  const apiAppliedCount = Math.max(
-    searchJobs.filter((j: any) => hasAppliedStatus(j.userJobStatus)).length,
-    availableJobs.filter((j) => hasAppliedStatus(j.userJobStatus)).length
-  );
+  }, [availableJobs, recentlyAppliedIds]);
+  const apiAppliedCount = availableJobs.filter((j) => hasAppliedStatus(j.userJobStatus)).length;
   const appliedCount = Math.max(apiAppliedCount, recentlyAppliedIds.size, myApps.length);
-  const filteredJobs = availableJobs.filter((j) => {
-    const query = searchPhrase.toLowerCase();
-    const sj = searchJobs.find((s: any) => String(s.id) === String(j.id) || s.jobCode === j.jobCode);
-    const isApplied = hasAppliedStatus(j.userJobStatus) || hasAppliedStatus(sj?.userJobStatus);
-    return (
-      !isApplied &&
-      (j.title.toLowerCase().includes(query) ||
-        j.companyName.toLowerCase().includes(query) ||
-        j.location.toLowerCase().includes(query) ||
-        j.category.toLowerCase().includes(query))
-    );
-  });
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start text-left font-sans">
       <DashboardMenu>
@@ -2736,7 +2981,7 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
           className={`px-3 py-1.5 text-xs font-bold rounded-xl text-left w-full transition-all flex items-center gap-1.5 ${activeTab === 'history' ? 'btn-gloss bg-theme-lavender text-white shadow-md' : 'bg-white hover:bg-theme-lightViolet/30 text-theme-darkViolet border border-theme-lightViolet/80'
             }`}
         >
-          <History className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.applied')} ({appliedCount})</span>
+          <History className="w-4 h-4" /><span className="truncate min-w-0">{t('dash.menu.applied')}</span>
         </button>
         <button
           onClick={() => { setActiveTab('support_tickets'); setSelectedJobIdForDetail(null); }}
@@ -2778,11 +3023,11 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                 <Briefcase className="w-4 h-4 text-white/80 shrink-0" />
               </button>
             </div>
-            <LiveDashboardStats appliedJobsOverride={appliedCount} />
+            <LiveDashboardStats appliedJobsOverride={isApplicationsTab || recentlyAppliedIds.size > 0 ? appliedCount : undefined} />
           </>
         )}
         {/* Profile incomplete warning to push CV uploads */}
-        {!resumeName && (
+        {profile && !resumeName && (
           <Alert
             type="info"
             title={t('dash.candidate.resumeUploadRequired')}
@@ -2797,145 +3042,151 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
               jobCode={selectedJobCode}
               onBack={() => { setSelectedJobIdForDetail(null); setSelectedJobCode(undefined); }}
               onApplySuccess={(appliedJobCode?: string) => {
-                const job =
-                  availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail) ||
-                  (searchJobs as any[]).find((j: any) => Number(j.id) === selectedJobIdForDetail);
+                const job = availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail);
                 const identifier = appliedJobCode || job?.jobCode || String(selectedJobIdForDetail);
                 setRecentlyAppliedIds((prev) =>
                   new Set(prev).add(identifier).add(String(selectedJobIdForDetail ?? ''))
                 );
                 setSelectedJobIdForDetail(null);
                 setSelectedJobCode(undefined);
-                refetchMyApps();
                 refetchJobs();
-                refetchSearchJobs();
               }}
+              apiData={availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail)?.apiData}
               alreadyApplied={isJobApplied(
                 selectedJobIdForDetail,
-                availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail) ||
-                (searchJobs as any[]).find((j: any) => Number(j.id) === selectedJobIdForDetail)
+                availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail)
               )}
             />
           ) : (
             <JobListingView
               onViewDetails={(id, jobCode) => { setSelectedJobIdForDetail(id); setSelectedJobCode(jobCode); }}
               appliedJobIds={appliedJobIds}
+              externalJobs={availableJobs}
+              externalTotalCount={availableJobs.length}
+              externalIsLoading={jobsLoading}
+              externalIsFetching={jobsFetching}
+              externalRefetch={refetchJobs}
             />
           )
         )}
         {/* 2. Job history tab */}
         {activeTab === 'history' && (
-          selectedJobIdForDetail ? (
-            <JobDetailsView
-              jobId={selectedJobIdForDetail}
-              onBack={() => setSelectedJobIdForDetail(null)}
-              alreadyApplied={true}
-            />
-          ) : (
+          <>
             <Card title={t('dash.candidate.activeApplications')}>
-              {(() => {
-                const mergedApps: Array<{ id: string; jobTitle: string; companyName: string; status: string; numericId?: number; jobCode?: string }> = [];
-                const seenKeys = new Set<string>();
-                const addKey = (k?: string | number) => {
-                  if (k === undefined || k === null) return;
-                  const s = String(k).trim();
-                  if (s) seenKeys.add(s);
-                };
-                // Applications from the applications history API (myApps) carry the
-                // authoritative, employer-updated status → add these first.
-                myApps.forEach((a) => {
-                  const numId = parseInt(String(a.jobId).replace(/\D/g, ''), 10);
-                  const validNum = numId && !isNaN(numId) ? numId : undefined;
-                  const override = getApplicationStatusOverride({
-                    applicationId: a.applicationId,
-                    id: a.id,
-                    jobId: a.jobId,
-                    jobCode: a.jobCode,
-                  });
-                  if (!mergedApps.some((m) => m.id === a.id)) {
-                    mergedApps.push({
-                      id: a.id,
-                      jobTitle: a.jobTitle || 'Job',
-                      companyName: a.companyName || 'Company',
-                      status: override?.statusName || displayAppliedStatus(a.status),
-                      numericId: validNum
-                    });
-                    addKey(a.id);
-                    addKey(a.jobId);
-                    if (validNum) addKey(validNum);
-                  }
-                });
-                // Jobs from searchJobs API (TanStack Query) where userJobStatus indicates
-                // already applied — only used as a fallback for jobs not in myApps.
-                searchJobs.forEach((j: any) => {
-                  if (hasAppliedStatus(j.userJobStatus)) {
-                    const numId = Number(j.id);
-                    if (numId && !isNaN(numId) && !seenKeys.has(String(numId))) {
-                      const override = getApplicationStatusOverride({ id: j.id, jobId: j.id, jobCode: j.jobCode });
-                      mergedApps.push({ id: String(j.id), jobTitle: j.jobDesignation || j.profileHeader || 'Job', companyName: j.companyName || j.postingNotes || 'Company', status: override?.statusName || displayAppliedStatus(j.userJobStatus), numericId: numId, jobCode: j.jobCode });
-                      addKey(numId);
-                      if (j.jobCode) addKey(j.jobCode);
-                    }
-                  }
-                });
-                // Also check availableJobs (RTK Query) as a fallback.
-                availableJobs.forEach((j) => {
-                  if (hasAppliedStatus(j.userJobStatus)) {
-                    const numId = Number(j.id);
-                    if (numId && !isNaN(numId) && !seenKeys.has(String(numId))) {
-                      const override = getApplicationStatusOverride({ id: j.id, jobId: j.id, jobCode: j.jobCode });
-                      mergedApps.push({ id: String(j.id), jobTitle: j.title, companyName: j.companyName, status: override?.statusName || displayAppliedStatus(j.userJobStatus), numericId: numId, jobCode: j.jobCode });
-                      addKey(numId);
-                      if (j.jobCode) addKey(j.jobCode);
-                    }
-                  }
-                });
-                // Optimistic entries from recent applies in this session
-                recentlyAppliedIds.forEach((code) => {
-                  if (!seenKeys.has(code)) {
-                    const job =
-                      availableJobs.find((j) => String(j.id) === code || j.jobCode === code) ||
-                      (searchJobs as any[]).find((j: any) => String(j.id) === code || j.jobCode === code);
-                    if (job) {
-                      mergedApps.unshift({
-                        id: `local-${code}`,
-                        jobTitle: job.jobDesignation || job.profileHeader || job.title,
-                        companyName: job.companyName,
-                        status: 'Applied',
-                        numericId: Number(job.id),
-                        jobCode: job.jobCode,
-                      });
-                      addKey(code);
-                      if (job.id) addKey(job.id);
-                      if (job.jobCode) addKey(job.jobCode);
-                    }
-                  }
-                });
-                if (mergedApps.length === 0) {
-                  return <EmptyState title="No Applications" desc="You have not applied to any job yet." />;
-                }
-                return (
-                  <div className="space-y-4">
-                    {mergedApps.map((app) => (
-                      <div
-                        key={app.id}
-                        onClick={app.numericId ? () => setSelectedJobIdForDetail(app.numericId!) : undefined}
-                        className={`p-3 lg:p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-3 text-left transition-all ${app.numericId ? 'hover:bg-orange-50 hover:border-orange-200 cursor-pointer' : ''}`}
-                      >
-                        <div className="space-y-1.5">
-                          <h4 className="text-sm font-bold text-slate-800">{app.jobTitle}</h4>
-                          <p className="text-xs text-slate-600 font-bold block leading-none">{t('dash.candidate.companyName', { name: app.companyName })}</p>
-                        </div>
-                        <div>
-                          <Badge type="primary">{app.status}</Badge>
-                        </div>
+              {applicationsLoading ? (
+                <Loader />
+              ) : applicationsError ? (
+                <Alert
+                  type="danger"
+                  title="Unable to load applications"
+                  message="Please try again later."
+                />
+              ) : myApps.length === 0 ? (
+                <EmptyState title="No Applications" desc="You have not applied to any job yet." />
+              ) : (
+                <div className="space-y-4">
+                  {myApps.map((app) => (
+                    <div
+                      key={app.id}
+                      className="p-3 lg:p-4 bg-slate-50 border border-slate-100 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-left transition-all hover:bg-orange-50 hover:border-orange-200"
+                    >
+                      <div className="space-y-1.5 min-w-0">
+                        <h4 className="text-sm font-bold text-slate-800 break-words">{app.jobTitle}</h4>
+                        <p className="text-xs text-slate-600 font-bold block leading-none break-words">
+                          {app.jobCode
+                            ? t('dash.candidate.jobCode', { code: app.jobCode })
+                            : t('dash.candidate.companyName', { name: app.companyName })}
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                );
-              })()}
+                      <div className="flex items-center gap-3 shrink-0 self-start sm:self-center">
+                        <Badge type="primary">{displayAppliedStatus(app.status)}</Badge>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedApplication(app)}
+                          className="px-3 py-1.5 text-xs font-bold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
+                        >
+                          {t('dash.candidate.showDetails')}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
-          )
+            <Modal
+              isOpen={selectedApplication !== null}
+              onClose={() => setSelectedApplication(null)}
+              title={t('dash.candidate.applicationDetails')}
+              maxWidthClass="max-w-3xl"
+            >
+              {selectedApplication && (
+                <div className="space-y-5 text-left">
+                  <section className="rounded-2xl bg-gradient-to-br from-slate-950 via-blue-950 to-theme-darkViolet p-5 text-white shadow-sm">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 space-y-2">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-200">
+                          {t('dash.candidate.applicationOverview')}
+                        </p>
+                        <h4 className="text-lg font-extrabold leading-snug break-words">
+                          {selectedApplication.jobTitle || 'Job application'}
+                        </h4>
+                        {selectedApplication.companyName && (
+                          <p className="text-sm font-medium text-blue-100 break-words">
+                            {selectedApplication.companyName}
+                          </p>
+                        )}
+                      </div>
+                      <span className="inline-flex w-fit shrink-0 items-center rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold text-white">
+                        {displayAppliedStatus(selectedApplication.status)}
+                      </span>
+                    </div>
+                    {(selectedApplication.jobCode || selectedApplication.appliedAt) && (
+                      <div className="mt-4 flex flex-wrap gap-2 border-t border-white/15 pt-4">
+                        {selectedApplication.jobCode && (
+                          <span className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-blue-50">
+                            {t('dash.candidate.jobCode', { code: selectedApplication.jobCode })}
+                          </span>
+                        )}
+                        {selectedApplication.appliedAt && (
+                          <span className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-blue-50">
+                            {t('dash.candidate.appliedOn', { date: formatApplicationDate(selectedApplication.appliedAt) })}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </section>
+
+                  <section>
+                    <div className="mb-3">
+                      <h5 className="text-sm font-extrabold text-slate-900">{t('dash.candidate.applicationInformation')}</h5>
+                      <p className="mt-1 text-xs text-slate-500">{t('dash.candidate.applicationDetailsIntro')}</p>
+                    </div>
+                    {selectedApplicationDetails.length > 0 ? (
+                      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {selectedApplicationDetails.map((entry, idx) => (
+                          <div
+                            key={`${entry.label}-${idx}`}
+                            className="min-w-0 rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm"
+                          >
+                            <dt className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                              {entry.label}
+                            </dt>
+                            <dd className="mt-1.5 whitespace-pre-wrap break-words text-sm font-semibold leading-relaxed text-slate-800">
+                              {entry.value}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                        {t('dash.candidate.noAdditionalApplicationDetails')}
+                      </div>
+                    )}
+                  </section>
+                </div>
+              )}
+            </Modal>
+          </>
         )}
         {/* Support Tickets - View Ticket */}
         {activeTab === 'support_tickets' && (
@@ -3181,8 +3432,8 @@ function SHGGroupDashboard({ shgId, setToastMsg }: { shgId: string; setToastMsg:
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
   const [activeTab, setActiveTab] = useState('trainings');
-  // Load trainings list
-  const { data: trainings = [] } = useGetTrainingsQuery(undefined, { skip: !user });
+  // Load trainings list only when its tab is active
+  const { data: trainings = [] } = useGetTrainingsQuery(undefined, { skip: !user || activeTab !== 'trainings' });
   const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !user });
   // Load dynamic SHG state
   const [shgName, setShgName] = useState('Swami Samarth Mahila Gruhudyog');

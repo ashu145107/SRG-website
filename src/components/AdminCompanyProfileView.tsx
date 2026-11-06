@@ -18,7 +18,6 @@ import {
   User,
   Globe,
   MapPin,
-  BadgeCheck,
   Loader2,
   AlertCircle
 } from 'lucide-react';
@@ -55,7 +54,7 @@ export function AdminCompanyProfileView({ companyId, onBack }: AdminCompanyProfi
           <Building2 className="w-6 h-6 text-theme-lavender" /> Company Profile
         </h1>
         <p className="text-xs text-slate-500 font-medium mt-1">
-          Viewing company profile for ID: <span className="font-bold text-blue-900">{companyId}</span>
+          Company profile details
           {isFetching && (
             <span className="inline-flex items-center gap-1 ml-3 text-[10px] text-theme-lavender font-bold">
               <Loader2 className="w-3 h-3 animate-spin" /> Updating...
@@ -106,7 +105,6 @@ export function AdminCompanyProfileView({ companyId, onBack }: AdminCompanyProfi
               <h2 className="text-xl font-black text-blue-950 leading-tight">
                 {field(company.companyName) || 'Unnamed Company'}
               </h2>
-              <p className="text-xs text-slate-500 font-medium mt-1">ID: {companyId}</p>
               <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
                 {field(company.phone || company.mobile) && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 rounded-lg text-[10px] font-bold text-slate-600">
@@ -118,13 +116,6 @@ export function AdminCompanyProfileView({ companyId, onBack }: AdminCompanyProfi
                     <Mail className="w-3 h-3" /> {field(company.email)}
                   </span>
                 )}
-                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold ${
-                  company.isApproved
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : 'bg-amber-50 text-amber-700 border border-amber-200'
-                }`}>
-                  <BadgeCheck className="w-3 h-3" /> {company.isApproved ? 'Approved' : 'Pending Approval'}
-                </span>
               </div>
             </div>
           </div>
@@ -146,7 +137,6 @@ export function AdminCompanyProfileView({ companyId, onBack }: AdminCompanyProfi
               {field(company.address) && (
                 <Field icon={<MapPin className="w-4 h-4" />} label="Address" value={field(company.address)} />
               )}
-              <Field icon={<BadgeCheck className="w-4 h-4" />} label="Status" value={company.isApproved ? 'Approved' : 'Pending Approval'} />
             </div>
           </div>
         </div>

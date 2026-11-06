@@ -113,6 +113,32 @@ export default function Register() {
   const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({});
   // Inline per-field error messages rendered directly under the affected input (REG-017)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const fieldLabels: Record<string, string> = {
+    name: 'Full name',
+    phone: 'Mobile number',
+    email: 'Email',
+    countryId: 'Country',
+    stateId: 'State',
+    districtId: 'District',
+    talukaId: 'Taluka',
+    educationId: 'Education',
+    subEducationId: 'Sub-education',
+    experience: 'Experience',
+    isTnCChecked: 'Terms and conditions',
+    empFullName: 'Company name',
+    empMobile: 'Mobile number',
+    empAddress: 'Address',
+    empEmail: 'Email',
+    empStateId: 'State',
+    empDistrictId: 'District',
+    empTalukaId: 'Taluka',
+    empContactPerson: 'Contact person',
+    empAlternateContactNumber: 'Alternate contact number',
+    empCompanyTypeId: 'Company type',
+    empIndustryTypeId: 'Industry type',
+    empDescription: 'Company description',
+    empAlternateEmail: 'Alternate email',
+  };
 
   const clearError = (fieldName: string) => {
     if (invalidFields[fieldName]) {
@@ -131,25 +157,13 @@ export default function Register() {
     }
   };
 
-  // REG-017: after a failed submit the user is parked at the bottom of the
-  // form with no feedback. Smooth-scroll back to the top, then move focus to
-  // the first field flagged invalid (or to the error banner when the failure
-  // came from the server, e.g. duplicate email).
+  // Keep validation feedback near the submit controls and focus that summary.
   const focusOnErrors = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => {
-      const firstInvalid = document.querySelector<HTMLElement>(
-        'input.border-red-500, textarea.border-red-500, select.border-red-500'
-      );
-      if (firstInvalid) {
-        firstInvalid.focus({ preventScroll: true });
-        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
-      }
-      const banner = document.querySelector<HTMLElement>('[data-error-banner]');
+      const banner = document.querySelector<HTMLElement>('[data-error-summary], [data-error-banner]');
       if (banner) {
         banner.focus({ preventScroll: true });
-        banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        banner.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
       }
     }, 80);
   };
@@ -244,25 +258,35 @@ export default function Register() {
       const errs: Record<string, string> = {};
       if (newInvalids['name']) {
         errs['name'] = t('reg.error.fullNameRequired');
-      } else if (newInvalids['phone']) {
+      }
+      if (newInvalids['phone']) {
         errs['phone'] = phone.trim() ? t('reg.error.mobileInvalid') : t('reg.error.mobileRequired');
-      } else if (newInvalids['email']) {
+      }
+      if (newInvalids['email']) {
         errs['email'] = t('reg.error.emailInvalid');
-      } else if (newInvalids['countryId']) {
+      }
+      if (newInvalids['countryId']) {
         errs['countryId'] = t('reg.error.countryRequired');
-      } else if (newInvalids['stateId']) {
+      }
+      if (newInvalids['stateId']) {
         errs['stateId'] = t('reg.error.stateRequired');
-      } else if (newInvalids['districtId']) {
+      }
+      if (newInvalids['districtId']) {
         errs['districtId'] = t('reg.error.districtRequired');
-      } else if (newInvalids['talukaId']) {
+      }
+      if (newInvalids['talukaId']) {
         errs['talukaId'] = t('reg.error.talukaRequired');
-      } else if (newInvalids['educationId']) {
+      }
+      if (newInvalids['educationId']) {
         errs['educationId'] = t('reg.error.educationRequired');
-      } else if (newInvalids['subEducationId']) {
+      }
+      if (newInvalids['subEducationId']) {
         errs['subEducationId'] = t('reg.error.subEducationRequired');
-      } else if (newInvalids['experience']) {
+      }
+      if (newInvalids['experience']) {
         errs['experience'] = experience.trim() === '' ? t('reg.error.experienceRequired') : t('reg.error.experienceInvalid');
-      } else if (newInvalids['isTnCChecked']) {
+      }
+      if (newInvalids['isTnCChecked']) {
         errs['isTnCChecked'] = t('reg.error.termsRequired');
       }
       setFieldErrors(errs);
@@ -391,31 +415,44 @@ export default function Register() {
       const errs: Record<string, string> = {};
       if (newInvalids['empFullName']) {
         errs['empFullName'] = t('reg.error.companyNameRequired');
-      } else if (newInvalids['empMobile']) {
+      }
+      if (newInvalids['empMobile']) {
         errs['empMobile'] = empMobile.trim() ? t('reg.error.empMobileInvalid') : t('reg.error.empMobileRequired');
-      } else if (newInvalids['empAddress']) {
+      }
+      if (newInvalids['empAddress']) {
         errs['empAddress'] = t('reg.error.addressRequired');
-      } else if (newInvalids['empEmail']) {
+      }
+      if (newInvalids['empEmail']) {
         errs['empEmail'] = empEmail.trim() ? t('reg.error.empEmailInvalid') : t('reg.error.emailRequired');
-      } else if (newInvalids['empStateId']) {
+      }
+      if (newInvalids['empStateId']) {
         errs['empStateId'] = t('reg.error.empStateRequired');
-      } else if (newInvalids['empDistrictId']) {
+      }
+      if (newInvalids['empDistrictId']) {
         errs['empDistrictId'] = t('reg.error.empDistrictRequired');
-      } else if (newInvalids['empTalukaId']) {
+      }
+      if (newInvalids['empTalukaId']) {
         errs['empTalukaId'] = t('reg.error.empTalukaRequired');
-      } else if (newInvalids['empContactPerson']) {
+      }
+      if (newInvalids['empContactPerson']) {
         errs['empContactPerson'] = t('reg.error.contactPersonRequired');
-      } else if (newInvalids['empAlternateContactNumber']) {
+      }
+      if (newInvalids['empAlternateContactNumber']) {
         errs['empAlternateContactNumber'] = t('reg.error.altContactNumberInvalid');
-      } else if (newInvalids['empCompanyTypeId']) {
+      }
+      if (newInvalids['empCompanyTypeId']) {
         errs['empCompanyTypeId'] = t('reg.error.companyTypeRequired');
-      } else if (newInvalids['empIndustryTypeId']) {
+      }
+      if (newInvalids['empIndustryTypeId']) {
         errs['empIndustryTypeId'] = t('reg.error.industryTypeRequired');
-      } else if (newInvalids['empDescription']) {
+      }
+      if (newInvalids['empDescription']) {
         errs['empDescription'] = t('reg.error.descriptionRequired');
-      } else if (newInvalids['empAlternateEmail']) {
+      }
+      if (newInvalids['empAlternateEmail']) {
         errs['empAlternateEmail'] = t('reg.error.altEmailInvalid');
-      } else if (newInvalids['isTnCChecked']) {
+      }
+      if (newInvalids['isTnCChecked']) {
         errs['isTnCChecked'] = t('reg.error.termsRequired');
       }
       setFieldErrors(errs);
@@ -956,6 +993,17 @@ export default function Register() {
                     </label>
                   </div>
 
+                  {errorText && (
+                    <div tabIndex={-1} data-error-summary className="space-y-2 outline-none">
+                      <Alert type="danger" message={errorText} />
+                      {Object.entries(fieldErrors).map(([field, message]) => (
+                        <p key={field} className="text-xs font-semibold text-red-700">
+                          <span className="font-bold">{fieldLabels[field] || field}:</span> {message}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
                   <button
                     type="submit"
                     disabled={isCompanyRegistering}
@@ -964,11 +1012,6 @@ export default function Register() {
                     {isCompanyRegistering ? t('reg.btn.submitting') : t('reg.btn.submitEmployer')}
                   </button>
 
-                  {errorText && (
-                        <div tabIndex={-1} data-error-banner className="outline-none">
-                          <Alert type="danger" message={errorText} />
-                        </div>
-                      )}
                 </form>
               ) : (
                 <>
@@ -1298,6 +1341,17 @@ export default function Register() {
                       </label>
                     </div>
 
+                    {errorText && (
+                      <div tabIndex={-1} data-error-summary className="space-y-2 outline-none">
+                        <Alert type="danger" message={errorText} />
+                        {Object.entries(fieldErrors).map(([field, message]) => (
+                          <p key={field} className="text-xs font-semibold text-red-700">
+                            <span className="font-bold">{fieldLabels[field] || field}:</span> {message}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+
                     <button
                       type="submit"
                       disabled={isRegistering}
@@ -1306,11 +1360,6 @@ export default function Register() {
                       {isRegistering ? t('reg.btn.submitting') : t('reg.btn.submitRegistration')}
                     </button>
 
-                    {errorText && (
-                        <div tabIndex={-1} data-error-banner className="outline-none">
-                          <Alert type="danger" message={errorText} />
-                        </div>
-                      )}
                   </form>
                 </>
               )}

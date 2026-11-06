@@ -113,10 +113,13 @@ describe('JobListingView', () => {
     renderWithProviders(<JobListingView onViewDetails={jest.fn()} />);
 
     expect(screen.getByText('Sales Executive')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sales Executive' })).toHaveClass('cursor-pointer');
     expect(screen.getByText('Senior Accountant')).toBeInTheDocument();
     expect(screen.getByText('Acme Corp')).toBeInTheDocument();
+    expect(screen.getAllByText('Nashik').length).toBeGreaterThan(1);
     expect(screen.getByText('₹50000 - ₹80000')).toBeInTheDocument();
     expect(screen.getByText('Showing 2 of 2 vacancies')).toBeInTheDocument();
+    expect(screen.getByText(/Last date: 2026-12-31/)).toBeInTheDocument();
   });
 
   it('renders the empty state when there are no jobs', () => {
@@ -160,11 +163,24 @@ describe('JobListingView', () => {
     await waitFor(() => expect(mockApplyAsync).toHaveBeenCalledWith(['2']));
   });
 
-  it('shows employer controls for employer/staff roles', () => {
+  it('shows the API error when quick apply fails', async () => {
+    mockApplyAsync.mockRejectedValue({
+      response: { data: { message: 'This job is no longer accepting applications.' } },
+    });
+    renderWithProviders(<JobListingView onViewDetails={jest.fn()} />);
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Apply' })[0]);
+
+    expect(await screen.findByText('This job is no longer accepting applications.')).toBeInTheDocument();
+  });
+
+  it('shows employer controls and passes the selected vacancy code to view and edit', async () => {
+    const onViewDetails = jest.fn();
+    const onEditJob = jest.fn();
     renderWithProviders(
       <JobListingView
-        onViewDetails={jest.fn()}
-        onEditJob={jest.fn()}
+        onViewDetails={onViewDetails}
+        onEditJob={onEditJob}
         onAddNewJob={jest.fn()}
       />,
       { preloadedState: { auth: authenticatedAuthState({ role: 'COMPANY' }) } }
@@ -174,6 +190,44 @@ describe('JobListingView', () => {
     expect(screen.getByRole('button', { name: /Post Job/ })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Edit' })).toHaveLength(2);
     expect(screen.queryByRole('button', { name: 'Apply' })).not.toBeInTheDocument();
+
+    const viewDetailsButton = screen.getAllByRole('button', { name: /View Details/ })[0];
+    expect(viewDetailsButton).toHaveClass('cursor-pointer');
+    await userEvent.click(viewDetailsButton);
+    expect(onViewDetails).toHaveBeenCalledWith(2, 'JOB-2');
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
+    expect(onEditJob).toHaveBeenCalledWith(2, 'JOB-2');
+  });
+
+  it('preserves the employer vacancies API order by default', () => {
+    const vacancies = [
+      {
+        id: 99,
+        jobCode: 'API-FIRST',
+        profileHeader: 'API First Vacancy',
+        createdDate: '2025-03-01T10:00:00Z',
+      },
+      {
+        id: 1,
+        jobCode: 'API-SECOND',
+        profileHeader: 'API Second Vacancy',
+        createdDate: '2025-03-10T10:00:00Z',
+      },
+    ];
+
+    renderWithProviders(
+      <JobListingView
+        onViewDetails={jest.fn()}
+        onEditJob={jest.fn()}
+        externalJobs={vacancies as any}
+      />,
+      { preloadedState: { auth: authenticatedAuthState({ role: 'COMPANY' }) } }
+    );
+
+    const first = screen.getByText('API First Vacancy');
+    const second = screen.getByText('API Second Vacancy');
+    expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('calls the refetch handler when Refresh is clicked', async () => {

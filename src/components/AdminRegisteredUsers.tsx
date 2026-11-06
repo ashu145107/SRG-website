@@ -4,6 +4,9 @@
  */
 
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { openEncryptedRouteInNewTab } from '../utils/secureDetailRoute';
 import { useGetAdminUsersQuery } from '../services/adminApi';
 import { CandidateProfile } from '../types';
 import { Users, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2, ExternalLink } from 'lucide-react';
@@ -11,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 
 export function AdminRegisteredUsers() {
   const { t } = useTranslation();
+  const { token } = useSelector((state: RootState) => state.auth);
   const [pageSize, setPageSize] = useState(15);
   const [pageNumber, setPageNumber] = useState(1);
   const [searchPhrase, setSearchPhrase] = useState('');
@@ -247,9 +251,16 @@ export function AdminRegisteredUsers() {
                   <tr key={candidate.id || index} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3.5 font-black text-blue-900 whitespace-nowrap">
                       <a
-                        href={`#/dashboard?view=candidate&id=${candidate.id || index + 1}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href="#/dashboard"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          void openEncryptedRouteInNewTab('/dashboard', {
+                            view: 'candidate',
+                            id: String(candidate.id || index + 1),
+                          }, token || '').catch((error: unknown) => {
+                            window.alert(error instanceof Error ? error.message : 'Unable to open candidate details.');
+                          });
+                        }}
                         title="Open candidate profile in new tab"
                         className="underline decoration-blue-300 underline-offset-2 hover:text-blue-600 hover:decoration-blue-600 transition-colors inline-flex items-center gap-1 cursor-pointer"
                       >

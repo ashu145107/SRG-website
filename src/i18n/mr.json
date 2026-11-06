@@ -279,7 +279,7 @@
     "recentJobs": "नुकत्याच प्रसिद्ध झालेल्या नोकऱ्या",
     "appliedJobs": "अर्ज केलेल्या नोकऱ्या",
     "postJob": "नवीन नोकरी जोडा",
-    "applications": "आलेले अर्ज",
+    "applications": "अर्जदार",
     "shgTrainings": "बचतगट प्रशिक्षण व बाजारपेठ",
     "adminTitle": "प्रशासक नियंत्रण डॅशबोर्ड",
     "superAdmin": "मुख्य प्रशासक",
@@ -351,8 +351,8 @@
       "subtitle": "नियोक्त्यांद्वारे पोस्ट केलेल्या नोकऱ्या आणि आवश्यक पात्रता तपशील व्यवस्थापन"
     },
     "applications": {
-      "title": "नोकरी अर्ज प्रविष्टी",
-      "listTitle": "अर्ज यादी",
+      "title": "अर्जदार",
+      "listTitle": "अर्जदार",
       "loadError": "❌ API लोड करण्यात अयशस्वी",
       "empty": "कोणतेही रेकॉर्ड सापडले नाही",
       "detailTitle": "अर्ज तपशील",
@@ -396,7 +396,7 @@
       "registeredCompany": "नोंदणीकृत कंपनी",
       "registeredUser": "नोंदणीकृत वापरकर्ते",
       "jobRequirement": "नोकरी आवश्यकता",
-      "jobApplication": "नोकरी अर्ज",
+      "jobApplication": "अर्जदार",
       "viewTicket": "तिकीट पहा",
       "logOff": "लॉग ऑफ",
       "drawerTitle": "माहिती फलक",
@@ -405,7 +405,7 @@
       "companies": "नियोक्ते फेरबदल",
       "shgsInfo": "बचतगट सक्षमीकरण",
       "reportsSummary": "अहवाल अहवाल",
-      "pipeline": "अर्ज प्रक्रिया",
+      "pipeline": "अर्जदार",
       "vacancies": "रिक्रूट नोकऱ्या",
       "postJob": "नवीन नोकरी जोडा",
       "profileSettings": "कंपनी प्रोफाइल",
@@ -433,8 +433,7 @@
       "companiesApprovalDesc": "उद्योगपती व नियोक्त्यांनी नोंदणी केल्यावर त्यांच्या प्रोफाइलची कसून तपासणी करून अप्रूव्ह करा."
     },
     "employer": {
-      "reviewPending": "पडताळणी प्रलंबित आहे",
-      "pipelineTitle": "उमेदवारांचे अर्ज प्रक्रिया",
+      "pipelineTitle": "अर्जदार",
       "profileTitle": "नियोक्ता माहिती संपादन",
       "interviewModalTitle": "मुलाखत नियोजित करा",
       "statusModalTitle": "अर्ज स्थिती अद्यतनित करा",
@@ -455,7 +454,15 @@
       "liveDataFinder": "स्थान व शैक्षणिक पात्रता",
       "liveDataHelp": "आपल्या प्रोफाइलसाठी देश, राज्य, जिल्हा, तालुका, सेवा केंद्र आणि शिक्षणाची माहिती निवडा. सर्व सूची नेहमी अद्ययावत असतात.",
       "uploadResumeBtn": "तुमचा बायोडाटा अपलोड करा (पीडीएफ)",
-      "companyName": "कंपनी: {{name}}"
+      "companyName": "कंपनी: {{name}}",
+      "jobCode": "नोकरी कोड: {{code}}",
+      "showDetails": "सविस्तर पहा",
+      "applicationDetails": "अर्जाची सविस्तर माहिती",
+      "applicationOverview": "अर्जाचा आढावा",
+      "applicationInformation": "अर्जाची माहिती",
+      "applicationDetailsIntro": "तुमच्या अर्जासोबत दिलेली माहिती.",
+      "noAdditionalApplicationDetails": "या अर्जासाठी अतिरिक्त माहिती उपलब्ध नाही.",
+      "appliedOn": "अर्ज दिनांक: {{date}}"
     },
     "shg": {
       "verificationTitle": "बचतगट गृहउद्योग पडताळणी",

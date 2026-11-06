@@ -8,11 +8,12 @@
  * Fetches data from GET /api/v1/viewcandidateprofile/{candidateId}
  *
  * Layout mirrors the user module's ProfilePage (tabbed: Basic Details + Resume)
- * with additional admin-only info (candidate ID, contact badges, etc.).
+ * with additional admin-only contact badges.
  */
 
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
+import { getApiBaseUrl } from '../services/baseApi';
 import { useGetAdminCandidateDetailQuery } from '../services/adminApi';
 import { logProfileDownload } from '../services/profileApi';
 import { RootState } from '../store';
@@ -87,6 +88,8 @@ interface AdminCandidateProfileViewProps {
 
 export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidateProfileViewProps) {
   const [activeTab, setActiveTab] = useState<'details' | 'education' | 'employment' | 'resume'>('details');
+  const [isDownloadingResume, setIsDownloadingResume] = useState(false);
+  const [resumeActionError, setResumeActionError] = useState('');
   const { user } = useSelector((state: RootState) => state.auth);
 
   const { data: profile, isLoading, error } = useGetAdminCandidateDetailQuery(candidateId, {
@@ -98,6 +101,48 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
   const handleDownload = () => {
     if (isCandidate) return;
     void logProfileDownload({ candidateId, role: user?.role });
+  };
+
+  const resolveResumeUrl = (url: string): string => {
+    if (!url) return '';
+    const apiBaseUrl = getApiBaseUrl() || 'https://srgapp.dindoripranit.org';
+
+    try {
+      return new URL(url, `${apiBaseUrl.replace(/\/+$/, '')}/`).toString();
+    } catch {
+      return url;
+    }
+  };
+
+  const downloadResume = async (url: string, fileName: string) => {
+    setResumeActionError('');
+    setIsDownloadingResume(true);
+    handleDownload();
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Resume download failed (${response.status}).`);
+      }
+
+      const blob = await response.blob();
+      if (!blob.size) {
+        throw new Error('The resume file is empty.');
+      }
+
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = fileName || 'resume';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (err) {
+      setResumeActionError(err instanceof Error ? err.message : 'Unable to download resume.');
+    } finally {
+      setIsDownloadingResume(false);
+    }
   };
 
   // Map the normalized CandidateProfile → CandidateData for display
@@ -123,7 +168,7 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
     noticePeriod: profile.noticePeriod ?? null,
     experienceYears: profile.experienceYears || profile.experience || 0,
     skills: Array.isArray(profile.skills) ? profile.skills : [],
-    resumeUrl: profile.resumeUrl || '',
+    resumeUrl: resolveResumeUrl(profile.resumeUrl || ''),
     resumeName: profile.resumeName || (profile.resumeUrl ? decodeURIComponent(profile.resumeUrl.split('/').pop() || 'Resume') : ''),
     employmentHistory: Array.isArray(profile.employmentHistory) ? profile.employmentHistory : [],
   } : null;
@@ -145,7 +190,7 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
       <div className="mb-6">
         <h1 className="text-2xl font-black text-blue-950">Candidate Profile</h1>
         <p className="text-xs text-slate-500 font-medium mt-1">
-          Viewing profile for candidate ID: <span className="font-bold text-blue-900">{candidateId}</span>
+          Candidate profile details
         </p>
       </div>
 
@@ -193,9 +238,6 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
               <h2 className="text-xl font-black text-blue-950 leading-tight">
                 {candidate.fullName || 'Unnamed Candidate'}
               </h2>
-              <p className="text-xs text-slate-500 font-medium mt-1">
-                ID: {candidateId}
-              </p>
               <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
                 {candidate.phone && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 rounded-lg text-[10px] font-bold text-slate-600">
@@ -365,36 +407,31 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
                         <p className="text-xs font-bold text-blue-900 truncate">My Resume</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => {
-                            const w = window.open('', '_blank');
-                            if (w) {
-                              w.document.write(
-                                `<html><head><title>${candidate.resumeName || 'Resume'}</title></head>` +
-                                `<body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f1f5f9;">` +
-                                `<iframe src="${candidate.resumeUrl}" style="width:100%;height:100vh;border:none;"></iframe>` +
-                                `</body></html>`
-                              );
-                            }
-                          }}
+                        <a
+                          href={candidate.resumeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="px-3 py-2 text-[11px] font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" /> Preview
-                        </button>
+                        </a>
                         {!isCandidate && (
-                          <a
-                            href={candidate.resumeUrl}
-                            download={candidate.resumeName || 'resume'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={handleDownload}
+                          <button
+                            type="button"
+                            onClick={() => void downloadResume(candidate.resumeUrl, candidate.resumeName)}
+                            disabled={isDownloadingResume}
                             className="px-3 py-2 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5"
                           >
-                            <Download className="w-3.5 h-3.5" /> Download
-                          </a>
+                            <Download className="w-3.5 h-3.5" /> {isDownloadingResume ? 'Downloading...' : 'Download'}
+                          </button>
                         )}
                       </div>
                     </div>
+                    {resumeActionError && (
+                      <p role="alert" className="text-xs font-medium text-red-600">
+                        {resumeActionError}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className="w-full max-w-md mx-auto bg-slate-50 border border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center gap-2">

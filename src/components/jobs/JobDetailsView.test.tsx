@@ -135,9 +135,12 @@ describe('JobDetailsView', () => {
     expect(screen.getByText('Senior Accountant')).toBeInTheDocument();
     expect(screen.getByText(/CODE: JOB-10/)).toBeInTheDocument();
     expect(screen.getByText('Full-time')).toBeInTheDocument();
+    expect(screen.getByText('SALARY RANGE')).toBeInTheDocument();
     expect(screen.getAllByText('₹50,000 - ₹80,000').length).toBeGreaterThan(0);
     expect(screen.getByText('Nashik')).toBeInTheDocument();
     expect(screen.getByText('Health Insurance')).toBeInTheDocument();
+    expect(screen.getByText('2026-12-31')).toBeInTheDocument();
+    expect(screen.queryByText(/12\/31\/2026/)).not.toBeInTheDocument();
   });
 
   it('submits an application after confirming, when authenticated', async () => {
@@ -147,6 +150,7 @@ describe('JobDetailsView', () => {
 
     const applyButtons = screen.getAllByRole('button', { name: /Apply/ });
     expect(applyButtons.length).toBeGreaterThan(0);
+    expect(applyButtons[0]).toHaveClass('cursor-pointer');
     await userEvent.click(applyButtons[0]);
 
     expect(
@@ -155,7 +159,7 @@ describe('JobDetailsView', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Yes, Apply/ }));
 
-    await waitFor(() => expect(mockApplyAsync).toHaveBeenCalledWith(['JOB-10']));
+    await waitFor(() => expect(mockApplyAsync).toHaveBeenCalledWith(['10']));
     expect(await screen.findByText('Application submitted')).toBeInTheDocument();
   });
 

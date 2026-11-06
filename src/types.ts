@@ -192,6 +192,7 @@ export interface Job {
   skill?: string;
   workPlace?: string;
   email?: string;
+  apiData?: import('./services/jobTypes').JobRequirement;
 }
 
 export interface JobApplication {

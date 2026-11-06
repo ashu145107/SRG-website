@@ -36,6 +36,7 @@ import {
 } from '../../services/jobMasterApi';
 import { EmploymentHistory, MyProfile } from '../../types';
 import { ConfirmDialog, Modal, Toast, Loader } from '../ui/FeedbackComponents';
+import { DatePicker } from '../ui/DatePicker';
 
 interface EmploymentHistoryTabProps {
   profile?: MyProfile;
@@ -391,27 +392,25 @@ export const EmploymentHistoryTab: React.FC<EmploymentHistoryTabProps> = ({
 
                 <div>
                   <label className={labelClass}>{t('employment.form.startDate')}</label>
-                  <input
-                    type="date"
+                  <DatePicker
                     name="startDate"
                     value={form.startDate}
                     max={todayInputDate()}
-                    onChange={handleChange}
-                    className={`${inputClass} cursor-pointer`}
+                    onChange={(value) => setForm((previous) => ({ ...previous, startDate: value }))}
+                    className={inputClass}
                   />
                 </div>
 
                 <div>
                   <label className={labelClass}>{t('employment.form.endDate')} {form.isCurrentJob ? '' : t('employment.form.optional')}</label>
-                  <input
-                    type="date"
+                  <DatePicker
                     name="endDate"
                     value={form.endDate}
                     max={todayInputDate()}
                     min={form.startDate || undefined}
-                    onChange={handleChange}
+                    onChange={(value) => setForm((previous) => ({ ...previous, endDate: value }))}
                     disabled={form.isCurrentJob}
-                    className={`${inputClass} cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed`}
+                    className={`${inputClass} disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed`}
                   />
                   {form.isCurrentJob && (
                     <span className="block text-[10px] text-orange-600 font-semibold mt-1">{t('profileView.employment.currentlyWorking')}</span>

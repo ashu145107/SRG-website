@@ -78,7 +78,8 @@ describe('AdminCompanyProfileView', () => {
     });
     expect(screen.getAllByText('contact@testcorp.com').length).toBeGreaterThan(0);
     expect(screen.getAllByText('John Smith').length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Approved/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Approved|Pending Approval|Status/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/company profile for ID|ID:\s*123/i)).not.toBeInTheDocument();
   });
 
   it('handles try again action', async () => {

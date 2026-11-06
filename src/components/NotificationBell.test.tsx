@@ -92,11 +92,13 @@ describe('NotificationBell', () => {
     expect(mockedFetch).not.toHaveBeenCalled();
   });
 
-  it('renders the bell when authenticated', () => {
-    mockedFetch.mockResolvedValue([]);
+  it('fetches notifications on mount and shows unread status before the bell is opened', async () => {
+    mockedFetch.mockResolvedValue([notification()]);
     renderBell({ auth: authenticatedAuthState() });
 
-    expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
+    const bell = screen.getByRole('button', { name: 'Notifications' });
+    await waitFor(() => expect(mockedFetch).toHaveBeenCalled());
+    await waitFor(() => expect(bell.querySelector('span')).toBeInTheDocument());
   });
 
   it('shows a loading state while notifications are pending', async () => {

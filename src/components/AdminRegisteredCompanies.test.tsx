@@ -30,8 +30,16 @@ jest.mock('../services/jobMasterApi', () => ({
   useGetIndustryTypesQuery: jest.fn(() => ({ data: [{ id: 1, label: 'IT' }] })),
 }));
 
-import { useGetAdminCompaniesQuery } from '../services/adminApi';
+jest.mock('../services/masterApi', () => ({
+  useGetStatesQuery: jest.fn(() => ({ data: [{ id: 1, name: 'Maharashtra' }] })),
+  useGetDistrictsQuery: jest.fn(() => ({ data: [{ id: 10, name: 'Pune' }] })),
+  useGetTalukasQuery: jest.fn(() => ({ data: [{ id: 100, name: 'Haveli' }] })),
+  getLocalizedName: (item: { name: string }) => item.name,
+}));
+
+import { useAddCompanyMutation, useGetAdminCompaniesQuery } from '../services/adminApi';
 const mockUseGetAdminCompaniesQuery = useGetAdminCompaniesQuery as jest.Mock;
+const mockAddCompany = jest.fn();
 
 const baseResult = (overrides: Record<string, unknown> = {}) => ({
   data: undefined,
@@ -45,6 +53,7 @@ const baseResult = (overrides: Record<string, unknown> = {}) => ({
 describe('AdminRegisteredCompanies', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (useAddCompanyMutation as jest.Mock).mockReturnValue([mockAddCompany, { isLoading: false }]);
   });
 
   it('renders loading state', () => {
@@ -94,6 +103,9 @@ describe('AdminRegisteredCompanies', () => {
     await waitFor(() => {
       expect(getByText('Tech Solutions')).toBeInTheDocument();
     });
+    const companyLink = screen.getByTitle('Open company profile in new tab');
+    expect(companyLink).toHaveAttribute('href', '#/dashboard');
+    expect(companyLink.getAttribute('href')).not.toContain('1');
 
     fireEvent.click(getByTitle('View Profile'));
 
@@ -114,6 +126,55 @@ describe('AdminRegisteredCompanies', () => {
       expect(getByText(/Register New Company/i)).toBeInTheDocument();
     });
     expect(screen.getByPlaceholderText(/Acme Pvt. Ltd./i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/State/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/District/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Taluka/i)).toBeInTheDocument();
+  });
+
+  it('submits the selected location IDs with the company registration fields', async () => {
+    mockUseGetAdminCompaniesQuery.mockReturnValue(baseResult({ data: { items: [], totalCount: 0 } }));
+    mockAddCompany.mockResolvedValue({ data: { message: 'Company registered' } });
+
+    renderWithProviders(<AdminRegisteredCompanies />);
+    fireEvent.click(screen.getByText('Add new Company'));
+
+    fireEvent.change(screen.getByLabelText(/State/i), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText(/District/i), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText(/Taluka/i), { target: { value: '100' } });
+    fireEvent.change(screen.getByPlaceholderText(/Acme Pvt. Ltd./i), { target: { value: 'Acme' } });
+    fireEvent.change(screen.getByPlaceholderText(/9876543210/i), { target: { value: '9876543210' } });
+    fireEvent.change(screen.getByPlaceholderText(/info@acme.com/i), { target: { value: 'info@acme.com' } });
+    fireEvent.change(screen.getByPlaceholderText(/Rahul Sharma/i), { target: { value: 'Rahul Sharma' } });
+    fireEvent.change(document.getElementById('addcomp-companytype')!, { target: { value: '1' } });
+    fireEvent.change(document.getElementById('addcomp-industrytype')!, { target: { value: '1' } });
+    fireEvent.change(screen.getByPlaceholderText(/Company registered address/i), { target: { value: 'Pune' } });
+    fireEvent.change(document.getElementById('addcomp-altcontactperson')!, { target: { value: 'Asha Sharma' } });
+    fireEvent.change(document.getElementById('addcomp-altnumber')!, { target: { value: '9876501234' } });
+    fireEvent.change(document.getElementById('addcomp-altemail')!, { target: { value: 'accounts@acme.com' } });
+    fireEvent.change(document.getElementById('addcomp-website')!, { target: { value: 'https://acme.com' } });
+    fireEvent.change(document.getElementById('addcomp-discription')!, { target: { value: 'Manufacturing company' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Register/i }));
+
+    await waitFor(() => {
+      expect(mockAddCompany).toHaveBeenCalledWith(expect.objectContaining({
+        stateId: 1,
+        districtId: 10,
+        talukaId: 100,
+        fullname: 'Acme',
+        mobile: '9876543210',
+        address: 'Pune',
+        email: 'info@acme.com',
+        contactPerson: 'Rahul Sharma',
+        alternateContactPerson: 'Asha Sharma',
+        alternateContactNumber: '9876501234',
+        companyTypeId: 1,
+        industryTypeId: 1,
+        discription: 'Manufacturing company',
+        website: 'https://acme.com',
+        alternateEmail: 'accounts@acme.com',
+      }));
+    });
   });
 
   it('filters companies by search input', async () => {

@@ -71,6 +71,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
     queryFn: fetchNotifications,
     enabled: isAuthenticated,
     staleTime: 1000 * 60 * 3, // 3 minutes cache
+    refetchOnMount: 'always',
     refetchInterval: open ? 1000 * 60 : false, // only poll periodically if the notification panel is open
     refetchOnWindowFocus: false,
     retry: 1,
@@ -96,11 +97,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
   }, [open]);
 
   const toggle = () => {
-    setOpen((prev) => {
-      const next = !prev;
-      if (next) refetch();
-      return next;
-    });
+    setOpen((prev) => !prev);
   };
 
   const handleItemClick = async (n: AppNotification) => {

@@ -4,6 +4,9 @@
  */
 
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { openEncryptedRouteInNewTab } from '../utils/secureDetailRoute';
 import { useGetAdminJobApplicationsQuery } from '../services/adminApi';
 import { JobApplication } from '../types';
 import { Mail, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2, ExternalLink } from 'lucide-react';
@@ -12,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 export function AdminJobApplications() {
   const { t } = useTranslation();
+  const { token } = useSelector((state: RootState) => state.auth);
   const [pageSize, setPageSize] = useState(15);
   const [pageNumber, setPageNumber] = useState(1);
   const [searchPhrase, setSearchPhrase] = useState('');
@@ -219,10 +223,17 @@ export function AdminJobApplications() {
                     <td className="px-4 py-3.5 font-bold text-slate-800 whitespace-nowrap">
                       {app.candidateId ? (
                         <a
-                          href={`#/dashboard?view=candidate&id=${app.candidateId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Open candidate profile in new tab"
+                          href="#/dashboard"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            void openEncryptedRouteInNewTab('/dashboard', {
+                              view: 'candidate',
+                              id: String(app.candidateId),
+                            }, token || '').catch((error: unknown) => {
+                              window.alert(error instanceof Error ? error.message : 'Unable to open applicant details.');
+                            });
+                          }}
+                          title="Open applicant profile in new tab"
                           className="underline decoration-blue-300 underline-offset-2 hover:text-blue-600 hover:decoration-blue-600 transition-colors inline-flex items-center gap-1 cursor-pointer"
                         >
                           {app.candidateName || 'Candidate'}

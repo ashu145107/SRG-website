@@ -92,6 +92,73 @@ describe('AdminCandidateProfileView', () => {
     });
     expect(screen.getAllByText('john@example.com').length).toBeGreaterThan(0);
     expect(screen.getAllByText('9876543210').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/candidate ID|ID:\s*123/i)).not.toBeInTheDocument();
+  });
+
+  it('previews resolved resume URLs and downloads the resume file', async () => {
+    mockUseGetAdminCandidateDetailQuery.mockReturnValue({
+      data: {
+        fullName: 'John Doe',
+        resumeUrl: '/Uploads/Resume/john.pdf',
+        resumeName: 'john.pdf',
+        employmentHistory: [],
+      },
+      isLoading: false,
+      error: undefined,
+    });
+
+    const originalFetch = global.fetch;
+    const createObjectURLDescriptor = Object.getOwnPropertyDescriptor(URL, 'createObjectURL');
+    const revokeObjectURLDescriptor = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL');
+    const anchorClickDescriptor = Object.getOwnPropertyDescriptor(HTMLAnchorElement.prototype, 'click');
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => new Blob(['resume']),
+    });
+    const createObjectURL = jest.fn().mockReturnValue('blob:resume');
+
+    global.fetch = fetchMock as typeof fetch;
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: jest.fn() });
+    Object.defineProperty(HTMLAnchorElement.prototype, 'click', { configurable: true, value: jest.fn() });
+
+    try {
+      renderWithProviders(<AdminCandidateProfileView candidateId="123" />);
+      await userEvent.click(screen.getByText('Resume / CV'));
+
+      const previewLink = screen.getByRole('link', { name: /preview/i });
+      expect(previewLink).toHaveAttribute(
+        'href',
+        'https://srgapp.dindoripranit.org/Uploads/Resume/john.pdf'
+      );
+      expect(previewLink).toHaveAttribute('target', '_blank');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Download' }));
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith(
+          'https://srgapp.dindoripranit.org/Uploads/Resume/john.pdf'
+        );
+      });
+      expect(createObjectURL).toHaveBeenCalled();
+    } finally {
+      global.fetch = originalFetch;
+      if (createObjectURLDescriptor) {
+        Object.defineProperty(URL, 'createObjectURL', createObjectURLDescriptor);
+      } else {
+        Reflect.deleteProperty(URL, 'createObjectURL');
+      }
+      if (revokeObjectURLDescriptor) {
+        Object.defineProperty(URL, 'revokeObjectURL', revokeObjectURLDescriptor);
+      } else {
+        Reflect.deleteProperty(URL, 'revokeObjectURL');
+      }
+      if (anchorClickDescriptor) {
+        Object.defineProperty(HTMLAnchorElement.prototype, 'click', anchorClickDescriptor);
+      } else {
+        Reflect.deleteProperty(HTMLAnchorElement.prototype, 'click');
+      }
+    }
   });
 
   it('handles tab switching and interactions', async () => {

@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { Navigate, Link, useLocation } from 'react-router-dom';
 import { RootState } from '../../store';
+import { isTokenExpired } from '../../store/authSlice';
 import { Globe, ChevronRight } from 'lucide-react';
 import { HandlerPermissions } from '../../types';
 
@@ -114,10 +115,10 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, user, token } = useSelector((state: RootState) => state.auth);
   const location = useLocation();
 
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated || !user || !token || isTokenExpired(token)) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -130,7 +131,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
 interface PermissionGuardProps {
   permission: keyof HandlerPermissions;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   fallback?: React.ReactNode;
 }
 

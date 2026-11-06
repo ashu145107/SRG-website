@@ -194,18 +194,15 @@ const normalizeUser = (item: any): CandidateProfile => {
  * by detail/application endpoints) is always resolved, regardless of which
  * field name the backend returns.
  */
-const normalizeJobRequirement = (item: any, index: number): any => {
+const normalizeJobRequirement = (item: any): any => {
   if (!item || typeof item !== 'object') return item;
-  const rawId = item.id || item.jobRequirementId || item.jobId;
-  const numId = typeof rawId === 'number'
-    ? rawId
-    : typeof rawId === 'string'
-      ? (parseInt(String(rawId).replace(/\D/g, ''), 10) || index + 1)
-      : index + 1;
+  const rawId = item.requirementId ?? item.id ?? item.jobRequirementId ?? item.jobId;
+  const parsedId = rawId === undefined || rawId === null || rawId === '' ? NaN : Number(rawId);
+  const requirementId = Number.isSafeInteger(parsedId) && parsedId > 0 ? parsedId : undefined;
   return {
     ...item,
-    id: numId,
-    jobRequirementId: numId,
+    id: requirementId,
+    jobRequirementId: requirementId,
   };
 };
 
@@ -251,6 +248,12 @@ export const adminApi = baseApi.injectEndpoints({
             console.error('getAdminCompanies API error:', result.error);
             return { error: result.error };
           }
+          return {
+            error: {
+              status: 'CUSTOM_ERROR',
+              error: 'Company registration request returned no data or error.',
+            },
+          };
         } catch (err) {
           console.error('getAdminCompanies API failed:', err);
           return { error: { status: 'FETCH_ERROR', error: String(err) } };
@@ -276,6 +279,12 @@ export const adminApi = baseApi.injectEndpoints({
             console.error('getAdminUsers API error:', result.error);
             return { error: result.error };
           }
+          return {
+            error: {
+              status: 'CUSTOM_ERROR',
+              error: 'User registration request returned no data or error.',
+            },
+          };
         } catch (err) {
           console.error('getAdminUsers API failed:', err);
           return { error: { status: 'FETCH_ERROR', error: String(err) } };
@@ -301,6 +310,12 @@ export const adminApi = baseApi.injectEndpoints({
             console.error('getAdminJobRequirements API error:', result.error);
             return { error: result.error };
           }
+          return {
+            error: {
+              status: 'CUSTOM_ERROR',
+              error: 'Job requirements request returned no data or error.',
+            },
+          };
         } catch (err) {
           console.error('getAdminJobRequirements API failed:', err);
           return { error: { status: 'FETCH_ERROR', error: String(err) } };
@@ -338,8 +353,10 @@ export const adminApi = baseApi.injectEndpoints({
       queryFn: async (requirementId, api, extraOptions, baseQuery) => {
         try {
           const result = await baseQuery(`/api/v1/jobapplicationsforrequirment/${requirementId}`);
-          if (result.data) {
-            const value = (result.data as any).value !== undefined ? (result.data as any).value : result.data;
+          if ('data' in result) {
+            const value = (result.data as any)?.value !== undefined
+              ? (result.data as any).value
+              : result.data;
             let items: any[] = [];
             let job: any = null;
             if (Array.isArray(value)) {
@@ -351,7 +368,7 @@ export const adminApi = baseApi.injectEndpoints({
                 || (Object.values(value).find((v) => Array.isArray(v)) as any[] | undefined);
               if (foundArr) items = foundArr;
             }
-            return { data: { items, job, totalCount: Array.isArray(items) ? items.length : 0 } };
+            return { data: { items, job, totalCount: items.length } };
           }
           if (result.error) {
             console.error('getRequirementDetail API error:', result.error);
@@ -361,9 +378,37 @@ export const adminApi = baseApi.injectEndpoints({
           console.error('getRequirementDetail API failed:', err);
           return { error: { status: 'FETCH_ERROR', error: String(err) } };
         }
-        return { data: { items: [], job: null, totalCount: 0 } };
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'Job applications request returned no data or error.',
+          },
+        };
       },
       providesTags: (result, error, arg) => [{ type: 'Job', id: String(arg) }]
+    }),
+
+    getJobRequirementByCode: builder.query<any, string>({
+      queryFn: async (jobCode, api, extraOptions, baseQuery) => {
+        const result = await baseQuery(`/api/v1/jobrequirement/${encodeURIComponent(jobCode)}`);
+        if ('error' in result) {
+          console.error('getJobRequirementByCode API error:', result.error);
+          return { error: result.error };
+        }
+
+        const response = result.data as any;
+        const job = response?.value ?? response?.data ?? response;
+        if (!job || typeof job !== 'object' || Array.isArray(job)) {
+          return {
+            error: {
+              status: 'CUSTOM_ERROR',
+              error: `Job requirement details for ${jobCode} were not returned by the API.`,
+            },
+          };
+        }
+        return { data: job };
+      },
+      providesTags: (result, error, jobCode) => [{ type: 'Job', id: jobCode }],
     }),
 
     getAdminCompanyDetail: builder.query<CompanyProfile | null, string>({
@@ -535,7 +580,9 @@ export const {
   useGetAdminJobRequirementsQuery,
   useGetAdminJobApplicationsQuery,
   useGetRequirementDetailQuery,
+  useGetJobRequirementByCodeQuery,
   useGetAdminCompanyDetailQuery,
   useGetAdminCandidateDetailQuery,
+  useLazyGetAdminCandidateDetailQuery,
   useAddCompanyMutation
 } = adminApi;

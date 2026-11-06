@@ -50,7 +50,7 @@ export const Radio: React.FC<RadioProps> = ({ label, className = '', ...props })
   );
 };
 
-interface ToggleSwitchProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface ToggleSwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onToggle'> {
   label?: string;
   checked: boolean;
   onToggle: (checked: boolean) => void;

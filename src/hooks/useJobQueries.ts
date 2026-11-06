@@ -4,8 +4,10 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useDispatch } from 'react-redux';
 import jobService, { JobSearchResult } from '../services/jobService';
 import { JobRequirement, JobSearchParams, JobApplicationRequest } from '../services/jobTypes';
+import { baseApi } from '../services/baseApi';
 
 // Query Keys for caching and invalidation
 export const jobKeys = {
@@ -30,11 +32,15 @@ export const useSearchJobsQuery = (params?: JobSearchParams, options?: { enabled
   });
 };
 
-export const useJobDetailsQuery = (id: number | undefined, jobCode?: string) => {
+export const useJobDetailsQuery = (
+  id: number | undefined,
+  jobCode?: string,
+  enabled = true
+) => {
   return useQuery({
     queryKey: ['jobDetails', id, jobCode],
     queryFn: () => (id ? jobService.getJobDetails(id, jobCode) : Promise.reject('No ID')),
-    enabled: !!id,
+    enabled: !!id && enabled,
   });
 };
 /**
@@ -59,16 +65,17 @@ export const useAddJobRequirementMutation = () => {
  */
 export const useEditJobRequirementMutation = () => {
   const queryClient = useQueryClient();
+  const dispatch = useDispatch();
   
   return useMutation({
     mutationFn: (payload: JobRequirement) => jobService.editJobRequirement(payload),
-    onSuccess: (data) => {
-      // Invalidate general jobs list
+    onSuccess: (data, payload) => {
       queryClient.invalidateQueries({ queryKey: jobKeys.all });
-      // Invalidate specific job details cache if we have an ID
-      if (data.id) {
-        queryClient.invalidateQueries({ queryKey: jobKeys.detail(Number(data.id)) });
+      queryClient.invalidateQueries({ queryKey: ['searchJobs'] });
+      if (payload.id) {
+        queryClient.invalidateQueries({ queryKey: ['jobDetails', Number(payload.id)] });
       }
+      dispatch(baseApi.util.invalidateTags([{ type: 'Job' }]));
     },
   });
 };

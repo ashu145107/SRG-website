@@ -147,79 +147,41 @@ export const candidateApi = baseApi.injectEndpoints({
       queryFn: async (filters) => {
         const f = filters as { candidateId?: string; companyId?: string } | undefined;
         try {
-          const pageSize = 100;
-          const pageNumber = 1;
-
-          // Prefer the candidate's own applications endpoint (returns the current
-          // status history), then fall back to the generic paginated list.
-          let list: any[] = [];
-          let userScoped = false;
-          try {
-            const userRes = await axiosInstance.get<any>('/api/v1/user/myjobapplications');
-            list = extractApplicationList(userRes.data);
-            userScoped = list.length > 0;
-          } catch (userErr) {
-            console.warn('[candidateApi] /user/myjobapplications failed, trying generic list:', userErr);
-          }
-          if (!list.length) {
-            const response = await axiosInstance.get<any>(`/api/v1/jobapplications/${pageSize}/${pageNumber}`);
-            list = extractApplicationList(response.data);
-            userScoped = false;
-          }
-
-          if (list && list.length > 0) {
-            const mapped = list.map((item: any) => {
-              const resolved = resolveApplicationStatus(item);
-              return {
-                id: String(item.id || item.jobApplicationId || item.applicationId || `app-${Date.now()}-${Math.random()}`),
-                applicationId: Number(item.applicationId ?? item.jobApplicationId ?? item.id) || undefined,
-                jobId: String(item.jobId || item.jobRequirementId || item.jobCode || ''),
-                jobCode: item.jobCode || '',
-                jobTitle: item.jobTitle || item.jobDesignation || item.profileHeader || item.title || 'Untitled Job',
-                companyName: item.companyName || item.company || 'Unknown Company',
-                companyId: String(item.companyId || ''),
-                candidateId: String(item.candidateId || item.userId || ''),
-                candidateName: item.candidateName || item.fullName || 'Candidate',
-                candidatePhone: item.candidatePhone || item.phone || '',
-                status: resolved.status as JobApplication['status'],
-                statusId: resolved.statusId,
-                appliedAt: item.appliedAt || item.createdDate || new Date().toISOString().split('T')[0],
-                interviewDate: item.interviewDate || undefined
-              };
-            });
-
-            // The portal stores candidate ids as `cand-<userId>` while the API
-            // returns numeric userIds, so match on the numeric part to avoid
-            // accidentally returning every candidate's applications.
-            const digitsOnly = (v: any) => String(v ?? '').replace(/\D/g, '');
-            let filtered = mapped;
-            const targetCandidate = digitsOnly(f?.candidateId);
-            if (targetCandidate) {
-              const matches = filtered.filter(a => digitsOnly(a.candidateId) === targetCandidate);
-              if (matches.length) filtered = matches;
-              else if (!userScoped) filtered = [];
-            }
-            if (f?.companyId) {
-              const matches = filtered.filter(a => String(a.companyId) === String(f.companyId));
-              if (matches.length) filtered = matches;
-            }
-            return { data: filtered };
-          }
+          const response = await axiosInstance.get<any>('/api/v1/user/myjobapplications');
+          const list = extractApplicationList(response.data);
+          const mapped = list.map((item: any) => {
+            const resolved = resolveApplicationStatus(item);
+            return {
+              id: String(item.id || item.jobApplicationId || item.jobapplicationId || item.applicationId || ''),
+              applicationId: Number(item.applicationId ?? item.jobApplicationId ?? item.jobapplicationId ?? item.id) || undefined,
+              jobId: String(item.jobId || item.jobRequirementId || item.requirementId || item.jobCode || ''),
+              jobCode: item.jobCode || item.jobcode || '',
+              jobTitle: item.jobTitle || item.jobDesignation || item.profileHeader || item.title || '',
+              companyName: item.companyName || item.company || '',
+              companyId: String(item.companyId || ''),
+              candidateId: String(item.candidateId || item.userId || ''),
+              candidateName: item.candidateName || item.fullName || '',
+              candidatePhone: item.candidatePhone || item.mobile || item.phone || '',
+              status: resolved.status as JobApplication['status'],
+              statusId: resolved.statusId,
+              appliedAt: item.applicationDate || item.appliedAt || item.createdDate || '',
+              interviewDate: item.interviewDate || undefined,
+              rawItem: item
+            };
+          });
+          const filtered = f?.companyId
+            ? mapped.filter((application) => application.companyId === String(f.companyId))
+            : mapped;
+          return { data: filtered };
         } catch (err) {
-          console.warn('Failed to fetch job applications from API, falling back to mock DB:', err);
+          console.error('[candidateApi] Failed to fetch /api/v1/user/myjobapplications:', err);
+          return {
+            error: {
+              status: 'CUSTOM_ERROR',
+              error: err instanceof Error ? err.message : String(err),
+            },
+          };
         }
-
-        let apps = [...applicationStore];
-        if (f?.candidateId) {
-          const target = String(f.candidateId).replace(/\D/g, '');
-          const matches = target ? apps.filter(a => String(a.candidateId).replace(/\D/g, '') === target) : [];
-          apps = matches.length ? matches : apps;
-        }
-        if (f?.companyId) {
-          const matches = apps.filter(a => a.companyId === f.companyId);
-          apps = matches.length ? matches : apps;
-        }
-        return { data: apps };
       },
       providesTags: ['Application']
     }),

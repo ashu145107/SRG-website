@@ -4,15 +4,56 @@
  */
 
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { openEncryptedRouteInNewTab } from '../utils/secureDetailRoute';
 import { useGetAdminCompaniesQuery, useAddCompanyMutation } from '../services/adminApi';
 import { CompanyProfile } from '../types';
 import { useGetCompanyTypesQuery, useGetIndustryTypesQuery } from '../services/jobMasterApi';
+import { getLocalizedName, useGetDistrictsQuery, useGetStatesQuery, useGetTalukasQuery } from '../services/masterApi';
 import { Building2, Eye, Search, ArrowUpDown, ChevronLeft, ChevronRight, X, Loader2, Plus, ExternalLink } from 'lucide-react';
 import { Loader, Toast } from './ui/FeedbackComponents';
 import { useTranslation } from 'react-i18next';
 
+type AddCompanyForm = {
+  fullname: string;
+  mobile: string;
+  address: string;
+  email: string;
+  stateId: number;
+  districtId: number;
+  talukaId: number;
+  contactPerson: string;
+  alternateContactPerson: string;
+  alternateContactNumber: string;
+  companyTypeId: number;
+  industryTypeId: number;
+  discription: string;
+  website: string;
+  alternateEmail: string;
+};
+
+const initialAddCompanyForm: AddCompanyForm = {
+  fullname: '',
+  mobile: '',
+  address: '',
+  email: '',
+  stateId: 0,
+  districtId: 0,
+  talukaId: 0,
+  contactPerson: '',
+  alternateContactPerson: '',
+  alternateContactNumber: '',
+  companyTypeId: 0,
+  industryTypeId: 0,
+  discription: '',
+  website: '',
+  alternateEmail: '',
+};
+
 export function AdminRegisteredCompanies() {
   const { t } = useTranslation();
+  const { token } = useSelector((state: RootState) => state.auth);
   const [pageSize, setPageSize] = useState(15);
   const [pageNumber, setPageNumber] = useState(1);
   const [searchPhrase, setSearchPhrase] = useState('');
@@ -37,23 +78,12 @@ export function AdminRegisteredCompanies() {
   // Master data for add-company form
   const { data: companyTypes = [] } = useGetCompanyTypesQuery();
   const { data: industryTypes = [] } = useGetIndustryTypesQuery();
+  const { data: states = [], isLoading: isLoadingStates } = useGetStatesQuery(1);
 
   const [addCompany, { isLoading: isAddingCompany }] = useAddCompanyMutation();
-
-  const [form, setForm] = useState({
-    fullname: '',
-    mobile: '',
-    address: '',
-    email: '',
-    contactPerson: '',
-    alternateContactPerson: '',
-    alternateContactNumber: '',
-    companyTypeId: 0,
-    industryTypeId: 0,
-    discription: '',
-    website: '',
-    alternateEmail: '',
-  });
+  const [form, setForm] = useState<AddCompanyForm>(initialAddCompanyForm);
+  const { data: districts = [], isLoading: isLoadingDistricts } = useGetDistrictsQuery(form.stateId, { skip: !form.stateId });
+  const { data: talukas = [], isLoading: isLoadingTalukas } = useGetTalukasQuery(form.districtId, { skip: !form.districtId });
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   const handleAddCompanySubmit = async () => {
@@ -69,7 +99,7 @@ export function AdminRegisteredCompanies() {
       setToastType('success');
       setToastMsg(msg);
       setShowAddCompany(false);
-      setForm({ fullname: '', mobile: '', address: '', email: '', contactPerson: '', alternateContactPerson: '', alternateContactNumber: '', companyTypeId: 0, industryTypeId: 0, discription: '', website: '', alternateEmail: '' });
+      setForm(initialAddCompanyForm);
       refetch();
     } catch (err: any) {
       setToastType('error');
@@ -284,9 +314,16 @@ export function AdminRegisteredCompanies() {
                   <tr key={company.id || index} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3.5 font-black text-blue-900 whitespace-nowrap">
                       <a
-                        href={`#/dashboard?view=company&id=${company.id || index + 1}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href="#/dashboard"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          void openEncryptedRouteInNewTab('/dashboard', {
+                            view: 'company',
+                            id: String(company.id || index + 1),
+                          }, token || '').catch((error: unknown) => {
+                            window.alert(error instanceof Error ? error.message : 'Unable to open company details.');
+                          });
+                        }}
                         title="Open company profile in new tab"
                         className="underline decoration-blue-300 underline-offset-2 hover:text-blue-600 hover:decoration-blue-600 transition-colors inline-flex items-center gap-1 cursor-pointer"
                       >
@@ -604,6 +641,54 @@ export function AdminRegisteredCompanies() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="addcomp-state" className="block font-bold text-slate-600 mb-1.5">
+                    {t('reg.form.state')}
+                  </label>
+                  <select
+                    id="addcomp-state"
+                    value={form.stateId}
+                    onChange={(e) => setForm({ ...form, stateId: Number(e.target.value), districtId: 0, talukaId: 0 })}
+                    disabled={isLoadingStates}
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                  >
+                    <option value={0}>{t('reg.option.selectState')}</option>
+                    {states.map((state) => <option key={state.id} value={state.id}>{getLocalizedName(state)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="addcomp-district" className="block font-bold text-slate-600 mb-1.5">
+                    {t('reg.form.district')}
+                  </label>
+                  <select
+                    id="addcomp-district"
+                    value={form.districtId}
+                    onChange={(e) => setForm({ ...form, districtId: Number(e.target.value), talukaId: 0 })}
+                    disabled={!form.stateId || isLoadingDistricts}
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                  >
+                    <option value={0}>{t('reg.option.selectDistrict')}</option>
+                    {districts.map((district) => <option key={district.id} value={district.id}>{getLocalizedName(district)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="addcomp-taluka" className="block font-bold text-slate-600 mb-1.5">
+                    {t('reg.form.taluka')}
+                  </label>
+                  <select
+                    id="addcomp-taluka"
+                    value={form.talukaId}
+                    onChange={(e) => setForm({ ...form, talukaId: Number(e.target.value) })}
+                    disabled={!form.districtId || isLoadingTalukas}
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-800"
+                  >
+                    <option value={0}>{t('reg.option.selectTaluka')}</option>
+                    {talukas.map((taluka) => <option key={taluka.id} value={taluka.id}>{getLocalizedName(taluka)}</option>)}
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <label className="block font-bold text-slate-600 mb-1.5">
                   {t('adm.companies.fieldAddress')} <span className="text-red-500">*</span>
@@ -642,7 +727,7 @@ export function AdminRegisteredCompanies() {
               </button>
               <button
                 onClick={handleAddCompanySubmit}
-                disabled={isAddingCompany || !form.fullname.trim() || !form.mobile.trim() || !form.email.trim() || !form.contactPerson.trim() || !form.address.trim() || !form.companyTypeId || !form.industryTypeId}
+                disabled={isAddingCompany || !form.fullname.trim() || !form.mobile.trim() || !form.email.trim() || !form.contactPerson.trim() || !form.address.trim() || !form.stateId || !form.districtId || !form.talukaId || !form.companyTypeId || !form.industryTypeId}
                 className="inline-flex items-center gap-2 px-5 py-2 bg-blue-950 hover:bg-orange-600 text-white font-bold text-xs rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isAddingCompany ? (

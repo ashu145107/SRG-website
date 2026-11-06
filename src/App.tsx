@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
-import { Provider, useSelector } from 'react-redux';
+import React, { useEffect } from 'react';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { store, RootState } from './store';
+import { logout, getTokenExpiration, isTokenExpired } from './store/authSlice';
 import './i18n/config';
 
 import Home from './pages/Home';
@@ -47,9 +48,40 @@ const queryClient = new QueryClient({
 
 /** If user is already logged in, redirect to /dashboard. Otherwise show children. */
 function GuestOnly({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  const { isAuthenticated, user, token } = useSelector((state: RootState) => state.auth);
+  if (isAuthenticated && user && token && !isTokenExpired(token)) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return <>{children}</>;
+}
+
+function AuthSessionManager() {
+  const dispatch = useDispatch();
+  const queryClient = useQueryClient();
+  const { isAuthenticated, token } = useSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      queryClient.clear();
+      return;
+    }
+
+    const expiresAt = getTokenExpiration(token);
+    if (expiresAt === null) return;
+
+    let timeout: number;
+    const checkExpiration = () => {
+      if (isTokenExpired(token)) {
+        dispatch(logout());
+        return;
+      }
+      timeout = window.setTimeout(checkExpiration, Math.min(expiresAt - Date.now(), 2_147_000_000));
+    };
+    timeout = window.setTimeout(checkExpiration, Math.min(expiresAt - Date.now(), 2_147_000_000));
+    return () => window.clearTimeout(timeout);
+  }, [dispatch, isAuthenticated, queryClient, token]);
+
+  return null;
 }
 
 export default function App() {
@@ -57,6 +89,7 @@ export default function App() {
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <HashRouter>
+          <AuthSessionManager />
           <ScrollToTop />
           <Routes>
             <Route path="/" element={<GuestOnly><Home /></GuestOnly>} />
@@ -102,6 +135,14 @@ export default function App() {
             />
             
             <Route
+              path="/candidate"
+              element={
+                <ProtectedRoute>
+                  <CandidateProfileView />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/candidate/:candidateId"
               element={
                 <ProtectedRoute>
@@ -110,6 +151,14 @@ export default function App() {
               }
             />
 
+            <Route
+              path="/company"
+              element={
+                <ProtectedRoute>
+                  <CompanyProfileView />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/company/:companyId"
               element={

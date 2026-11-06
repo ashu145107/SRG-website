@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useAddJobRequirementMutation } from '../../hooks/useJobQueries';
@@ -23,6 +23,7 @@ import {
   useGetSubEducationsQuery,
 } from '../../services/jobMasterApi';
 import { Alert, Toast } from '../ui/FeedbackComponents';
+import { DatePicker } from '../ui/DatePicker';
 
 const MAX_JOB_DESCRIPTION_LENGTH = 4000;
 
@@ -55,6 +56,26 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
   const [toastMsg, setToastMsg] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const validationSummaryRef = useRef<HTMLDivElement>(null);
+  const fieldLabels: Record<string, string> = {
+    profileHeader: 'Profile header',
+    jobDesignation: 'Designation',
+    noOfVacancy: 'Number of vacancies',
+    experianceTo: 'Maximum experience',
+    salary: 'Minimum salary',
+    salaryTo: 'Maximum salary',
+    jobLocation: 'Job location',
+    expiryDate: 'Expiry date',
+    skill: 'Required skills',
+    jobDiscription: 'Job description',
+  };
+
+  useEffect(() => {
+    if (!validationError || Object.keys(fieldErrors).length === 0) return;
+    validationSummaryRef.current?.focus({ preventScroll: true });
+    validationSummaryRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  }, [validationError, fieldErrors]);
 
   // Parse logged in user ID as a number for the API payload
   const numericUserId = user ? parseInt(user.id.replace(/\D/g, '')) || 123 : 123;
@@ -123,59 +144,72 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
       ...prev,
       [name]: numericFields.includes(name) ? Number(value) : value,
     }));
+    setFieldErrors((previous) => {
+      if (!previous[name]) return previous;
+      const next = { ...previous };
+      delete next[name];
+      return next;
+    });
+    setValidationError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
+    const errors: Record<string, string> = {};
 
-    // Form Validation
+    if (!form.profileHeader.trim()) errors.profileHeader = 'Please enter the profile header.';
     if (!form.jobDesignation.trim()) {
-      setValidationError(t('jobs.add.errDesignation'));
-      return;
+      errors.jobDesignation = t('jobs.add.errDesignation');
     }
 
     if (!form.jobDiscription.trim() || form.jobDiscription.length < 10) {
-      setValidationError(t('jobs.add.errDescription'));
-      return;
+      errors.jobDiscription = t('jobs.add.errDescription');
     }
 
     if (form.jobDiscription.length > MAX_JOB_DESCRIPTION_LENGTH) {
-      setValidationError(t('jobs.add.errDescriptionMax', { max: MAX_JOB_DESCRIPTION_LENGTH }));
-      return;
+      errors.jobDiscription = t('jobs.add.errDescriptionMax', { max: MAX_JOB_DESCRIPTION_LENGTH });
     }
 
     if (!form.skill.trim()) {
-      setValidationError(t('jobs.add.errSkills'));
-      return;
+      errors.skill = t('jobs.add.errSkills');
     }
 
-    // Salary validation fix
+    if (!Number.isFinite(form.noOfVacancy) || form.noOfVacancy < 1) {
+      errors.noOfVacancy = 'Number of vacancies must be at least 1.';
+    }
+
     if (!Number.isFinite(form.salary) || form.salary <= 0) {
-      setValidationError(t('jobs.add.errMinSalary'));
-      return;
+      errors.salary = t('jobs.add.errMinSalary');
     }
 
     if (!Number.isFinite(form.salaryTo) || form.salaryTo <= 0) {
-      setValidationError(t('jobs.add.errMaxSalary'));
-      return;
+      errors.salaryTo = t('jobs.add.errMaxSalary');
     }
 
     if (form.salaryTo < form.salary) {
-      setValidationError(t('jobs.add.errMaxSalaryGteMin'));
-      return;
+      errors.salaryTo = t('jobs.add.errMaxSalaryGteMin');
     }
 
     if (form.experianceTo < form.experiance) {
-      setValidationError(t('jobs.add.errMaxExpGtMin'));
-      return;
+      errors.experianceTo = t('jobs.add.errMaxExpGtMin');
     }
 
     if (!form.jobLocation.trim()) {
-      setValidationError(t('jobs.add.errLocation'));
+      errors.jobLocation = t('jobs.add.errLocation');
+    }
+
+    if (!form.expiryDate) {
+      errors.expiryDate = 'Please select an expiry date.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setValidationError('Please fix the highlighted fields before saving.');
       return;
     }
 
+    setFieldErrors({});
     try {
       const payload = {
         ...form,
@@ -230,27 +264,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
         )}
       </div>
 
-      {validationError && (
-        <div className="mb-5">
-          <Alert type="error" title="Validation Error" message={validationError} />
-        </div>
-      )}
-
-      {apiError && (
-        <div className="mb-5">
-          <Alert
-            type="error"
-            title="Backend Error"
-            message={
-              (apiError as any)?.data?.message ||
-              (apiError as any)?.data ||
-              'A network error occurred while submitting. Please verify your data.'
-            }
-          />
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form noValidate onSubmit={handleSubmit} className="space-y-6">
         {/* Core Info Row */}
         <div className="bg-slate-50/55 p-4 rounded-xl border border-slate-100">
           <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.profileHeader')}</label>
@@ -260,9 +274,11 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             placeholder="e.g. Hiring experienced web programmers / Urgent Need of Drivers"
             value={form.profileHeader}
             onChange={handleChange}
-            className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+            aria-invalid={Boolean(fieldErrors.profileHeader)}
+            className={`w-full text-xs p-2.5 rounded-lg border focus:border-orange-500 focus:outline-none transition-all ${fieldErrors.profileHeader ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
             required
           />
+          {fieldErrors.profileHeader && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.profileHeader}</p>}
         </div>
 
         {/* Designation, Vacancies & Role Type */}
@@ -275,9 +291,11 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               placeholder="e.g. Sales Executive, Senior Accountant"
               value={form.jobDesignation}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              aria-invalid={Boolean(fieldErrors.jobDesignation)}
+              className={`w-full text-xs p-2.5 rounded-lg border focus:border-orange-500 focus:outline-none transition-all ${fieldErrors.jobDesignation ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
               required
             />
+            {fieldErrors.jobDesignation && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.jobDesignation}</p>}
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.noOfVacancies')}</label>
@@ -287,9 +305,11 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               min="1"
               value={form.noOfVacancy}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              aria-invalid={Boolean(fieldErrors.noOfVacancy)}
+              className={`w-full text-xs p-2.5 rounded-lg border focus:border-orange-500 focus:outline-none transition-all ${fieldErrors.noOfVacancy ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
               required
             />
+            {fieldErrors.noOfVacancy && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.noOfVacancy}</p>}
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.jobType')}</label>
@@ -334,8 +354,10 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                   min="0"
                   value={form.experianceTo}
                   onChange={handleChange}
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-orange-500"
+                  aria-invalid={Boolean(fieldErrors.experianceTo)}
+                  className={`w-full text-xs p-2.5 rounded-lg border bg-white focus:outline-none focus:border-orange-500 ${fieldErrors.experianceTo ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
                 />
+                {fieldErrors.experianceTo && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.experianceTo}</p>}
               </div>
             </div>
           </div>
@@ -355,8 +377,10 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                   step="1"
                   value={form.salary}
                   onChange={handleChange}
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-orange-500"
+                  aria-invalid={Boolean(fieldErrors.salary)}
+                  className={`w-full text-xs p-2.5 rounded-lg border bg-white focus:outline-none focus:border-orange-500 ${fieldErrors.salary ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
                 />
+                {fieldErrors.salary && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.salary}</p>}
               </div>
               <div>
                 <label className="block text-[10px] text-slate-500 mb-1">{t('jobs.add.maxSalary')}</label>
@@ -369,8 +393,10 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                   step="1"
                   value={form.salaryTo}
                   onChange={handleChange}
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-orange-500"
+                  aria-invalid={Boolean(fieldErrors.salaryTo)}
+                  className={`w-full text-xs p-2.5 rounded-lg border bg-white focus:outline-none focus:border-orange-500 ${fieldErrors.salaryTo ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
                 />
+                {fieldErrors.salaryTo && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.salaryTo}</p>}
               </div>
             </div>
           </div>
@@ -413,9 +439,11 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               placeholder="e.g. Nashik, Mumbai, Pune"
               value={form.jobLocation}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              aria-invalid={Boolean(fieldErrors.jobLocation)}
+              className={`w-full text-xs p-2.5 rounded-lg border focus:border-orange-500 focus:outline-none transition-all ${fieldErrors.jobLocation ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
               required
             />
+            {fieldErrors.jobLocation && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.jobLocation}</p>}
           </div>
         </div>
 
@@ -459,14 +487,23 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.expiryDate')}</label>
-            <input
-              type="date"
+            <DatePicker
               name="expiryDate"
               value={form.expiryDate}
-              onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all cursor-pointer"
+              onChange={(value) => {
+                setForm((previous) => ({ ...previous, expiryDate: value }));
+                setFieldErrors((previous) => {
+                  if (!previous.expiryDate) return previous;
+                  const next = { ...previous };
+                  delete next.expiryDate;
+                  return next;
+                });
+              }}
+              aria-invalid={Boolean(fieldErrors.expiryDate)}
+              className={`w-full text-xs p-2.5 rounded-lg border bg-white focus:border-orange-500 focus:outline-none transition-all ${fieldErrors.expiryDate ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
               required
             />
+            {fieldErrors.expiryDate && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.expiryDate}</p>}
           </div>
         </div>
 
@@ -550,9 +587,11 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               placeholder="e.g. Tally, Ms-Office, Driving, Speaking Marathi"
               value={form.skill}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              aria-invalid={Boolean(fieldErrors.skill)}
+              className={`w-full text-xs p-2.5 rounded-lg border focus:border-orange-500 focus:outline-none transition-all ${fieldErrors.skill ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
               required
             />
+            {fieldErrors.skill && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.skill}</p>}
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.certifications')}</label>
@@ -670,9 +709,11 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             placeholder={t('jobs.add.jobDescriptionPlaceholder')}
             value={form.jobDiscription}
             onChange={handleChange}
-            className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all resize-none"
+            aria-invalid={Boolean(fieldErrors.jobDiscription)}
+            className={`w-full text-xs p-2.5 rounded-lg border focus:border-orange-500 focus:outline-none transition-all resize-none ${fieldErrors.jobDiscription ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
             required
           />
+          {fieldErrors.jobDiscription && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.jobDiscription}</p>}
           <div className={`mt-1 text-[10px] font-semibold text-right ${form.jobDiscription.length >= MAX_JOB_DESCRIPTION_LENGTH ? 'text-rose-600' : 'text-slate-400'}`}>
             {MAX_JOB_DESCRIPTION_LENGTH - form.jobDiscription.length} {t('jobs.add.charactersLeft')} ({form.jobDiscription.length}/{MAX_JOB_DESCRIPTION_LENGTH})
           </div>
@@ -691,6 +732,31 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
         </div>
 
         {/* Buttons */}
+        {(validationError || apiError) && (
+          <div
+            ref={validationSummaryRef}
+            tabIndex={-1}
+            className="space-y-2 rounded-lg outline-none focus:ring-2 focus:ring-red-200"
+            role="alert"
+            aria-live="polite"
+          >
+            {validationError && <Alert type="danger" title="Please review these fields" message={validationError} />}
+            {apiError && (
+              <Alert
+                type="danger"
+                title="Backend Error"
+                message={(apiError as any)?.data?.message || (apiError as any)?.data || 'A network error occurred while submitting. Please verify your data.'}
+              />
+            )}
+            {Object.entries(fieldErrors).length > 0 && (
+              <ul className="list-disc space-y-1 pl-5 text-xs font-semibold text-red-700">
+                {Object.entries(fieldErrors).map(([field, message]) => (
+                  <li key={field}><span className="font-bold">{fieldLabels[field] || field}:</span> {message}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
         <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
           {onCancel && (
             <button

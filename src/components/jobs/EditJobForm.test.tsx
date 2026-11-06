@@ -28,6 +28,7 @@ import {
   useGetEducationsQuery,
   useGetSubEducationsQuery,
 } from '../../services/jobMasterApi';
+import { useGetJobRequirementByCodeQuery } from '../../services/adminApi';
 
 jest.mock('../../services/baseApi', () => {
   const { createApi, fetchBaseQuery } = require('@reduxjs/toolkit/query/react');
@@ -54,9 +55,85 @@ jest.mock('../../services/baseApi', () => {
   };
 });
 
+it('loads by job code, prepopulates readable API fields, and submits edits', async () => {
+  mockedRequirementByCodeQuery.mockReturnValue({
+    data: {
+      id: 5,
+      userId: 7,
+      createdBy: 7,
+      jobCode: 'JOB-5',
+      profileHeader: 'Hiring Drivers Updated',
+      jobDesignation: 'Driver',
+      skill: 'Driving',
+      experiance: 2,
+      experianceTo: 5,
+      noOfVacancy: 3,
+      workPlace: 'Nashik Depot',
+      salary: 18000,
+      salaryTo: 28000,
+      expiryDate: '2026-12-31T00:00:00',
+      educationId: 1,
+      education: 'Bachelor Degree',
+      specializationId: 1,
+      specialization: 'IT Industry',
+      roleTypeId: 1,
+      interviewModeId: 1,
+      interviewMode: 'Face to Face',
+      shiftTypeId: 1,
+      shiftType: 'Day Shift',
+      workModeId: 1,
+      workMode: 'On-site',
+      salaryPeriodId: 1,
+      salaryPeriod: 'per Month',
+      weeklyOffId: 1,
+      weeklyOff: 'Sunday',
+      interviewLocation: 'Zoom',
+      jobLocation: 'Nashik',
+      jobDiscription: 'Need experienced drivers for transport duty.',
+      postingNotes: '',
+      certificationsRequired: '',
+      genderPreference: 'Any',
+      ageRange: '18-45',
+      benefits: '',
+    },
+    isLoading: false,
+    error: null,
+    refetch: jest.fn(),
+  });
+
+  const { container } = renderWithProviders(<EditJobForm jobId={5} jobCode="JOB-5" />);
+
+  expect(mockedRequirementByCodeQuery).toHaveBeenCalledWith(
+    'JOB-5',
+    expect.objectContaining({ skip: false, refetchOnMountOrArgChange: true })
+  );
+  expect((container.querySelector('[name="profileHeader"]') as HTMLInputElement).value).toBe(
+    'Hiring Drivers Updated'
+  );
+  expect((container.querySelector('[name="salary"]') as HTMLInputElement).value).toBe('18000');
+  expect((container.querySelector('[name="expiryDate"]') as HTMLInputElement).value).toBe('2026-12-31');
+  expect((container.querySelector('[name="educationId"]') as HTMLSelectElement).selectedOptions[0].textContent).toBe(
+    'Bachelor Degree'
+  );
+
+  fireEvent.change(container.querySelector('[name="profileHeader"]') as HTMLElement, {
+    target: { value: 'Updated Driver Profile' },
+  });
+  fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+  await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
+  expect(mockMutateAsync).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 5, jobCode: 'JOB-5', profileHeader: 'Updated Driver Profile', salary: 18000 })
+  );
+});
+
 jest.mock('../../hooks/useJobQueries', () => ({
   useEditJobRequirementMutation: jest.fn(),
   useJobDetailsQuery: jest.fn(),
+}));
+
+jest.mock('../../services/adminApi', () => ({
+  useGetJobRequirementByCodeQuery: jest.fn(),
 }));
 
 jest.mock('../../services/jobMasterApi', () => ({
@@ -74,6 +151,7 @@ jest.mock('../../services/jobMasterApi', () => ({
 }));
 
 const mockedUseJobDetails = useJobDetailsQuery as jest.Mock;
+const mockedRequirementByCodeQuery = useGetJobRequirementByCodeQuery as jest.Mock;
 const mockedEditMutation = useEditJobRequirementMutation as jest.Mock;
 const mockMutateAsync = jest.fn();
 
@@ -128,6 +206,12 @@ beforeEach(() => {
     error: null,
     refetch: jest.fn(),
   });
+  mockedRequirementByCodeQuery.mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    error: null,
+    refetch: jest.fn(),
+  });
 
   (useGetCompanyTypesQuery as jest.Mock).mockReturnValue({ data: [asData('Private Ltd')] });
   (useGetIndustryTypesQuery as jest.Mock).mockReturnValue({ data: [asData('IT Industry')] });
@@ -169,7 +253,7 @@ describe('EditJobForm', () => {
     renderWithProviders(<EditJobForm jobId={5} />);
 
     expect(screen.getByText('Failed to load job details')).toBeInTheDocument();
-    expect(screen.getByText(/ID #5 could not be loaded/)).toBeInTheDocument();
+    expect(screen.getByText(/Job requirement details could not be loaded/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
@@ -180,7 +264,7 @@ describe('EditJobForm', () => {
     const { container } = renderWithProviders(<EditJobForm jobId={5} />);
 
     expect(screen.getByText('Edit Job Requirement')).toBeInTheDocument();
-    expect(screen.getByText('Job Code: JOB-5 | ID: #5')).toBeInTheDocument();
+    expect(screen.getByText('Job Code: JOB-5')).toBeInTheDocument();
     expect((container.querySelector('[name="profileHeader"]') as HTMLInputElement).value).toBe(
       'Hiring Drivers'
     );
@@ -197,7 +281,11 @@ describe('EditJobForm', () => {
     });
     fireEvent.submit(container.querySelector('form') as HTMLFormElement);
 
-    expect(await screen.findByText('Please enter the profile header.')).toBeInTheDocument();
+    expect((await screen.findAllByText('Please enter the profile header.')).length).toBeGreaterThan(0);
+    expect(container.querySelector('[name="profileHeader"]')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText('Please fix the highlighted fields before saving.')).toBeInTheDocument();
+    expect(screen.getByText('Profile header:', { exact: false })).toBeInTheDocument();
+    expect(document.activeElement).toHaveAttribute('aria-live', 'polite');
     expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 

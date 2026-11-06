@@ -5,6 +5,8 @@
 
 export interface JobRequirement {
   id?: number;
+  jobRequirementId?: number;
+  requirementId?: number;
   userId: number;
   profileHeader: string;
   skill: string;
@@ -33,8 +35,15 @@ export interface JobRequirement {
   salaryPeriodId: number;
   benefits: string;
   weeklyOffId: number;
-  jobCode: string;
+  jobCode?: string;
   companyName?: string;
+  companyEmail?: string;
+  email?: string;
+  education?: string | number;
+  roleType?: string | number;
+  shiftType?: string | number;
+  workMode?: string | number;
+  jobDescription?: string;
   userJobStatus?: string;
   /** UI-only alias — maps to `specialization` for backend */
   companyTypeId?: number;

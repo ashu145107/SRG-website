@@ -7,6 +7,8 @@ import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useJobDetailsQuery, useApplyJobMutation } from '../../hooks/useJobQueries';
+import type { JobRequirement } from '../../services/jobTypes';
+import { useDateOnly } from '../../hooks/useDateOnly';
 import {
   getLabel,
   educations,
@@ -19,7 +21,6 @@ import {
 } from './jobMappings';
 import { Alert, Toast, ConfirmDialog } from '../ui/FeedbackComponents';
 import {
-  Briefcase,
   MapPin,
   Calendar,
   Users,
@@ -40,20 +41,15 @@ interface JobDetailsViewProps {
   onApplySuccess?: (appliedJobCode?: string) => void;
   alreadyApplied?: boolean;
   jobCode?: string;
+  apiData?: JobRequirement;
 }
 
 const SpecRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-3 text-xs py-2.5">
-    <span className="text-slate-500 font-bold">{label}</span>
-    <span className="font-extrabold text-slate-800 text-right break-words">{children}</span>
+  <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start gap-x-3 py-3 text-xs sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+    <span className="font-bold leading-relaxed text-slate-500">{label}</span>
+    <span className="break-words text-right font-bold leading-relaxed text-slate-800">{children}</span>
   </div>
 );
-
-const formatDate = (v: any): string => {
-  if (!v) return 'N/A';
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
-};
 
 export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
   jobId,
@@ -61,8 +57,10 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
   onApplySuccess,
   alreadyApplied: initialApplied = false,
   jobCode,
+  apiData,
 }) => {
   const { t, i18n } = useTranslation();
+  const formatDateOnly = useDateOnly();
   const lang = i18n.language === 'mr' ? 'mr' : 'en';
 
   const user = useSelector((state: any) => state.auth?.user);
@@ -77,7 +75,14 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
   );
 
   // Queries and mutations
-  const { data: job, isLoading, error: loadError, refetch } = useJobDetailsQuery(jobId, jobCode);
+  const { data: fetchedJob, isLoading: isFetchingJob, error: fetchError, refetch } = useJobDetailsQuery(
+    jobId,
+    jobCode,
+    !apiData
+  );
+  const job = apiData || fetchedJob;
+  const isLoading = !apiData && isFetchingJob;
+  const loadError = !apiData ? fetchError : undefined;
   const applyJobMutation = useApplyJobMutation();
   const applyJob = applyJobMutation.mutateAsync;
   const isApplying = applyJobMutation.isPending;
@@ -88,6 +93,18 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const displayMappedValue = (
+    value: string | number | undefined,
+    mappings: typeof roleTypes,
+    id: number | undefined
+  ) => typeof value === 'string' && value.trim()
+    ? value
+    : getLabel(mappings, Number(value ?? id), lang);
+  const formatAmount = (value: unknown) => {
+    if (value === undefined || value === null || value === '') return '';
+    const amount = Number(value);
+    return Number.isFinite(amount) ? amount.toLocaleString() : String(value);
+  };
 
   const handleApplyClick = () => {
     if (!isAuthenticated) {
@@ -102,11 +119,11 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
   const handleConfirmApply = async () => {
     setShowConfirm(false);
     try {
-      const jobIdentifier = job?.jobCode || String(jobId);
+      const jobIdentifier = String(job?.id ?? jobId);
       const response: any = await applyJob([jobIdentifier]);
 
-      if (response && response.isSuccess === false) {
-        throw { response: { data: response } };
+      if (response && (response.isSuccess === false || response.success === false)) {
+        throw new Error(response.message || t('jobs.detail.applyError'));
       }
 
       setHasApplied(true);
@@ -125,6 +142,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
         err?.response?.data?.message ||
         err?.data?.message ||
         err?.data ||
+        err?.message ||
         t('jobs.detail.applyError');
       setToastMsg(typeof errorMsg === 'string' ? errorMsg : 'Duplicate application or server error.');
       setShowToast(true);
@@ -183,7 +201,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
   }
 
   return (
-    <div className="max-w-6xl mx-auto text-left space-y-6 pb-20 lg:pb-6 animate-fade-in">
+    <div className="mx-auto max-w-6xl space-y-5 px-3 pb-24 text-left animate-fade-in sm:space-y-6 sm:px-4 sm:pb-6 lg:px-0">
       {/* Back button */}
       {onBack && (
         <button
@@ -196,26 +214,27 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
       )}
 
       {/* Main Responsive Grid: 2 columns for large, stack for mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
+      <div className="grid grid-cols-1 items-start gap-4 sm:gap-5 lg:grid-cols-3 lg:gap-6">
         {/* Left column (Main Details) - lg:col-span-2 */}
-        <div className="lg:col-span-2 min-w-0 space-y-6">
+        <div className="min-w-0 space-y-4 sm:space-y-5 lg:col-span-2 lg:space-y-6">
           {/* Header Card */}
-          <div className="bg-white rounded-2xl border border-slate-150 shadow-xs p-6 relative overflow-hidden">
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-orange-600" />
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="px-2.5 py-0.5 bg-orange-50 border border-orange-100 text-orange-950 text-[10px] font-bold rounded-md uppercase tracking-wider">
-                    {getLabel(roleTypes, job.roleTypeId, lang)}
+                    {displayMappedValue(job.roleType, roleTypes, job.roleTypeId)}
                   </span>
                   <span className="px-2.5 py-0.5 bg-blue-50 border border-blue-100 text-blue-950 text-[10px] font-bold rounded-md">
-                    CODE: {job.jobCode || `JOB-${job.id}`}
+                    {job.jobCode ? `CODE: ${job.jobCode}` : 'CODE'}
                   </span>
                 </div>
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                  {job.jobDesignation || job.profileHeader || 'Job Vacancy'}
+                <h1 className="break-words text-xl font-black tracking-tight text-slate-900 sm:text-2xl">
+                  {job.jobDesignation || job.profileHeader || '—'}
                 </h1>
-                <p className="text-sm font-bold text-slate-600 block">{job.profileHeader || job.jobDesignation || 'Job Requirement'}</p>
+                <p className="text-sm font-bold text-slate-600 block">{job.profileHeader || job.jobDesignation || '—'}</p>
+                {job.companyName && <p className="text-sm font-semibold text-slate-600">{job.companyName}</p>}
               </div>
 
               {/* Desktop Apply Button */}
@@ -242,37 +261,36 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
             </div>
 
             {/* Core Specs Quick Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-100 text-slate-600">
+            <div className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 text-slate-600 sm:mt-6 sm:grid-cols-2 sm:gap-4 sm:pt-5 xl:grid-cols-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-slate-50 border border-slate-100 rounded-lg text-orange-600">
                   <MapPin className="w-4 h-4" />
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 block font-semibold leading-none mb-0.5">LOCATION</span>
-                  <span className="text-xs font-bold text-slate-800 block">{job.jobLocation || job.workPlace || 'Nashik'}</span>
+                  <span className="text-xs font-bold text-slate-800 block">{job.jobLocation || job.workPlace || '—'}</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-slate-50 border border-slate-100 rounded-lg text-orange-600">
+              <div className="flex items-center gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3">
+                <div className="rounded-lg border border-emerald-100 bg-white p-2 text-emerald-700">
                   <IndianRupee className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 block font-semibold leading-none mb-0.5">SALARY RANGE</span>
-                  <span className="text-xs font-bold text-slate-800 block">
-                    ₹{job.salary ? job.salary.toLocaleString() : '0'} - ₹{job.salaryTo ? job.salaryTo.toLocaleString() : (job.salary ? job.salary.toLocaleString() : '0')}
+                  <span className="text-[10px] font-bold leading-none text-emerald-800/70 block mb-1">SALARY RANGE</span>
+                  <span className="text-sm font-extrabold text-emerald-950 block">
+                    {formatAmount(job.salary) ? `₹${formatAmount(job.salary)}` : '—'}{job.salaryTo != null ? ` - ₹${formatAmount(job.salaryTo)}` : ''}
                   </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-slate-50 border border-slate-100 rounded-lg text-orange-600">
-                  <Briefcase className="w-4 h-4" />
-                </div>
                 <div>
                   <span className="text-[10px] text-slate-400 block font-semibold leading-none mb-0.5">EXPERIENCE</span>
                   <span className="text-xs font-bold text-slate-800 block">
-                    {job.experiance !== undefined ? job.experiance : 0} - {job.experianceTo !== undefined ? job.experianceTo : 2} Years
+                    {job.experiance != null || job.experianceTo != null
+                      ? `${job.experiance ?? ''} - ${job.experianceTo ?? ''} Years`
+                      : '—'}
                   </span>
                 </div>
               </div>
@@ -283,32 +301,31 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 block font-semibold leading-none mb-0.5">VACANCIES</span>
-                  <span className="text-xs font-bold text-slate-800 block">{job.noOfVacancy || 1} Positions</span>
+                  <span className="text-xs font-bold text-slate-800 block">{job.noOfVacancy != null ? `${job.noOfVacancy} Positions` : '—'}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Job Description Card */}
-          <div className="bg-white rounded-2xl border border-slate-150 p-6 space-y-4">
-            <h3 className="text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
-              <Briefcase className="w-4.5 h-4.5 text-orange-600" />
-              <span>{t('jobs.detail.descriptionTitle')}</span>
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+            <h3 className="text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-2">
+              {t('jobs.detail.descriptionTitle')}
             </h3>
             <p className="text-xs text-slate-650 leading-relaxed whitespace-pre-line block">
-              {job.jobDiscription || job.profileHeader || 'Detailed job requirement specifications.'}
+              {job.jobDiscription || job.jobDescription || job.profileHeader || '—'}
             </p>
           </div>
 
           {/* Required Skills & Certifications */}
-          <div className="bg-white rounded-2xl border border-slate-150 p-6 space-y-5">
+          <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
             <div>
               <h4 className="text-xs font-extrabold text-slate-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
                 <Award className="w-4 h-4 text-orange-600" />
                 <span>{t('jobs.detail.requiredSkills')}</span>
               </h4>
               <div className="flex flex-wrap gap-2">
-                {(job.skill || 'Relevant Skills').split(',').map((s, idx) => (
+                {String(job.skill || '').split(',').map((s, idx) => s.trim() && (
                   <span key={idx} className="px-3 py-1 bg-slate-50 border border-slate-150 text-slate-700 text-xs font-bold rounded-lg shadow-2xs">
                     {s.trim()}
                   </span>
@@ -329,7 +346,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
 
           {/* Benefits */}
           {job.benefits && (
-            <div className="bg-white rounded-2xl border border-slate-150 p-6 space-y-3">
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
               <h3 className="text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-2">
                 {t('jobs.detail.benefitsTitle')}
               </h3>
@@ -339,8 +356,8 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
         </div>
 
         {/* Right column (Sidebar specs) */}
-        <div className="min-w-0 space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-150 p-6 space-y-5 relative overflow-hidden">
+        <div className="min-w-0 space-y-4 sm:space-y-5 lg:space-y-6">
+          <div className="relative space-y-5 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
             <div className="absolute top-0 left-0 right-0 h-1 bg-blue-900" />
             <h3 className="text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-2">
               {t('jobs.detail.specificationsTitle')}
@@ -348,11 +365,11 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
 
             <div className="divide-y divide-slate-100">
               <SpecRow label={t('jobs.detail.workplace')}>
-                {job.workPlace || 'Office Office'}
+                {job.workPlace || job.jobLocation || '—'}
               </SpecRow>
 
               <SpecRow label={t('jobs.detail.qualification')}>
-                {getLabel(educations, job.educationId, lang)}
+                {displayMappedValue(job.education, educations, job.educationId)}
               </SpecRow>
 
               <SpecRow label={t('jobs.detail.specialization')}>
@@ -364,11 +381,11 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
               </SpecRow>
 
               <SpecRow label={t('jobs.detail.genderPreference')}>
-                {job.genderPreference === 'Any' ? t('jobs.detail.anyGender') : job.genderPreference}
+                {job.genderPreference === 'Any' ? t('jobs.detail.anyGender') : job.genderPreference || '—'}
               </SpecRow>
 
               <SpecRow label={t('jobs.detail.ageRange')}>
-                {job.ageRange || '18-45'}
+                {job.ageRange || '—'}
               </SpecRow>
 
               <SpecRow label={t('jobs.detail.weeklyOff')}>
@@ -376,13 +393,25 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
               </SpecRow>
 
               <SpecRow label={t('jobs.detail.shift')}>
-                {getLabel(shiftTypes, job.shiftTypeId, lang)}
+                {displayMappedValue(job.shiftType, shiftTypes, job.shiftTypeId)}
+              </SpecRow>
+
+              <SpecRow label="Work mode">
+                {displayMappedValue(job.workMode, workModes, job.workModeId)}
+              </SpecRow>
+
+              <SpecRow label="Company">
+                {job.companyName || '—'}
+              </SpecRow>
+
+              <SpecRow label="Company email">
+                {job.companyEmail || job.email || '—'}
               </SpecRow>
             </div>
           </div>
 
           {/* Interview Details Sidebar Card */}
-          <div className="bg-slate-50 rounded-2xl border border-slate-150 p-6 space-y-4">
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5 lg:p-6">
             <h4 className="text-xs font-extrabold text-slate-900 border-b border-slate-200 pb-2 flex items-center gap-2 uppercase tracking-wider">
               <Clock className="w-4 h-4 text-orange-600" />
               <span>{t('jobs.detail.interviewProcess')}</span>
@@ -404,13 +433,13 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
           </div>
 
           {/* Posting date / Expiry date */}
-          <div className="bg-white rounded-2xl border border-slate-150 p-6 space-y-4 text-xs text-slate-600">
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-600 shadow-sm sm:p-5 lg:p-6">
             <div className="flex items-center gap-2.5">
               <Calendar className="w-4.5 h-4.5 text-slate-400 shrink-0" />
               <div className="min-w-0">
                 <span className="text-slate-400 block text-[10px] font-bold leading-none mb-0.5">EXPIRE DATE</span>
                 <span className="font-bold text-slate-800 block break-words">
-                  {formatDate(job.expiryDate)}
+                  {formatDateOnly(job.expiryDate) || '—'}
                 </span>
               </div>
             </div>
@@ -427,11 +456,11 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
 
       {/* Mobile Sticky Footer - Sticky Apply Button on mobile */}
       {!isEmployerOrStaff && (
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-150 px-4 py-3 z-40 flex justify-between items-center shadow-lg">
-        <div>
+      <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.08)] sm:hidden">
+        <div className="min-w-0">
           <span className="text-[10px] text-slate-400 block font-bold">MONTHLY RANGE</span>
-          <span className="text-sm font-black text-slate-800">
-            ₹{job.salary.toLocaleString()} - ₹{job.salaryTo.toLocaleString()}
+          <span className="block truncate text-sm font-black text-slate-800">
+            {formatAmount(job.salary) ? `₹${formatAmount(job.salary)}` : '—'}{job.salaryTo != null ? ` - ₹${formatAmount(job.salaryTo)}` : ''}
           </span>
         </div>
 
@@ -443,7 +472,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
           <button
             onClick={handleApplyClick}
             disabled={isApplying}
-            className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-colors hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isApplying && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             <span>{isApplying ? t('jobs.detail.submitting') : t('jobs.detail.apply')}</span>

@@ -132,13 +132,13 @@ const normalizeApplications = (data: any): JobApplication[] => {
   }
 
   return list.map((item: any, idx: number) => {
-    const rawId = item.id ?? item.jobApplicationId ?? item.applicationId ?? null;
-    
+    const rawId = item.jobApplicationId;
+
     // Comprehensive extraction of numeric application ID
     const numericAppId = (() => {
       const candidates = [
+        item.jobapplicationid,
         item.applicationId,
-        item.jobApplicationId,
         item.applicationHistoryId,
         item.applicationStatusHistoryId,
         item.appliedJobId,
@@ -261,19 +261,6 @@ export const employerApi = baseApi.injectEndpoints({
         try {
           const result = await baseQuery('/api/v1/company/myjobapplications');
           if (result.data) {
-            const value = (result.data as any).value !== undefined ? (result.data as any).value : result.data;
-            const sample = Array.isArray(value) ? value[0] : value;
-            console.log('[employerApi] getMyJobApplications sample item:', JSON.stringify(sample)?.slice(0, 1600));
-            if (sample && sample.requirementId) {
-              const reqRes = await baseQuery(`/api/v1/jobapplicationsforrequirment/${sample.requirementId}`);
-              if (reqRes.data) {
-                const rv = (reqRes.data as any).value !== undefined ? (reqRes.data as any).value : reqRes.data;
-                const list2 = Array.isArray(rv) ? rv : (rv && (rv.data || rv.items || rv.list || rv.results || rv.applications));
-                console.log('[employerApi] jobapplicationsforrequirment sample item:', JSON.stringify(Array.isArray(list2) ? list2[0] : rv)?.slice(0, 1600));
-              } else if (reqRes.error) {
-                console.log('[employerApi] jobapplicationsforrequirment probe error:', JSON.stringify(reqRes.error)?.slice(0, 400));
-              }
-            }
             return { data: normalizeApplications(result.data) };
           }
           if (result.error) {

@@ -76,28 +76,6 @@ export const dashboardApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getDashboardStats: builder.query<any, void>({
       queryFn: async (arg, api, extraOptions, baseQuery) => {
-        // Fetch the total requirement count from the same paginated endpoint the
-        // admin Job Requirement list table uses, so the widget stays in sync.
-        const fetchRequirementTotal = async (): Promise<number> => {
-          try {
-            const reqRes = await baseQuery('/api/v1/jobrequirements/1/1');
-            const d: any = reqRes.data;
-            if (!d) return 0;
-            const value: any = d.value !== undefined ? d.value : d;
-            if (Array.isArray(value)) return value.length;
-            if (value && typeof value === 'object') {
-              const tc = value.totalRecords ?? value.totalCount ?? value.total ?? value.count;
-              if (typeof tc === 'number' && !isNaN(tc) && tc > 0) return tc;
-              const arr = [value.data, value.items, value.list, value.records, value.results, value.rows].find(Array.isArray);
-              return Array.isArray(arr) ? arr.length : 0;
-            }
-            return 0;
-          } catch (err) {
-            console.warn('Failed to fetch job requirements total for admin dashboard:', err);
-            return 0;
-          }
-        };
-
         try {
           const result = await baseQuery('/api/v1/dashboard');
           if (result.data) {
@@ -108,10 +86,6 @@ export const dashboardApi = baseApi.injectEndpoints({
             } else {
               const dataObj = typeof result.data === 'object' && result.data !== null ? result.data : {};
               norm = { ...normalizeDashboardValue(dataObj), isMock: false };
-            }
-            if (norm.adminDashboard) {
-              const live = await fetchRequirementTotal();
-              if (live > 0) norm.adminDashboard.requirementCount = live;
             }
             return { data: norm };
           }

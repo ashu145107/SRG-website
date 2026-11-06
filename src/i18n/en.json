@@ -279,7 +279,7 @@
     "recentJobs": "Recently Added Vacancies",
     "appliedJobs": "Applied Opportunities",
     "postJob": "Post a New Vacancy",
-    "applications": "Applicant Pipelines",
+    "applications": "Applicants",
     "shgTrainings": "Training enrollments & Showcase",
     "adminTitle": "Admin Control Dashboard",
     "superAdmin": "Super Admin Console",
@@ -351,8 +351,8 @@
       "subtitle": "Manage job posts by employers and required qualifications"
     },
     "applications": {
-      "title": "Job Application entry",
-      "listTitle": "Job Application List",
+      "title": "Applicants",
+      "listTitle": "Applicants",
       "loadError": "Failed to load applications from API. Please check your connection and try again.",
       "empty": "No applications found",
       "detailTitle": "Job Application Details",
@@ -396,7 +396,7 @@
       "registeredCompany": "Registered Company",
       "registeredUser": "Registered User",
       "jobRequirement": "Job Requirement",
-      "jobApplication": "Job Application",
+      "jobApplication": "Applicants",
       "viewTicket": "View Ticket",
       "logOff": "Log Off",
       "drawerTitle": "Swayamrojgar Dashboard",
@@ -405,7 +405,7 @@
       "companies": "Companies",
       "shgsInfo": "SHGs Info",
       "reportsSummary": "Reports Summary",
-      "pipeline": "Pipeline",
+      "pipeline": "Applicants",
       "vacancies": "Vacancies",
       "postJob": "Post Job",
       "profileSettings": "Profile Settings",
@@ -433,8 +433,7 @@
       "companiesApprovalDesc": "Once industrialists and employers have registered, carefully verify their profiles and approve them."
     },
     "employer": {
-      "reviewPending": "Review Pending",
-      "pipelineTitle": "Applicant Pipeline Tracking",
+      "pipelineTitle": "Applicants",
       "profileTitle": "Employer Profile Settings",
       "interviewModalTitle": "Coordinate Interview Scheduled",
       "statusModalTitle": "Update Application Status",
@@ -455,7 +454,15 @@
       "liveDataFinder": "Location & Educational Qualifications",
       "liveDataHelp": "Select your Country, State, District, Taluka, Seva Kendra and Education details for your profile. All lists are always up to date.",
       "uploadResumeBtn": "Upload Resume (PDF)",
-      "companyName": "Company: {{name}}"
+      "companyName": "Company: {{name}}",
+      "jobCode": "Job Code: {{code}}",
+      "showDetails": "Show Details",
+      "applicationDetails": "Application Details",
+      "applicationOverview": "Application overview",
+      "applicationInformation": "Application information",
+      "applicationDetailsIntro": "Information provided with your application.",
+      "noAdditionalApplicationDetails": "No additional application details are available.",
+      "appliedOn": "Applied {{date}}"
     },
     "shg": {
       "verificationTitle": "Women SHGs Micro-enterprise verification",

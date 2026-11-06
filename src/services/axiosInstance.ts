@@ -17,23 +17,10 @@ const axiosInstance = axios.create({
   },
 });
 
-// Request Interceptor: attach token dynamically from Redux store or localStorage
+// Request Interceptor: attach the current session token from Redux.
 axiosInstance.interceptors.request.use(
   (config) => {
-    const state = store.getState();
-    let token = state.auth?.token;
-
-    if (!token) {
-      try {
-        const stored = localStorage.getItem('srg_auth');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          token = parsed.token;
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
+    const token = store.getState().auth?.token;
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

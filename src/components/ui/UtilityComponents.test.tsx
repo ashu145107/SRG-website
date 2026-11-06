@@ -121,6 +121,23 @@ describe('ProtectedRoute', () => {
     expect(screen.getByText('SECRET')).toBeInTheDocument();
   });
 
+  it('redirects users without a token to /login', () => {
+    renderRoutes({
+      auth: { ...authenticatedAuthState(), token: null },
+    });
+    expect(screen.getByText('LOGIN PAGE')).toBeInTheDocument();
+    expect(screen.queryByText('SECRET')).not.toBeInTheDocument();
+  });
+
+  it('redirects users with an expired token to /login', () => {
+    const expiredToken = `header.${btoa(JSON.stringify({ exp: 1 }))}.signature`;
+    renderRoutes({
+      auth: { ...authenticatedAuthState(), token: expiredToken },
+    });
+    expect(screen.getByText('LOGIN PAGE')).toBeInTheDocument();
+    expect(screen.queryByText('SECRET')).not.toBeInTheDocument();
+  });
+
   it('redirects to /unauthorized when the role is not allowed', () => {
     renderWithProviders(
       <Routes>
