@@ -10,7 +10,7 @@ export interface JobRequirement {
   userId: number;
   profileHeader: string;
   skill: string;
-  specialization: number;
+  specialization: string | number;
   experiance: number;
   noOfVacancy: number;
   workPlace: string;
@@ -40,9 +40,14 @@ export interface JobRequirement {
   companyEmail?: string;
   email?: string;
   education?: string | number;
+  specializationId?: number;
   roleType?: string | number;
   shiftType?: string | number;
   workMode?: string | number;
+  interviewMode?: string | number;
+  salaryPeriod?: string | number;
+  weeklyOff?: string | number;
+  isActive?: boolean;
   jobDescription?: string;
   userJobStatus?: string;
   /** UI-only alias — maps to `specialization` for backend */

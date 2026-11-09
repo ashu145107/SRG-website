@@ -2769,6 +2769,18 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
     { approvedOnly: true },
     { skip: !user || !isSearchTab, refetchOnMountOrArgChange: true }
   );
+  // Applied job details → GET /api/v1/jobrequirement/{jobCode}
+  const selectedApplicationJobCode = selectedApplication?.jobCode || '';
+  const {
+    data: selectedApplicationJob,
+    isLoading: selectedApplicationJobLoading,
+    isFetching: selectedApplicationJobFetching,
+    error: selectedApplicationJobError,
+    refetch: refetchSelectedApplicationJob,
+  } = useGetJobRequirementByCodeQuery(selectedApplicationJobCode, {
+    skip: !selectedApplicationJobCode,
+    refetchOnMountOrArgChange: true,
+  });
   // Applied Jobs → GET /api/v1/user/myjobapplications
   const {
     data: myApps = [],
@@ -3056,7 +3068,6 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                 setSelectedJobCode(undefined);
                 refetchJobs();
               }}
-              apiData={availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail)?.apiData}
               alreadyApplied={isJobApplied(
                 selectedJobIdForDetail,
                 availableJobs.find((j) => Number(j.id) === selectedJobIdForDetail)
@@ -3118,6 +3129,16 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                 </div>
               )}
             </Card>
+            {selectedApplication && selectedApplication.jobCode ? (
+              <JobRequirementDetailsDialog
+                requirement={selectedApplicationJob}
+                isLoading={selectedApplicationJobLoading || selectedApplicationJobFetching}
+                error={selectedApplicationJobError}
+                onRetry={() => { void refetchSelectedApplicationJob(); }}
+                onClose={() => setSelectedApplication(null)}
+                closeLabel={t('adm.common.close')}
+              />
+            ) : (
             <Modal
               isOpen={selectedApplication !== null}
               onClose={() => setSelectedApplication(null)}
@@ -3191,6 +3212,7 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
                 </div>
               )}
             </Modal>
+            )}
           </>
         )}
         {/* Support Tickets - View Ticket */}

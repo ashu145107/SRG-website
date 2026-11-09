@@ -18,6 +18,7 @@ import {
   workModes,
   salaryPeriods,
   weeklyOffs,
+  specializations,
 } from './jobMappings';
 import { Alert, Toast, ConfirmDialog } from '../ui/FeedbackComponents';
 import {
@@ -367,6 +368,10 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
             </h3>
 
             <div className="divide-y divide-slate-100">
+              <SpecRow label="Requirement ID">
+                {job.requirementId ?? job.id ?? '—'}
+              </SpecRow>
+
               <SpecRow label={t('jobs.detail.workplace')}>
                 {job.workPlace || job.jobLocation || '—'}
               </SpecRow>
@@ -376,11 +381,11 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
               </SpecRow>
 
               <SpecRow label={t('jobs.detail.specialization')}>
-                {job.industryTypeId || 'N/A'}
+                {displayMappedValue(job.specialization, specializations, job.specializationId)}
               </SpecRow>
 
               <SpecRow label={t('jobs.detail.salaryPeriod')}>
-                {getLabel(salaryPeriods, job.salaryPeriodId, lang)}
+                {displayMappedValue(job.salaryPeriod, salaryPeriods, job.salaryPeriodId)}
               </SpecRow>
 
               <SpecRow label={t('jobs.detail.genderPreference')}>
@@ -392,7 +397,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
               </SpecRow>
 
               <SpecRow label={t('jobs.detail.weeklyOff')}>
-                {getLabel(weeklyOffs, job.weeklyOffId, lang)}
+                {displayMappedValue(job.weeklyOff, weeklyOffs, job.weeklyOffId)}
               </SpecRow>
 
               <SpecRow label={t('jobs.detail.shift')}>
@@ -423,7 +428,7 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
               <div>
                 <span className="text-[10px] text-slate-400 block font-bold leading-none mb-1">INTERVIEW MODE</span>
                 <span className="font-bold text-slate-800 block break-words">
-                  {getLabel(interviewModes, job.interviewModeId, lang)}
+                  {displayMappedValue(job.interviewMode, interviewModes, job.interviewModeId)}
                 </span>
               </div>
               {job.interviewLocation && (
