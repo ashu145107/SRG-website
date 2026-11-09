@@ -102,6 +102,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
   const applyJobMutation = useApplyJobMutation();
   const [applyingJobCodes, setApplyingJobCodes] = useState<Set<string>>(new Set());
   const [applyErrorMessage, setApplyErrorMessage] = useState('');
+  const [appliedDialog, setAppliedDialog] = useState<{ jobCode: string; message: string } | null>(null);
 
   const handleQuickApply = async (jobCode: string) => {
     setApplyingJobCodes((prev) => new Set(prev).add(jobCode));
@@ -111,6 +112,12 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
       if (response?.isSuccess === false || response?.success === false) {
         throw new Error(response.message || 'Your application could not be submitted.');
       }
+      setAppliedDialog({
+        jobCode,
+        message: response?.message || 'You have successfully applied for this job.',
+      });
+      if (useExternal && externalRefetch) void externalRefetch();
+      else void internalRefetch();
     } catch (error: any) {
       const responseData = error?.response?.data ?? error?.data;
       const message = responseData?.error?.message
@@ -375,6 +382,35 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
           onClose={() => setApplyErrorMessage('')}
         />
       )}
+      <Modal
+        isOpen={appliedDialog !== null}
+        onClose={() => setAppliedDialog(null)}
+        title="Application submitted"
+        maxWidthClass="max-w-sm"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <Check className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 space-y-1">
+              <p className="text-sm font-bold text-slate-800">Successfully applied</p>
+              <p className="break-words text-xs font-medium leading-relaxed text-slate-600">
+                {appliedDialog?.message || 'You have successfully applied for this job.'}
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setAppliedDialog(null)}
+              className="rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-orange-700"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      </Modal>
       {error && (
         <div className="my-4">
           <Alert
@@ -488,10 +524,14 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                                     disabled={!row.hasValidJobId || row.isApplying}
                                     className="py-1.5 px-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[11px] font-bold shadow-xs transition-all inline-flex items-center gap-1 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
                                   >
-                                    {row.isApplying
-                                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                      : <Send className="w-3.5 h-3.5" />}
-                                    <span>{row.isApplying ? 'Applying...' : 'Apply'}</span>
+                                    {row.isApplying ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <Send className="w-3.5 h-3.5" />
+                                        <span>Apply</span>
+                                      </>
+                                    )}
                                   </button>
                                 )}
                                 <button
@@ -595,10 +635,14 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                               disabled={!hasValidJobId || isApplying}
                               className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-orange-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                              {isApplying
-                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                : <Send className="w-3.5 h-3.5" />}
-                              <span>{isApplying ? 'Applying...' : 'Apply'}</span>
+                              {isApplying ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <Send className="w-3.5 h-3.5" />
+                                  <span>Apply</span>
+                                </>
+                              )}
                             </button>
                           )}
                           <button
