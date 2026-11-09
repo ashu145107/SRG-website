@@ -104,9 +104,16 @@ const setField = (container: HTMLElement, name: string, value: string) =>
 const fillValidForm = (container: HTMLElement) => {
   setField(container, 'profileHeader', 'Hiring Web Developers');
   setField(container, 'jobDesignation', 'Senior Developer');
+  setField(container, 'industryTypeId', '1');
+  setField(container, 'noOfVacancy', '2');
+  setField(container, 'experiance', '1');
+  setField(container, 'experianceTo', '3');
   setField(container, 'salary', '20000');
   setField(container, 'salaryTo', '40000');
+  setField(container, 'workPlace', 'Office');
   setField(container, 'jobLocation', 'Pune');
+  setField(container, 'interviewModeId', '1');
+  setField(container, 'interviewLocation', 'Pune Office');
   setField(container, 'skill', 'React, Node');
   setField(container, 'jobDiscription', 'We are hiring a senior developer for web projects.');
 };
@@ -132,6 +139,60 @@ describe('AddJobForm', () => {
     expect(screen.getByText('Please fix the highlighted fields before saving.')).toBeInTheDocument();
     expect(screen.getByText('Designation:', { exact: false })).toBeInTheDocument();
     expect(document.activeElement).toHaveAttribute('aria-live', 'polite');
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('enforces the profile header limit and removes non-numeric characters from numeric inputs', async () => {
+    const { container } = renderWithProviders(<AddJobForm />);
+    fillValidForm(container);
+    setField(container, 'profileHeader', 'x'.repeat(101));
+    setField(container, 'salary', '20x000');
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    expect((await screen.findAllByText('Profile header must be 100 characters or fewer.')).length).toBeGreaterThan(0);
+    expect((container.querySelector('[name="salary"]') as HTMLInputElement).value).toBe('20000');
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('allows zero salary and accepts experience values up to two digits', async () => {
+    const { container } = renderWithProviders(<AddJobForm />);
+    fillValidForm(container);
+    setField(container, 'salary', '0');
+    setField(container, 'salaryTo', '10000000');
+    setField(container, 'experiance', '12');
+    setField(container, 'experianceTo', '99');
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
+    expect(mockMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ salary: 0, salaryTo: 10000000, experiance: 12, experianceTo: 99 })
+    );
+    expect(container.querySelector('[name="experiance"]')).toHaveAttribute('type', 'text');
+    expect(container.querySelector('[name="experiance"]')).toHaveAttribute('maxLength', '2');
+  });
+
+  it('rejects salary above 1 crore', async () => {
+    const { container } = renderWithProviders(<AddJobForm />);
+    fillValidForm(container);
+    setField(container, 'salary', '10000001');
+    setField(container, 'salaryTo', '10000001');
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    expect((await screen.findAllByText('Minimum salary must be between 0 and 1 crore.')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Maximum salary must be between 0 and 1 crore.')).length).toBeGreaterThan(0);
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('allows clearing numeric fields and reports validation errors instead of submitting NaN', async () => {
+    const { container } = renderWithProviders(<AddJobForm />);
+    fillValidForm(container);
+    setField(container, 'salary', '');
+    setField(container, 'experiance', '');
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    expect((await screen.findAllByText('Enter a minimum experience using 1 or 2 digits (0-99).')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Minimum salary must be between 0 and 1 crore.').length).toBeGreaterThan(0);
+    expect((container.querySelector('[name="salary"]') as HTMLInputElement).value).toBe('');
     expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 

@@ -38,6 +38,7 @@ jest.mock('../services/masterApi', () => ({
 }));
 
 import { useAddCompanyMutation, useGetAdminCompaniesQuery } from '../services/adminApi';
+import { useGetCompanyTypesQuery, useGetIndustryTypesQuery } from '../services/jobMasterApi';
 const mockUseGetAdminCompaniesQuery = useGetAdminCompaniesQuery as jest.Mock;
 const mockAddCompany = jest.fn();
 
@@ -125,10 +126,33 @@ describe('AdminRegisteredCompanies', () => {
     await waitFor(() => {
       expect(getByText(/Register New Company/i)).toBeInTheDocument();
     });
+    expect(useGetCompanyTypesQuery).toHaveBeenLastCalledWith(undefined, {
+      skip: false,
+      refetchOnMountOrArgChange: true,
+    });
+    expect(useGetIndustryTypesQuery).toHaveBeenLastCalledWith(undefined, {
+      skip: false,
+      refetchOnMountOrArgChange: true,
+    });
     expect(screen.getByPlaceholderText(/Acme Pvt. Ltd./i)).toBeInTheDocument();
     expect(screen.getByLabelText(/State/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/District/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Taluka/i)).toBeInTheDocument();
+  });
+
+  it('does not request company and industry types until add company is opened', () => {
+    mockUseGetAdminCompaniesQuery.mockReturnValue(baseResult({ data: { items: [], totalCount: 0 } }));
+
+    renderWithProviders(<AdminRegisteredCompanies />);
+
+    expect(useGetCompanyTypesQuery).toHaveBeenLastCalledWith(undefined, {
+      skip: true,
+      refetchOnMountOrArgChange: true,
+    });
+    expect(useGetIndustryTypesQuery).toHaveBeenLastCalledWith(undefined, {
+      skip: true,
+      refetchOnMountOrArgChange: true,
+    });
   });
 
   it('submits the selected location IDs with the company registration fields', async () => {

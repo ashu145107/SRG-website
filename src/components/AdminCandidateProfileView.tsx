@@ -11,11 +11,11 @@
  * with additional admin-only contact badges.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { getApiBaseUrl } from '../services/baseApi';
 import { useGetAdminCandidateDetailQuery } from '../services/adminApi';
-import { logProfileDownload } from '../services/profileApi';
+import axiosInstance from '../services/axiosInstance';
 import { RootState } from '../store';
 import { EmploymentHistory, UserRole } from '../types';
 import {
@@ -70,6 +70,10 @@ const formatDisplayDate = (value?: string): string => {
   return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+const revokeObjectUrl = (url: string): void => {
+  if (typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(url);
+};
+
 const Field = ({ icon, label, value, fullWidth }: { icon: React.ReactNode; label: string; value?: string | number; fullWidth?: boolean }) => (
   <div className={`bg-slate-50 rounded-xl p-4 ${fullWidth ? 'sm:col-span-2' : ''}`}>
     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
@@ -89,7 +93,10 @@ interface AdminCandidateProfileViewProps {
 export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidateProfileViewProps) {
   const [activeTab, setActiveTab] = useState<'details' | 'education' | 'employment' | 'resume'>('details');
   const [isDownloadingResume, setIsDownloadingResume] = useState(false);
+  const [isPreviewingResume, setIsPreviewingResume] = useState(false);
+  const [resumePreviewUrl, setResumePreviewUrl] = useState('');
   const [resumeActionError, setResumeActionError] = useState('');
+  const previewUrlRef = useRef('');
   const { user } = useSelector((state: RootState) => state.auth);
 
   const { data: profile, isLoading, error } = useGetAdminCandidateDetailQuery(candidateId, {
@@ -98,10 +105,9 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
 
   const isCandidate = String(user?.role || '').toUpperCase() === UserRole.CANDIDATE;
 
-  const handleDownload = () => {
-    if (isCandidate) return;
-    void logProfileDownload({ candidateId, role: user?.role });
-  };
+  useEffect(() => () => {
+    if (previewUrlRef.current) revokeObjectUrl(previewUrlRef.current);
+  }, []);
 
   const resolveResumeUrl = (url: string): string => {
     if (!url) return '';
@@ -114,30 +120,70 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
     }
   };
 
-  const downloadResume = async (url: string, fileName: string) => {
+  const fetchResumeBlob = async (url: string): Promise<Blob> => {
+    const resumeUrl = new URL(url);
+    const apiBase = getApiBaseUrl();
+    const apiOrigin = apiBase
+      ? new URL(apiBase, window.location.origin).origin
+      : window.location.origin;
+    const productionApiOrigin = new URL('https://srgapp.dindoripranit.org').origin;
+
+    if (resumeUrl.origin !== apiOrigin && resumeUrl.origin !== productionApiOrigin) {
+      throw new Error('Resume files must be hosted by the SRG API.');
+    }
+
+    const proxyUrl = new URL(`/resume-file${resumeUrl.pathname}`, window.location.origin);
+    const response = await axiosInstance.get<Blob>(proxyUrl.toString(), {
+      responseType: 'blob',
+    });
+    if (!response.data.size) {
+      throw new Error('The resume file is empty.');
+    }
+    return response.data;
+  };
+
+  const previewResume = async (url: string) => {
+    setResumeActionError('');
+    setIsPreviewingResume(true);
+    try {
+      const blob = await fetchResumeBlob(url);
+      if (previewUrlRef.current) revokeObjectUrl(previewUrlRef.current);
+      const objectUrl = URL.createObjectURL(blob);
+      previewUrlRef.current = objectUrl;
+      setResumePreviewUrl(objectUrl);
+    } catch (err) {
+      setResumeActionError(err instanceof Error ? err.message : 'Unable to preview resume.');
+    } finally {
+      setIsPreviewingResume(false);
+    }
+  };
+
+  const closeResumePreview = () => {
+    if (previewUrlRef.current) revokeObjectUrl(previewUrlRef.current);
+    previewUrlRef.current = '';
+    setResumePreviewUrl('');
+  };
+
+  const downloadResume = async (url: string, candidateName: string) => {
     setResumeActionError('');
     setIsDownloadingResume(true);
-    handleDownload();
 
     try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Resume download failed (${response.status}).`);
-      }
-
-      const blob = await response.blob();
-      if (!blob.size) {
-        throw new Error('The resume file is empty.');
-      }
-
+      const blob = await fetchResumeBlob(url);
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = objectUrl;
-      link.download = fileName || 'resume';
+      const extension = new URL(url).pathname.match(/\.[a-z0-9]{1,8}$/i)?.[0] || '.pdf';
+      const safeCandidateName = candidateName
+        .normalize('NFKD')
+        .replace(/[^\w -]/g, '')
+        .trim()
+        .replace(/\s+/g, '_') || 'Candidate';
+      link.download = `${safeCandidateName}${extension}`;
       document.body.appendChild(link);
       link.click();
       link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      window.setTimeout(() => revokeObjectUrl(objectUrl), 1000);
     } catch (err) {
       setResumeActionError(err instanceof Error ? err.message : 'Unable to download resume.');
     } finally {
@@ -407,18 +453,18 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
                         <p className="text-xs font-bold text-blue-900 truncate">My Resume</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <a
-                          href={candidate.resumeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          type="button"
+                          onClick={() => void previewResume(candidate.resumeUrl)}
+                          disabled={isPreviewingResume}
                           className="px-3 py-2 text-[11px] font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                         >
-                          <Eye className="w-3.5 h-3.5" /> Preview
-                        </a>
+                          <Eye className="w-3.5 h-3.5" /> {isPreviewingResume ? 'Loading...' : 'Preview'}
+                        </button>
                         {!isCandidate && (
                           <button
                             type="button"
-                            onClick={() => void downloadResume(candidate.resumeUrl, candidate.resumeName)}
+                            onClick={() => void downloadResume(candidate.resumeUrl, candidate.fullName)}
                             disabled={isDownloadingResume}
                             className="px-3 py-2 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5"
                           >
@@ -442,6 +488,25 @@ export function AdminCandidateProfileView({ candidateId, onBack }: AdminCandidat
               </>
             )}
 
+          </div>
+        </div>
+      )}
+      {resumePreviewUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Resume preview"
+          onClick={closeResumePreview}
+        >
+          <div className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <span className="text-sm font-bold text-slate-800">Resume preview</span>
+              <button type="button" onClick={closeResumePreview} className="rounded-lg px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100">
+                Close
+              </button>
+            </div>
+            <iframe title="Resume preview" src={resumePreviewUrl} className="min-h-0 flex-1" />
           </div>
         </div>
       )}

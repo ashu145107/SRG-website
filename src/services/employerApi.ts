@@ -229,7 +229,7 @@ const normalizeApplications = (data: any): JobApplication[] => {
  * Normalize raw API response into Job[] for employer's own requirements.
  * Spreads the raw API item so all fields are preserved (profileHeader, skill, workPlace, etc.)
  */
-const normalizeRequirements = (data: any): Job[] => {
+export const normalizeRequirements = (data: any): Job[] => {
   if (!data) return [];
 
   const value = data.value !== undefined ? data.value : data;
@@ -246,6 +246,7 @@ const normalizeRequirements = (data: any): Job[] => {
   return list.map((item: any, idx: number) => ({
     ...item,
     id: item.id ?? item.jobRequirementId ?? (idx + 1),
+    workPlace: item.workPlace ?? item.WorkPlace ?? item.workplace ?? item.workplaceType ?? '',
   }));
 };
 

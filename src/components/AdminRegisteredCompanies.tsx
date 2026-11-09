@@ -76,8 +76,14 @@ export function AdminRegisteredCompanies() {
   });
 
   // Master data for add-company form
-  const { data: companyTypes = [] } = useGetCompanyTypesQuery();
-  const { data: industryTypes = [] } = useGetIndustryTypesQuery();
+  const { data: companyTypes = [] } = useGetCompanyTypesQuery(undefined, {
+    skip: !showAddCompany,
+    refetchOnMountOrArgChange: true,
+  });
+  const { data: industryTypes = [] } = useGetIndustryTypesQuery(undefined, {
+    skip: !showAddCompany,
+    refetchOnMountOrArgChange: true,
+  });
   const { data: states = [], isLoading: isLoadingStates } = useGetStatesQuery(1);
 
   const [addCompany, { isLoading: isAddingCompany }] = useAddCompanyMutation();

@@ -109,7 +109,7 @@ describe('JobListingView', () => {
     expect(screen.queryByText('Sales Executive')).not.toBeInTheDocument();
   });
 
-  it('renders the job rows with count and salary', () => {
+  it('renders the job rows with count and workplace', () => {
     renderWithProviders(<JobListingView onViewDetails={jest.fn()} />);
 
     expect(screen.getByText('Sales Executive')).toBeInTheDocument();
@@ -117,9 +117,36 @@ describe('JobListingView', () => {
     expect(screen.getByText('Senior Accountant')).toBeInTheDocument();
     expect(screen.getByText('Acme Corp')).toBeInTheDocument();
     expect(screen.getAllByText('Nashik').length).toBeGreaterThan(1);
-    expect(screen.getByText('₹50000 - ₹80000')).toBeInTheDocument();
+    expect(screen.queryByText('Experience', { selector: 'th' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/yrs/)).not.toBeInTheDocument();
+    expect(screen.queryByText('₹50000 - ₹80000')).not.toBeInTheDocument();
     expect(screen.getByText('Showing 2 of 2 vacancies')).toBeInTheDocument();
     expect(screen.getByText(/Last date: 2026-12-31/)).toBeInTheDocument();
+  });
+
+  it('shows workplace and hides salary range in vacancy cards and table', async () => {
+    mockedSearchJobs.mockReturnValue(queryResult([
+      {
+        ...jobs[0],
+        jobLocation: 'Nashik City',
+        workPlace: 'Main Office',
+        salary: 0,
+        salaryTo: 10000000,
+      },
+    ], 1));
+
+    renderWithProviders(<JobListingView onViewDetails={jest.fn()} />);
+
+    expect(screen.getAllByText('Main Office').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Nashik City')).not.toBeInTheDocument();
+    expect(screen.queryByText('₹0 - ₹100 L')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Table/ }));
+
+    expect(screen.getByText('Workplace')).toBeInTheDocument();
+    expect(screen.queryByText('Experience', { selector: 'th' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Salary', { selector: 'th' })).not.toBeInTheDocument();
+    expect(screen.getAllByText('Main Office').length).toBeGreaterThan(0);
   });
 
   it('renders the empty state when there are no jobs', () => {

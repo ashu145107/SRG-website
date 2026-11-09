@@ -24,6 +24,9 @@ import { Alert, Toast } from '../ui/FeedbackComponents';
 import { DatePicker } from '../ui/DatePicker';
 
 const MAX_JOB_DESCRIPTION_LENGTH = 4000;
+const MAX_EXPERIENCE_DIGITS = 2;
+const MAX_SALARY = 10_000_000;
+const MAX_SALARY_DIGITS = 8;
 
 const FieldError: React.FC<{ message?: string }> = ({ message }) =>
   message ? <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{message}</p> : null;
@@ -35,7 +38,16 @@ interface EditJobFormProps {
   onCancel?: () => void;
 }
 
-type EditJobFormData = Omit<JobRequirement, 'id'>;
+type EditJobFormData = Omit<
+  JobRequirement,
+  'id' | 'experiance' | 'experianceTo' | 'noOfVacancy' | 'salary' | 'salaryTo'
+> & {
+  experiance: string;
+  experianceTo: string;
+  noOfVacancy: string;
+  salary: string;
+  salaryTo: string;
+};
 
 const getNumber = (value: unknown, fallback = 0): number => {
   if (value === null || value === undefined || value === '') {
@@ -99,12 +111,12 @@ const initialForm: EditJobFormData = {
   profileHeader: '',
   skill: '',
   specialization: 0,
-  experiance: 0,
-  experianceTo: 1,
-  noOfVacancy: 1,
+  experiance: '0',
+  experianceTo: '1',
+  noOfVacancy: '1',
   workPlace: '',
-  salary: 1,
-  salaryTo: 1,
+  salary: '',
+  salaryTo: '',
   expiryDate: '',
   educationId: 0,
   createdBy: 0,
@@ -183,14 +195,20 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
   const fieldLabels: Record<string, string> = {
     profileHeader: 'Profile header',
     jobDesignation: 'Designation',
+    industryTypeId: 'Specialization',
     noOfVacancy: 'Number of vacancies',
     experiance: 'Minimum experience',
     experianceTo: 'Maximum experience',
     salary: 'Minimum salary',
     salaryTo: 'Maximum salary',
+    workPlace: 'Workplace',
     jobLocation: 'Job location',
     expiryDate: 'Expiry date',
     skill: 'Required skills',
+    interviewModeId: 'Interview mode',
+    interviewLocation: 'Interview location',
+    ageRange: 'Age range',
+    genderPreference: 'Gender preference',
     jobDiscription: 'Job description',
   };
 
@@ -210,16 +228,13 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
       profileHeader: jobData.profileHeader ?? '',
       skill: jobData.skill ?? '',
       specialization: getNumber(jobData.specializationId ?? jobData.specialization, 0),
-      experiance: getNumber(jobData.experiance, 0),
-      experianceTo: getNumber(jobData.experianceTo, 1),
-      noOfVacancy: getNumber(jobData.noOfVacancy, 1),
+      experiance: String(getNumber(jobData.experiance, 0)),
+      experianceTo: String(getNumber(jobData.experianceTo, 1)),
+      noOfVacancy: String(getNumber(jobData.noOfVacancy, 1)),
       workPlace: jobData.workPlace ?? '',
 
-      // Do not use `|| 0` here because it silently changes values.
-      // Salary is initialized to 1 if the API has no value because the
-      // backend rejects zero salary values.
-      salary: getNumber(jobData.salary, 1),
-      salaryTo: getNumber(jobData.salaryTo, 1),
+      salary: jobData.salary === null || jobData.salary === undefined ? '' : String(jobData.salary),
+      salaryTo: jobData.salaryTo === null || jobData.salaryTo === undefined ? '' : String(jobData.salaryTo),
 
       expiryDate: formatDateForInput(jobData.expiryDate),
       educationId: resolveMasterId(jobData.educationId, jobData.education, educations, 0),
@@ -271,14 +286,15 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
     >
   ) => {
     const { name, value } = event.target;
+    const digitLimits: Record<string, number> = {
+      experiance: MAX_EXPERIENCE_DIGITS,
+      experianceTo: MAX_EXPERIENCE_DIGITS,
+      salary: MAX_SALARY_DIGITS,
+      salaryTo: MAX_SALARY_DIGITS,
+    };
 
     const numericFields = [
       'specialization',
-      'experiance',
-      'experianceTo',
-      'noOfVacancy',
-      'salary',
-      'salaryTo',
       'educationId',
       'subEducationId',
       'roleTypeId',
@@ -294,7 +310,11 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
 
     setForm((previous) => ({
       ...previous,
-      [name]: numericFields.includes(name) ? Number(value) : value,
+      [name]: numericFields.includes(name)
+        ? Number(value)
+        : name in digitLimits
+          ? value.replace(/\D/g, '').slice(0, digitLimits[name])
+          : value,
     }));
     setFieldErrors((previous) => {
       if (!previous[name]) return previous;
@@ -308,26 +328,39 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
   const validateForm = (): Record<string, string> => {
     const errors: Record<string, string> = {};
     if (!form.profileHeader.trim()) errors.profileHeader = 'Please enter the profile header.';
+    if (form.profileHeader.length > 100) errors.profileHeader = 'Profile header must be 100 characters or fewer.';
     if (!form.jobDesignation.trim()) errors.jobDesignation = 'Please enter the job designation.';
     if (!form.skill.trim()) errors.skill = 'Please enter the required skills.';
+    if (!Number(form.industryTypeId)) errors.industryTypeId = 'Please select a specialization.';
     if (!form.jobDiscription.trim()) {
       errors.jobDiscription = 'Please enter the job description.';
     } else if (form.jobDiscription.trim().length < 10) {
       errors.jobDiscription = 'Job description must contain at least 10 characters.';
     }
-    if (!form.noOfVacancy || form.noOfVacancy < 1) errors.noOfVacancy = 'Number of vacancies must be at least 1.';
-    if (form.experiance < 0) errors.experiance = 'Experience cannot be negative.';
-    if (form.experianceTo < 0) errors.experianceTo = 'Experience cannot be negative.';
-    if (form.experianceTo < form.experiance) {
+    const experience = form.experiance.trim() ? Number(form.experiance) : NaN;
+    const experienceTo = form.experianceTo.trim() ? Number(form.experianceTo) : NaN;
+    const vacancy = form.noOfVacancy.trim() ? Number(form.noOfVacancy) : NaN;
+    const salary = form.salary.trim() ? Number(form.salary) : NaN;
+    const salaryTo = form.salaryTo.trim() ? Number(form.salaryTo) : NaN;
+
+    if (!Number.isInteger(experience) || experience < 0 || experience > 99) errors.experiance = 'Enter a minimum experience using 1 or 2 digits (0-99).';
+    if (!Number.isInteger(experienceTo) || experienceTo < 0 || experienceTo > 99) errors.experianceTo = 'Enter a maximum experience using 1 or 2 digits (0-99).';
+    if (!Number.isFinite(vacancy) || vacancy < 1) errors.noOfVacancy = 'Number of vacancies must be at least 1.';
+    if (Number.isFinite(experience) && Number.isFinite(experienceTo) && experienceTo < experience) {
       errors.experianceTo = 'Maximum experience must be greater than or equal to minimum experience.';
     }
-    if (!Number.isFinite(form.salary) || form.salary <= 0) errors.salary = 'Minimum salary must be greater than 0.';
-    if (!Number.isFinite(form.salaryTo) || form.salaryTo <= 0) errors.salaryTo = 'Maximum salary must be greater than 0.';
-    if (form.salaryTo < form.salary) errors.salaryTo = 'Maximum salary must be greater than or equal to minimum salary.';
+    if (!form.workPlace.trim()) errors.workPlace = 'Please enter the workplace.';
+    if (!Number.isInteger(salary) || salary < 0 || salary > MAX_SALARY) errors.salary = 'Minimum salary must be between 0 and 1 crore.';
+    if (!Number.isInteger(salaryTo) || salaryTo < 0 || salaryTo > MAX_SALARY) errors.salaryTo = 'Maximum salary must be between 0 and 1 crore.';
+    if (Number.isFinite(salary) && Number.isFinite(salaryTo) && salaryTo < salary) errors.salaryTo = 'Maximum salary must be greater than or equal to minimum salary.';
     if (!form.jobLocation.trim()) errors.jobLocation = 'Please enter the job location.';
     if (!form.expiryDate || Number.isNaN(new Date(form.expiryDate).getTime())) {
       errors.expiryDate = 'Please select a valid expiry date.';
     }
+    if (!Number(form.interviewModeId)) errors.interviewModeId = 'Please select an interview mode.';
+    if (!form.interviewLocation.trim()) errors.interviewLocation = 'Please enter the interview location.';
+    if (!form.ageRange.trim()) errors.ageRange = 'Please enter the age range.';
+    if (!form.genderPreference.trim()) errors.genderPreference = 'Please select a gender preference.';
     return errors;
   };
 
@@ -474,6 +507,7 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
             <label className="form-label">Profile Header *</label>
             <input
               name="profileHeader"
+              maxLength={100}
               value={form.profileHeader}
               onChange={handleChange}
               aria-invalid={Boolean(fieldErrors.profileHeader)}
@@ -551,9 +585,11 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               <div>
                 <label className="form-label">Minimum Experience</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{1,2}"
                   name="experiance"
-                  min="0"
+                  maxLength={MAX_EXPERIENCE_DIGITS}
                   value={form.experiance}
                   onChange={handleChange}
                   aria-invalid={Boolean(fieldErrors.experiance)}
@@ -565,9 +601,11 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
               <div>
                 <label className="form-label">Maximum Experience</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{1,2}"
                   name="experianceTo"
-                  min="0"
+                  maxLength={MAX_EXPERIENCE_DIGITS}
                   value={form.experianceTo}
                   onChange={handleChange}
                   aria-invalid={Boolean(fieldErrors.experianceTo)}
@@ -589,10 +627,9 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
                 <input
                   type="text"
                   inputMode="numeric"
-                  pattern="[0-9]*"
+                  pattern="[0-9]{1,8}"
                   name="salary"
-                  min="1"
-                  step="1"
+                  maxLength={MAX_SALARY_DIGITS}
                   value={form.salary}
                   onChange={handleChange}
                   aria-invalid={Boolean(fieldErrors.salary)}
@@ -607,10 +644,9 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
                 <input
                   type="text"
                   inputMode="numeric"
-                  pattern="[0-9]*"
+                  pattern="[0-9]{1,8}"
                   name="salaryTo"
-                  min="1"
-                  step="1"
+                  maxLength={MAX_SALARY_DIGITS}
                   value={form.salaryTo}
                   onChange={handleChange}
                   aria-invalid={Boolean(fieldErrors.salaryTo)}
@@ -622,8 +658,7 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
             </div>
 
             <p className="text-[10px] text-slate-500 mt-2">
-              Salary must be greater than 0 because the API does not accept
-              zero salary values.
+              Salary values can range from 0 to ₹1,00,00,000.
             </p>
           </div>
         </div>
@@ -647,13 +682,16 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
           </div>
 
           <div>
-            <label className="form-label">Workplace</label>
+            <label className="form-label">Workplace *</label>
             <input
               name="workPlace"
               value={form.workPlace}
               onChange={handleChange}
-              className="form-input"
+              aria-invalid={Boolean(fieldErrors.workPlace)}
+              className={`form-input ${fieldErrors.workPlace ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
+              required
             />
+            <FieldError message={fieldErrors.workPlace} />
           </div>
 
           <div>
@@ -750,12 +788,14 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
           </div>
 
           <div>
-            <label className="form-label">Industry Type</label>
+            <label className="form-label">Industry Type / Specialization *</label>
             <select
               name="industryTypeId"
               value={form.industryTypeId}
               onChange={handleChange}
-              className="form-input"
+              aria-invalid={Boolean(fieldErrors.industryTypeId)}
+              className={`form-input ${fieldErrors.industryTypeId ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
+              required
             >
               <option value={0}>-- Select --</option>
               {industryTypes.map((item) => (
@@ -764,17 +804,20 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
                 </option>
               ))}
             </select>
+            <FieldError message={fieldErrors.industryTypeId} />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="form-label">Interview Mode</label>
+            <label className="form-label">Interview Mode *</label>
             <select
               name="interviewModeId"
               value={form.interviewModeId}
               onChange={handleChange}
-              className="form-input"
+              aria-invalid={Boolean(fieldErrors.interviewModeId)}
+              className={`form-input ${fieldErrors.interviewModeId ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
+              required
             >
               <option value={0}>-- Select --</option>
               {interviewModes.map((item) => (
@@ -783,16 +826,20 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
                 </option>
               ))}
             </select>
+            <FieldError message={fieldErrors.interviewModeId} />
           </div>
 
           <div>
-            <label className="form-label">Interview Location</label>
+            <label className="form-label">Interview Location *</label>
             <input
               name="interviewLocation"
               value={form.interviewLocation}
               onChange={handleChange}
-              className="form-input"
+              aria-invalid={Boolean(fieldErrors.interviewLocation)}
+              className={`form-input ${fieldErrors.interviewLocation ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
+              required
             />
+            <FieldError message={fieldErrors.interviewLocation} />
           </div>
         </div>
 
@@ -823,27 +870,33 @@ export const EditJobForm: React.FC<EditJobFormProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="form-label">Gender Preference</label>
+            <label className="form-label">Gender Preference *</label>
             <select
               name="genderPreference"
               value={form.genderPreference}
               onChange={handleChange}
-              className="form-input"
+              aria-invalid={Boolean(fieldErrors.genderPreference)}
+              className={`form-input ${fieldErrors.genderPreference ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
+              required
             >
               <option value="Any">Any</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
             </select>
+            <FieldError message={fieldErrors.genderPreference} />
           </div>
 
           <div>
-            <label className="form-label">Age Range</label>
+            <label className="form-label">Age Range *</label>
             <input
               name="ageRange"
               value={form.ageRange}
               onChange={handleChange}
-              className="form-input"
+              aria-invalid={Boolean(fieldErrors.ageRange)}
+              className={`form-input ${fieldErrors.ageRange ? '!border-red-500 !ring-2 !ring-red-100' : ''}`}
+              required
             />
+            <FieldError message={fieldErrors.ageRange} />
           </div>
 
           <div>

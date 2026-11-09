@@ -26,6 +26,10 @@ import { Alert, Toast } from '../ui/FeedbackComponents';
 import { DatePicker } from '../ui/DatePicker';
 
 const MAX_JOB_DESCRIPTION_LENGTH = 4000;
+const MAX_PROFILE_HEADER_LENGTH = 100;
+const MAX_EXPERIENCE_DIGITS = 2;
+const MAX_SALARY = 10_000_000;
+const MAX_SALARY_DIGITS = 8;
 
 interface AddJobFormProps {
   onSuccess?: (newJob: JobRequirement) => void;
@@ -61,13 +65,20 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
   const fieldLabels: Record<string, string> = {
     profileHeader: 'Profile header',
     jobDesignation: 'Designation',
+    industryTypeId: 'Specialization',
     noOfVacancy: 'Number of vacancies',
+    experiance: 'Minimum experience',
     experianceTo: 'Maximum experience',
     salary: 'Minimum salary',
     salaryTo: 'Maximum salary',
+    workPlace: 'Workplace',
     jobLocation: 'Job location',
     expiryDate: 'Expiry date',
     skill: 'Required skills',
+    interviewModeId: 'Interview mode',
+    interviewLocation: 'Interview location',
+    ageRange: 'Age range',
+    genderPreference: 'Gender preference',
     jobDiscription: 'Job description',
   };
 
@@ -85,17 +96,17 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
     profileHeader: '',
     skill: '',
     specialization: 0,
-    experiance: 0,
-    experianceTo: 1,
-    noOfVacancy: 1,
+    experiance: '0',
+    experianceTo: '1',
+    noOfVacancy: '1',
     workPlace: '',
-    salary: 0,
-    salaryTo: 0,
+    salary: '',
+    salaryTo: '',
     expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     educationId: 0,
     subEducationId: 0,
     roleTypeId: 1,
-    interviewModeId: 1,
+    interviewModeId: 0,
     interviewLocation: '',
     postingNotes: '',
     jobDiscription: '',
@@ -120,13 +131,14 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    const numericFields = [
+    const digitLimits: Record<string, number> = {
+      experiance: MAX_EXPERIENCE_DIGITS,
+      experianceTo: MAX_EXPERIENCE_DIGITS,
+      salary: MAX_SALARY_DIGITS,
+      salaryTo: MAX_SALARY_DIGITS,
+    };
+    const numericSelectFields = [
       'specialization',
-      'experiance',
-      'experianceTo',
-      'noOfVacancy',
-      'salary',
-      'salaryTo',
       'educationId',
       'subEducationId',
       'roleTypeId',
@@ -142,7 +154,11 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
 
     setForm((prev) => ({
       ...prev,
-      [name]: numericFields.includes(name) ? Number(value) : value,
+      [name]: numericSelectFields.includes(name)
+        ? Number(value)
+        : name in digitLimits
+          ? value.replace(/\D/g, '').slice(0, digitLimits[name])
+          : value,
     }));
     setFieldErrors((previous) => {
       if (!previous[name]) return previous;
@@ -159,9 +175,13 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
     const errors: Record<string, string> = {};
 
     if (!form.profileHeader.trim()) errors.profileHeader = 'Please enter the profile header.';
+    if (form.profileHeader.length > MAX_PROFILE_HEADER_LENGTH) {
+      errors.profileHeader = `Profile header must be ${MAX_PROFILE_HEADER_LENGTH} characters or fewer.`;
+    }
     if (!form.jobDesignation.trim()) {
       errors.jobDesignation = t('jobs.add.errDesignation');
     }
+    if (!Number(form.industryTypeId)) errors.industryTypeId = 'Please select a specialization.';
 
     if (!form.jobDiscription.trim() || form.jobDiscription.length < 10) {
       errors.jobDiscription = t('jobs.add.errDescription');
@@ -175,33 +195,51 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
       errors.skill = t('jobs.add.errSkills');
     }
 
-    if (!Number.isFinite(form.noOfVacancy) || form.noOfVacancy < 1) {
+    const experience = form.experiance.trim() ? Number(form.experiance) : NaN;
+    const experienceTo = form.experianceTo.trim() ? Number(form.experianceTo) : NaN;
+    const vacancy = form.noOfVacancy.trim() ? Number(form.noOfVacancy) : NaN;
+    const salary = form.salary.trim() ? Number(form.salary) : NaN;
+    const salaryTo = form.salaryTo.trim() ? Number(form.salaryTo) : NaN;
+
+    if (!Number.isInteger(experience) || experience < 0 || experience > 99) {
+      errors.experiance = 'Enter a minimum experience using 1 or 2 digits (0-99).';
+    }
+    if (!Number.isInteger(experienceTo) || experienceTo < 0 || experienceTo > 99) {
+      errors.experianceTo = 'Enter a maximum experience using 1 or 2 digits (0-99).';
+    }
+    if (Number.isFinite(experience) && Number.isFinite(experienceTo) && experienceTo < experience) {
+      errors.experianceTo = t('jobs.add.errMaxExpGtMin');
+    }
+
+    if (!Number.isFinite(vacancy) || vacancy < 1) {
       errors.noOfVacancy = 'Number of vacancies must be at least 1.';
     }
 
-    if (!Number.isFinite(form.salary) || form.salary <= 0) {
-      errors.salary = t('jobs.add.errMinSalary');
+    if (!form.workPlace.trim()) errors.workPlace = 'Please enter the workplace.';
+
+    if (!Number.isInteger(salary) || salary < 0 || salary > MAX_SALARY) {
+      errors.salary = 'Minimum salary must be between 0 and 1 crore.';
     }
 
-    if (!Number.isFinite(form.salaryTo) || form.salaryTo <= 0) {
-      errors.salaryTo = t('jobs.add.errMaxSalary');
+    if (!Number.isInteger(salaryTo) || salaryTo < 0 || salaryTo > MAX_SALARY) {
+      errors.salaryTo = 'Maximum salary must be between 0 and 1 crore.';
     }
 
-    if (form.salaryTo < form.salary) {
+    if (Number.isFinite(salary) && Number.isFinite(salaryTo) && salaryTo < salary) {
       errors.salaryTo = t('jobs.add.errMaxSalaryGteMin');
-    }
-
-    if (form.experianceTo < form.experiance) {
-      errors.experianceTo = t('jobs.add.errMaxExpGtMin');
     }
 
     if (!form.jobLocation.trim()) {
       errors.jobLocation = t('jobs.add.errLocation');
     }
 
-    if (!form.expiryDate) {
+    if (!form.expiryDate || Number.isNaN(new Date(form.expiryDate).getTime())) {
       errors.expiryDate = 'Please select an expiry date.';
     }
+    if (!Number(form.interviewModeId)) errors.interviewModeId = 'Please select an interview mode.';
+    if (!form.interviewLocation.trim()) errors.interviewLocation = 'Please enter the interview location.';
+    if (!form.ageRange.trim()) errors.ageRange = 'Please enter the age range.';
+    if (!form.genderPreference.trim()) errors.genderPreference = 'Please select a gender preference.';
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -216,6 +254,9 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
         specialization: Number(form.industryTypeId) || 1,
         userId: numericUserId,
         createdBy: numericUserId,
+        experiance: Number(form.experiance),
+        experianceTo: Number(form.experianceTo),
+        noOfVacancy: Number(form.noOfVacancy),
         salary: Number(form.salary),
         salaryTo: Number(form.salaryTo),
         expiryDate: new Date(form.expiryDate).toISOString(),
@@ -267,10 +308,11 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
       <form noValidate onSubmit={handleSubmit} className="space-y-6">
         {/* Core Info Row */}
         <div className="bg-slate-50/55 p-4 rounded-xl border border-slate-100">
-          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.profileHeader')}</label>
+          <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.profileHeader')} *</label>
           <input
             type="text"
             name="profileHeader"
+            maxLength={MAX_PROFILE_HEADER_LENGTH}
             placeholder="e.g. Hiring experienced web programmers / Urgent Need of Drivers"
             value={form.profileHeader}
             onChange={handleChange}
@@ -279,6 +321,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             required
           />
           {fieldErrors.profileHeader && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.profileHeader}</p>}
+          <p className="mt-1 text-right text-[10px] text-slate-400">{form.profileHeader.length}/{MAX_PROFILE_HEADER_LENGTH}</p>
         </div>
 
         {/* Designation, Vacancies & Role Type */}
@@ -338,20 +381,26 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
               <div>
                 <label className="block text-[10px] text-slate-500 mb-1">{t('jobs.add.minExperience')}</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{1,2}"
                   name="experiance"
-                  min="0"
+                  maxLength={MAX_EXPERIENCE_DIGITS}
                   value={form.experiance}
                   onChange={handleChange}
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-orange-500"
+                  aria-invalid={Boolean(fieldErrors.experiance)}
+                  className={`w-full text-xs p-2.5 rounded-lg border bg-white focus:outline-none focus:border-orange-500 ${fieldErrors.experiance ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
                 />
+                {fieldErrors.experiance && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.experiance}</p>}
               </div>
               <div>
                 <label className="block text-[10px] text-slate-500 mb-1">{t('jobs.add.maxExperience')}</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{1,2}"
                   name="experianceTo"
-                  min="0"
+                  maxLength={MAX_EXPERIENCE_DIGITS}
                   value={form.experianceTo}
                   onChange={handleChange}
                   aria-invalid={Boolean(fieldErrors.experianceTo)}
@@ -371,10 +420,9 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                 <input
                   type="text"
                   inputMode="numeric"
-                  pattern="[0-9]*"
+                  pattern="[0-9]{1,8}"
                   name="salary"
-                  min="1"
-                  step="1"
+                  maxLength={MAX_SALARY_DIGITS}
                   value={form.salary}
                   onChange={handleChange}
                   aria-invalid={Boolean(fieldErrors.salary)}
@@ -387,10 +435,9 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                 <input
                   type="text"
                   inputMode="numeric"
-                  pattern="[0-9]*"
+                  pattern="[0-9]{1,8}"
                   name="salaryTo"
-                  min="1"
-                  step="1"
+                  maxLength={MAX_SALARY_DIGITS}
                   value={form.salaryTo}
                   onChange={handleChange}
                   aria-invalid={Boolean(fieldErrors.salaryTo)}
@@ -399,6 +446,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                 {fieldErrors.salaryTo && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.salaryTo}</p>}
               </div>
             </div>
+            <p className="mt-2 text-[10px] text-slate-500">Salary values can range from 0 to ₹1,00,00,000.</p>
           </div>
         </div>
 
@@ -421,15 +469,18 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.workplaceType')}</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.workplaceType')} *</label>
             <input
               type="text"
               name="workPlace"
               placeholder="e.g. Office Building, On-field, Workshop"
               value={form.workPlace}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              aria-invalid={Boolean(fieldErrors.workPlace)}
+              className={`w-full text-xs p-2.5 rounded-lg border focus:border-orange-500 focus:outline-none transition-all ${fieldErrors.workPlace ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
+              required
             />
+            {fieldErrors.workPlace && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.workPlace}</p>}
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.jobLocation')}</label>
@@ -526,12 +577,14 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.industryType')}</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">Specialization / {t('jobs.add.industryType')} *</label>
             <select
               name="industryTypeId"
               value={form.industryTypeId}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+              aria-invalid={Boolean(fieldErrors.industryTypeId)}
+              className={`w-full text-xs p-2.5 rounded-lg border focus:border-orange-500 focus:outline-none transition-all bg-white ${fieldErrors.industryTypeId ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
+              required
             >
               <option value={0}>-- Select --</option>
               {industryTypes.map((it) => (
@@ -540,6 +593,7 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                 </option>
               ))}
             </select>
+            {fieldErrors.industryTypeId && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.industryTypeId}</p>}
           </div>
         </div>
 
@@ -548,12 +602,14 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
           <span className="block text-xs font-extrabold text-slate-800 border-b border-slate-100 pb-1.5">{t('jobs.add.interviewDetails')}</span>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.interviewMode')}</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.interviewMode')} *</label>
               <select
                 name="interviewModeId"
                 value={form.interviewModeId}
                 onChange={handleChange}
-                className="w-full text-xs p-2.5 bg-white rounded-lg border border-slate-200 focus:outline-none focus:border-orange-500"
+                aria-invalid={Boolean(fieldErrors.interviewModeId)}
+                className={`w-full text-xs p-2.5 bg-white rounded-lg border focus:outline-none focus:border-orange-500 ${fieldErrors.interviewModeId ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
+                required
               >
                 <option value={0}>-- Select --</option>
                 {interviewModes.map((im) => (
@@ -562,17 +618,21 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
                   </option>
                 ))}
               </select>
+              {fieldErrors.interviewModeId && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.interviewModeId}</p>}
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.interviewLocation')}</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.interviewLocation')} *</label>
               <input
                 type="text"
                 name="interviewLocation"
                 placeholder="e.g. Corporate Office, Zoom Link, Telephonic"
                 value={form.interviewLocation}
                 onChange={handleChange}
-                className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none"
+                aria-invalid={Boolean(fieldErrors.interviewLocation)}
+                className={`w-full text-xs p-2.5 rounded-lg border focus:border-orange-500 focus:outline-none ${fieldErrors.interviewLocation ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
+                required
               />
+              {fieldErrors.interviewLocation && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.interviewLocation}</p>}
             </div>
           </div>
         </div>
@@ -608,27 +668,33 @@ export const AddJobForm: React.FC<AddJobFormProps> = ({ onSuccess, onCancel }) =
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.genderPreference')}</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.genderPreference')} *</label>
             <select
               name="genderPreference"
               value={form.genderPreference}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all bg-white"
+              aria-invalid={Boolean(fieldErrors.genderPreference)}
+              className={`w-full text-xs p-2.5 rounded-lg border focus:border-orange-500 focus:outline-none transition-all bg-white ${fieldErrors.genderPreference ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
+              required
             >
               <option value="Any">{t('jobs.add.anyGender')}</option>
               <option value="Male">{t('jobs.add.male')}</option>
               <option value="Female">{t('jobs.add.female')}</option>
             </select>
+            {fieldErrors.genderPreference && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.genderPreference}</p>}
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.ageRange')}</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.ageRange')} *</label>
             <input
               type="text"
               name="ageRange"
               value={form.ageRange}
               onChange={handleChange}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-orange-500 focus:outline-none transition-all"
+              aria-invalid={Boolean(fieldErrors.ageRange)}
+              className={`w-full text-xs p-2.5 rounded-lg border focus:border-orange-500 focus:outline-none transition-all ${fieldErrors.ageRange ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
+              required
             />
+            {fieldErrors.ageRange && <p className="mt-1 text-[11px] font-semibold text-red-600" role="alert">{fieldErrors.ageRange}</p>}
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('jobs.add.salaryPeriod')}</label>

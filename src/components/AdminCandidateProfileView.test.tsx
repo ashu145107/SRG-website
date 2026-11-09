@@ -25,12 +25,15 @@ jest.mock('../services/adminApi', () => ({
   useGetAdminCandidateDetailQuery: jest.fn(),
 }));
 
-jest.mock('../services/profileApi', () => ({
-  logProfileDownload: jest.fn(),
+jest.mock('../services/axiosInstance', () => ({
+  __esModule: true,
+  default: { get: jest.fn() },
 }));
 
 import { useGetAdminCandidateDetailQuery } from '../services/adminApi';
+import axiosInstance from '../services/axiosInstance';
 const mockUseGetAdminCandidateDetailQuery = useGetAdminCandidateDetailQuery as jest.Mock;
+const mockAxiosGet = axiosInstance.get as jest.Mock;
 
 describe('AdminCandidateProfileView', () => {
   beforeEach(() => {
@@ -107,42 +110,46 @@ describe('AdminCandidateProfileView', () => {
       error: undefined,
     });
 
-    const originalFetch = global.fetch;
     const createObjectURLDescriptor = Object.getOwnPropertyDescriptor(URL, 'createObjectURL');
     const revokeObjectURLDescriptor = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL');
     const anchorClickDescriptor = Object.getOwnPropertyDescriptor(HTMLAnchorElement.prototype, 'click');
-    const fetchMock = jest.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      blob: async () => new Blob(['resume']),
-    });
     const createObjectURL = jest.fn().mockReturnValue('blob:resume');
+    const downloadedNames: string[] = [];
 
-    global.fetch = fetchMock as typeof fetch;
+    mockAxiosGet.mockResolvedValue({ data: new Blob(['resume']) });
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: jest.fn() });
-    Object.defineProperty(HTMLAnchorElement.prototype, 'click', { configurable: true, value: jest.fn() });
+    Object.defineProperty(HTMLAnchorElement.prototype, 'click', {
+      configurable: true,
+      value: jest.fn(function (this: HTMLAnchorElement) {
+        downloadedNames.push(this.download);
+      }),
+    });
 
     try {
       renderWithProviders(<AdminCandidateProfileView candidateId="123" />);
       await userEvent.click(screen.getByText('Resume / CV'));
 
-      const previewLink = screen.getByRole('link', { name: /preview/i });
-      expect(previewLink).toHaveAttribute(
-        'href',
-        'https://srgapp.dindoripranit.org/Uploads/Resume/john.pdf'
+      expect(screen.queryByRole('link', { name: /preview/i })).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /preview/i }));
+      await waitFor(() => expect(screen.getByRole('dialog', { name: 'Resume preview' })).toBeInTheDocument());
+      expect(mockAxiosGet).toHaveBeenLastCalledWith(
+        `${window.location.origin}/resume-file/Uploads/Resume/john.pdf`,
+        { responseType: 'blob' }
       );
-      expect(previewLink).toHaveAttribute('target', '_blank');
+      expect(screen.getByTitle('Resume preview')).toHaveAttribute('src', 'blob:resume');
 
       await userEvent.click(screen.getByRole('button', { name: 'Download' }));
       await waitFor(() => {
-        expect(fetchMock).toHaveBeenCalledWith(
-          'https://srgapp.dindoripranit.org/Uploads/Resume/john.pdf'
+        expect(mockAxiosGet).toHaveBeenLastCalledWith(
+          `${window.location.origin}/resume-file/Uploads/Resume/john.pdf`,
+          { responseType: 'blob' }
         );
       });
-      expect(createObjectURL).toHaveBeenCalled();
+      expect(downloadedNames).toEqual(['John_Doe.pdf']);
+      expect(createObjectURL).toHaveBeenCalledTimes(2);
     } finally {
-      global.fetch = originalFetch;
+      mockAxiosGet.mockReset();
       if (createObjectURLDescriptor) {
         Object.defineProperty(URL, 'createObjectURL', createObjectURLDescriptor);
       } else {

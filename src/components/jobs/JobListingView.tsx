@@ -19,7 +19,6 @@ import {
   ChevronRight,
   SlidersHorizontal,
   MapPin,
-  IndianRupee,
   Building2,
   CalendarDays,
   Loader2,
@@ -225,22 +224,10 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
 
   // Derived display rows shared by the list and table layouts
   const mappedJobs = React.useMemo(() => {
-    const fmt = (v: any) => {
-      const n = Number(v);
-      if (!n) return '';
-      return n >= 100000 ? `${n / 100000} L` : `${n}`;
-    };
     return filteredAndSortedJobs.map((job: any, index: number) => {
       const jobIdNum = Number(job.id);
       const hasValidJobId = Number.isSafeInteger(jobIdNum) && jobIdNum > 0;
       const jobKey = job.jobCode || String(job.id || `job-row-${index}`);
-      const salaryFrom = fmt(job.salary);
-      const salaryTo = fmt(job.salaryTo);
-      const salaryText = salaryFrom && salaryTo
-        ? `₹${salaryFrom} - ₹${salaryTo}`
-        : salaryFrom
-          ? `₹${salaryFrom}`
-          : '—';
       const expiry = formatDateOnly(job.expiryDate);
       const apiStatus = String(job.userJobStatus || '').trim();
       const isApplied = apiStatus
@@ -256,10 +243,6 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
         isApplying: applyingIds.has(jobIdNum),
         designation: job.profileHeader || job.jobDesignation || 'N/A',
         workPlace: job.workPlace || job.jobLocation || '—',
-        experience: job.experiance != null || job.experianceTo != null
-          ? `${job.experiance ?? ''} - ${job.experianceTo ?? ''} yrs`
-          : '—',
-        salaryText,
         expiry,
       };
     });
@@ -449,9 +432,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                       <th className="px-4 py-3 whitespace-nowrap">Job Code</th>
                       <th className="px-4 py-3">Designation</th>
                       <th className="px-4 py-3">Company</th>
-                      <th className="px-4 py-3">Location</th>
-                      <th className="px-4 py-3 whitespace-nowrap">Experience</th>
-                      <th className="px-4 py-3 whitespace-nowrap">Salary</th>
+                      <th className="px-4 py-3">Workplace</th>
                       <th className="px-4 py-3 whitespace-nowrap">Last Date</th>
                       <th className="px-4 py-3 text-right whitespace-nowrap">Actions</th>
                     </tr>
@@ -477,8 +458,6 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                         </td>
                         <td className="px-4 py-3 font-semibold text-slate-700">{row.job.companyName || 'N/A'}</td>
                         <td className="px-4 py-3 text-slate-600">{row.workPlace}</td>
-                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.experience}</td>
-                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.salaryText}</td>
                         <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{row.expiry || '—'}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-2">
@@ -535,7 +514,7 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
             </div>
           ) : (
           <div className="space-y-3">
-            {mappedJobs.map(({ job, jobIdNum, jobKey, hasValidJobId, isApplied, applicationStatus, isApplying, designation, workPlace, experience, salaryText, expiry }) => {
+            {mappedJobs.map(({ job, jobIdNum, jobKey, hasValidJobId, isApplied, applicationStatus, isApplying, designation, workPlace, expiry }) => {
               return (
                 <div
                   key={jobKey}
@@ -576,13 +555,6 @@ export const JobListingView: React.FC<JobListingViewProps> = ({
                     </div>
                   )}
                   <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 border-t border-slate-100 pt-3 text-xs sm:grid-cols-3">
-                    <span className="flex min-w-0 items-center gap-1.5 font-semibold text-slate-700">
-                      <span className="truncate">{experience}</span>
-                    </span>
-                    <span className="flex min-w-0 items-center gap-1.5 font-semibold text-slate-700">
-                      <IndianRupee className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                      <span className="truncate">{salaryText}</span>
-                    </span>
                     {expiry && (
                       <span className="flex min-w-0 items-center gap-1.5 font-semibold text-slate-700">
                         <CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400" />

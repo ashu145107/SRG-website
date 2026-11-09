@@ -2351,7 +2351,7 @@ function CompanyEmployerDashboard({
                             })()}
                           </div>
                         </div>
-                        {/* Interactive Status dropdown + Resume */}
+                        {/* Applicant status controls */}
                         <div className="flex flex-wrap gap-2 items-center">
                           <label className="text-[10px] font-bold text-slate-500 uppercase">Status:</label>
                           <select
@@ -2368,12 +2368,6 @@ function CompanyEmployerDashboard({
                               Note: {app.remarks}
                             </span>
                           )}
-                          <button
-                            onClick={() => setToastMsg('Mock Resume Download complete! (Rahul_Resume.pdf)')}
-                            className="ml-auto flex items-center gap-1 px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-850 text-[10px] font-bold rounded-lg cursor-pointer"
-                          >
-                            <FileText className="w-3.5 h-3.5" /> CV / Resume
-                          </button>
                         </div>
                       </div>
                     ))

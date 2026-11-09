@@ -49,6 +49,60 @@ async function startServer() {
       req.on('error', reject);
     });
 
+  app.all('/resume-file/*', async (req, res) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      res.sendStatus(405);
+      return;
+    }
+
+    const authorization = req.headers.authorization;
+    const token = req.headers.token;
+    if (!authorization && !token) {
+      res.sendStatus(401);
+      return;
+    }
+
+    let upstreamPath: string;
+    try {
+      upstreamPath = decodeURIComponent(req.path).replace(/^\/resume-file/, '');
+    } catch {
+      res.sendStatus(400);
+      return;
+    }
+    if (!/^\/Uploads\/(?:CV|Resume)\/[A-Za-z0-9._-]+$/i.test(upstreamPath)
+      || upstreamPath.split('/').some((part) => part === '..')) {
+      res.sendStatus(400);
+      return;
+    }
+
+    const headers: Record<string, string> = { Accept: req.headers.accept || '*/*' };
+    if (authorization) headers.Authorization = authorization;
+    if (token) headers.token = String(token);
+
+    try {
+      const upstream = await fetchWithRetry(`${PROXY_TARGET}${upstreamPath}`, {
+        method: req.method,
+        headers,
+      });
+      res.status(upstream.status);
+      const contentType = upstream.headers.get('content-type');
+      if (contentType) res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'private, no-store');
+      if (req.method === 'HEAD') {
+        res.end();
+        return;
+      }
+      res.send(Buffer.from(await upstream.arrayBuffer()));
+    } catch (error: any) {
+      console.error(`[Resume Proxy Error] ${upstreamPath}:`, error.message || error);
+      res.status(502).json({
+        isSuccess: false,
+        isFailure: true,
+        error: { code: 'ResumeProxyError', message: 'Unable to retrieve the resume file.' },
+      });
+    }
+  });
+
   // Proxy all /api/v1/* requests to srgapp backend server to bypass browser CORS checks
   app.all('/api/v1/*', async (req, res) => {
     const targetUrl = `${PROXY_TARGET}${req.originalUrl}`;

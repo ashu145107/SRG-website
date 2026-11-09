@@ -122,6 +122,18 @@ export default defineConfig(() => {
     },
     server: {
       proxy: {
+        '/resume-file': {
+          target: BACKEND_TARGET,
+          changeOrigin: true,
+          secure: false,
+          agent: backendAgent,
+          rewrite: (requestPath) => requestPath.replace(/^\/resume-file/, ''),
+          configure: (proxy) => {
+            proxy.on('error', (err: any, req: IncomingMessage, res: ServerResponse) => {
+              handleProxyError(proxy, err, req, res);
+            });
+          },
+        },
         '/api/v1': {
           target: BACKEND_TARGET,
           changeOrigin: true,

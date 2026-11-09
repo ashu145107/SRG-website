@@ -289,6 +289,62 @@ describe('EditJobForm', () => {
     expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 
+  it('keeps cleared or malformed numeric inputs editable and blocks invalid values', async () => {
+    const { container } = renderWithProviders(<EditJobForm jobId={5} />);
+
+    fireEvent.change(container.querySelector('[name="salary"]') as HTMLElement, {
+      target: { value: '18x000' },
+    });
+    fireEvent.change(container.querySelector('[name="experiance"]') as HTMLElement, {
+      target: { value: '' },
+    });
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    expect((await screen.findAllByText('Enter a minimum experience using 1 or 2 digits (0-99).')).length).toBeGreaterThan(0);
+    expect((container.querySelector('[name="salary"]') as HTMLInputElement).value).toBe('18000');
+    expect((container.querySelector('[name="experiance"]') as HTMLInputElement).value).toBe('');
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('accepts zero salary through one crore and limits experience to two digits', async () => {
+    const { container } = renderWithProviders(<EditJobForm jobId={5} />);
+    fireEvent.change(container.querySelector('[name="salary"]') as HTMLElement, {
+      target: { value: '0' },
+    });
+    fireEvent.change(container.querySelector('[name="salaryTo"]') as HTMLElement, {
+      target: { value: '10000000' },
+    });
+    fireEvent.change(container.querySelector('[name="experiance"]') as HTMLElement, {
+      target: { value: '12' },
+    });
+    fireEvent.change(container.querySelector('[name="experianceTo"]') as HTMLElement, {
+      target: { value: '99' },
+    });
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
+    expect(mockMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ salary: 0, salaryTo: 10000000, experiance: 12, experianceTo: 99 })
+    );
+    expect(container.querySelector('[name="experiance"]')).toHaveAttribute('type', 'text');
+    expect(container.querySelector('[name="experiance"]')).toHaveAttribute('maxLength', '2');
+  });
+
+  it('rejects salary above one crore', async () => {
+    const { container } = renderWithProviders(<EditJobForm jobId={5} />);
+    fireEvent.change(container.querySelector('[name="salary"]') as HTMLElement, {
+      target: { value: '10000001' },
+    });
+    fireEvent.change(container.querySelector('[name="salaryTo"]') as HTMLElement, {
+      target: { value: '10000001' },
+    });
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    expect((await screen.findAllByText('Minimum salary must be between 0 and 1 crore.')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Maximum salary must be between 0 and 1 crore.').length).toBeGreaterThan(0);
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
   it('submits the edited job and shows the success toast', async () => {
     const { container } = renderWithProviders(<EditJobForm jobId={5} />);
 
