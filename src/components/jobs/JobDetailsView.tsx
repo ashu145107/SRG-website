@@ -119,7 +119,10 @@ export const JobDetailsView: React.FC<JobDetailsViewProps> = ({
   const handleConfirmApply = async () => {
     setShowConfirm(false);
     try {
-      const jobIdentifier = String(job?.id ?? jobId);
+      const jobIdentifier = job?.jobCode || jobCode;
+      if (!jobIdentifier) {
+        throw new Error(t('jobs.detail.applyError'));
+      }
       const response: any = await applyJob([jobIdentifier]);
 
       if (response && (response.isSuccess === false || response.success === false)) {

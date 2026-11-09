@@ -14,6 +14,8 @@ import { useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { RootState } from '../store';
 import { useGetMyProfileQuery, uploadProfilePic, uploadResume, bustProfileImageCache, updateUserPersonalInfo, updateUserEducationInfo } from '../services/profileApi';
+import { getApiBaseUrl } from '../services/baseApi';
+import axiosInstance from '../services/axiosInstance';
 import { useGetJobTypesQuery, useGetShiftTypesQuery, useGetWorkModesQuery } from '../services/jobMasterApi';
 import { useGetStatesQuery, useGetDistrictsQuery, useGetTalukasQuery, useGetEducationsListQuery, useGetSubEducationsListQuery, GenericMasterItem, getLocalizedName } from '../services/masterApi';
 import { Toast } from '../components/ui/FeedbackComponents';
@@ -318,6 +320,10 @@ export default function ProfilePage() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeUploading, setResumeUploading] = useState(false);
   const resumeInputRef = useRef<HTMLInputElement>(null);
+  // Resume preview state (proxy + blob so the raw file URL is never exposed)
+  const [isPreviewingResume, setIsPreviewingResume] = useState(false);
+  const [resumePreviewUrl, setResumePreviewUrl] = useState('');
+  const resumePreviewUrlRef = useRef('');
 
   // Basic details edit state
   const [detailsEditing, setDetailsEditing] = useState(false);
@@ -415,6 +421,11 @@ export default function ProfilePage() {
     subEducations,
   ]);
 
+  // Revoke the resume preview blob URL on unmount so memory is released.
+  useEffect(() => () => {
+    if (resumePreviewUrlRef.current) URL.revokeObjectURL(resumePreviewUrlRef.current);
+  }, []);
+
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-800 antialiased font-sans">
@@ -430,6 +441,62 @@ export default function ProfilePage() {
     const fallback = type === 'success' ? 'Operation successful.' : 'Something went wrong.';
     setToastMsg(message && message.trim() ? message : fallback);
     setToastType(type);
+  };
+
+  const revokeResumePreviewUrl = () => {
+    if (resumePreviewUrlRef.current) {
+      URL.revokeObjectURL(resumePreviewUrlRef.current);
+      resumePreviewUrlRef.current = '';
+    }
+  };
+
+  const fetchResumeBlob = async (url: string): Promise<Blob> => {
+    if (!url) throw new Error('No resume available.');
+    const apiBase = getApiBaseUrl();
+    const apiOrigin = apiBase
+      ? new URL(apiBase, window.location.origin).origin
+      : window.location.origin;
+    const productionApiOrigin = new URL('https://srgapp.dindoripranit.org').origin;
+
+    let resumeUrl: URL;
+    try {
+      resumeUrl = new URL(url, `${apiOrigin}/`);
+    } catch {
+      throw new Error('Resume files must be hosted by the SRG API.');
+    }
+
+    if (resumeUrl.origin !== apiOrigin && resumeUrl.origin !== productionApiOrigin) {
+      throw new Error('Resume files must be hosted by the SRG API.');
+    }
+
+    const proxyUrl = new URL(`/resume-file${resumeUrl.pathname}`, window.location.origin);
+    const response = await axiosInstance.get<Blob>(proxyUrl.toString(), {
+      responseType: 'blob',
+    });
+    if (!response.data.size) {
+      throw new Error('The resume file is empty.');
+    }
+    return response.data;
+  };
+
+  const previewResume = async (url: string) => {
+    setIsPreviewingResume(true);
+    try {
+      const blob = await fetchResumeBlob(url);
+      revokeResumePreviewUrl();
+      const objectUrl = URL.createObjectURL(blob);
+      resumePreviewUrlRef.current = objectUrl;
+      setResumePreviewUrl(objectUrl);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Unable to preview resume.', 'error');
+    } finally {
+      setIsPreviewingResume(false);
+    }
+  };
+
+  const closeResumePreview = () => {
+    revokeResumePreviewUrl();
+    setResumePreviewUrl('');
   };
 
   // Client-side upload limits enforced per stated profile upload policy (1 MB).
@@ -1502,15 +1569,11 @@ export default function ProfilePage() {
                   <FileText className="w-8 h-8 text-blue-600 shrink-0" />
                   <p className="text-sm font-bold text-blue-900 truncate flex-1 min-w-0">My Resume</p>
                   <button
-                    onClick={() => {
-                      const win = window.open(profile.resumeUrl, '_blank');
-                      if (!win) {
-                        showToast('Popup blocked. Please allow pop-ups to view your resume.', 'error');
-                      }
-                    }}
-                    className="px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5 shrink-0"
+                    onClick={() => void previewResume(profile.resumeUrl || '')}
+                    disabled={isPreviewingResume}
+                    className="px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5 shrink-0 disabled:opacity-50"
                   >
-                    <Eye className="w-3.5 h-3.5" /> View
+                    <Eye className="w-3.5 h-3.5" /> {isPreviewingResume ? 'Loading...' : 'View'}
                   </button>
                 </div>
               ) : (
@@ -1590,6 +1653,34 @@ export default function ProfilePage() {
 
         </div>
       </main>
+
+      {/* Resume preview (blob URL via /resume-file proxy — raw file URL hidden) */}
+      {resumePreviewUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Resume preview"
+          onClick={closeResumePreview}
+        >
+          <div
+            className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <span className="text-sm font-bold text-slate-800">Resume preview</span>
+              <button
+                type="button"
+                onClick={closeResumePreview}
+                className="rounded-lg px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100"
+              >
+                Close
+              </button>
+            </div>
+            <iframe title="Resume preview" src={resumePreviewUrl} className="min-h-0 flex-1" />
+          </div>
+        </div>
+      )}
 
       {/* Toast */}
       {toastMsg && (

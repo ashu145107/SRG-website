@@ -159,7 +159,7 @@ describe('JobDetailsView', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Yes, Apply/ }));
 
-    await waitFor(() => expect(mockApplyAsync).toHaveBeenCalledWith(['10']));
+    await waitFor(() => expect(mockApplyAsync).toHaveBeenCalledWith(['JOB-10']));
     expect(await screen.findByText('Application submitted')).toBeInTheDocument();
   });
 

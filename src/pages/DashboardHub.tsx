@@ -2929,10 +2929,14 @@ function CandidateSeekerDashboard({ candidateId, setToastMsg }: { candidateId: s
     'applicationdate', 'appliedat', 'company', 'companyname', 'jobcode',
     'jobdesignation', 'jobtitle', 'profileheader', 'status', 'applicationstatus', 'title'
   ]);
+  const applicationDetailHiddenKeys = new Set([
+    'applicationid', 'jobapplicationid', 'jobid', 'requirementid', 'userid', 'candidateid'
+  ]);
   const selectedApplicationDetails = selectedApplication
-    ? applicationDetailEntries(selectedApplication).filter(
-      (entry) => !applicationDetailSummaryKeys.has(entry.label.replace(/[^a-z0-9]/gi, '').toLowerCase())
-    )
+    ? applicationDetailEntries(selectedApplication).filter((entry) => {
+      const normalizedLabel = entry.label.replace(/[^a-z0-9]/gi, '').toLowerCase();
+      return !applicationDetailSummaryKeys.has(normalizedLabel) && !applicationDetailHiddenKeys.has(normalizedLabel);
+    })
     : [];
   const formatApplicationDate = (value: string): string => {
     const date = new Date(value);

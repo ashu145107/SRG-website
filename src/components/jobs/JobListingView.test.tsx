@@ -187,7 +187,7 @@ describe('JobListingView', () => {
 
     await userEvent.click(applyButtons[0]);
 
-    await waitFor(() => expect(mockApplyAsync).toHaveBeenCalledWith(['2']));
+    await waitFor(() => expect(mockApplyAsync).toHaveBeenCalledWith(['JOB-2']));
   });
 
   it('shows the API error when quick apply fails', async () => {

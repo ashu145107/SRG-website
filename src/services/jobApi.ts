@@ -61,6 +61,7 @@ export const jobApi = baseApi.injectEndpoints({
                 companyName: item.companyName || '',
                 companyId: String(item.companyId || item.userId || ''),
                 location: item.jobLocation || item.workPlace || '',
+                workPlace: item.workPlace || item.jobLocation || item.location || item.city || '',
                 salary: item.salary != null ? String(item.salary) : '',
                 description: item.jobDiscription || item.jobDescription || '',
                 requirements: Array.isArray(skill) ? skill : String(skill).split(',').map((s: string) => s.trim()).filter(Boolean),
