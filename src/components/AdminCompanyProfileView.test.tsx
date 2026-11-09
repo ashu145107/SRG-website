@@ -22,14 +22,27 @@ jest.mock('../services/baseApi', () => ({
 
 jest.mock('../services/adminApi', () => ({
   useGetAdminCompanyDetailQuery: jest.fn(),
+  useGetCompanyRequirementsQuery: jest.fn(),
 }));
 
-import { useGetAdminCompanyDetailQuery } from '../services/adminApi';
+jest.mock('./jobs/CompanyProfileJobDetails', () => ({
+  CompanyProfileJobDetails: ({ requirementId, jobCode }: { requirementId: number; jobCode?: string }) =>
+    require('react').createElement('div', { 'data-testid': 'company-profile-job-details' }, `details:${requirementId}:${jobCode}`),
+}));
+
+import { useGetAdminCompanyDetailQuery, useGetCompanyRequirementsQuery } from '../services/adminApi';
 const mockUseGetAdminCompanyDetailQuery = useGetAdminCompanyDetailQuery as jest.Mock;
+const mockUseGetCompanyRequirementsQuery = useGetCompanyRequirementsQuery as jest.Mock;
 
 describe('AdminCompanyProfileView', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseGetCompanyRequirementsQuery.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
   });
 
   it('renders loading state', () => {
@@ -80,6 +93,69 @@ describe('AdminCompanyProfileView', () => {
     expect(screen.getAllByText('John Smith').length).toBeGreaterThan(0);
     expect(screen.queryByText(/Approved|Pending Approval|Status/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/company profile for ID|ID:\s*123/i)).not.toBeInTheDocument();
+  });
+
+  it('renders the company job requirements table', async () => {
+    mockUseGetAdminCompanyDetailQuery.mockReturnValue({
+      data: {
+        companyName: 'Test Corp',
+        email: 'contact@testcorp.com',
+      },
+      isLoading: false,
+      isFetching: false,
+      refetch: jest.fn(),
+    });
+    mockUseGetCompanyRequirementsQuery.mockReturnValue({
+      data: [
+        {
+          requirementId: 1487,
+          profileHeader: 'HEAVY VEHICLE DRIVER',
+          jobCode: 'RG23212',
+          companyName: 'Test Corp',
+          email: 'contact@testcorp.com',
+          workPlace: 'Pune',
+          skill: 'HEAVY VEHICLE DRIVER',
+        },
+      ],
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
+
+    renderWithProviders(<AdminCompanyProfileView companyId="123" />);
+
+    expect((await screen.findAllByText('HEAVY VEHICLE DRIVER')).length).toBeGreaterThan(0);
+    expect(screen.getByText('RG23212')).toBeInTheDocument();
+    expect(screen.queryByText('1487')).not.toBeInTheDocument();
+    expect(screen.getByText('Job Requirements')).toBeInTheDocument();
+  });
+
+  it('opens job details with applied applicants when the job code is clicked', async () => {
+    mockUseGetAdminCompanyDetailQuery.mockReturnValue({
+      data: { companyName: 'Test Corp' },
+      isLoading: false,
+      isFetching: false,
+      refetch: jest.fn(),
+    });
+    mockUseGetCompanyRequirementsQuery.mockReturnValue({
+      data: [
+        {
+          requirementId: 1487,
+          profileHeader: 'HEAVY VEHICLE DRIVER',
+          jobCode: 'RG23212',
+        },
+      ],
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
+
+    renderWithProviders(<AdminCompanyProfileView companyId="123" />);
+
+    const jobCodeButton = await screen.findByRole('button', { name: 'RG23212' });
+    fireEvent.click(jobCodeButton);
+
+    expect(screen.getByTestId('company-profile-job-details')).toHaveTextContent('details:1487:RG23212');
   });
 
   it('handles try again action', async () => {

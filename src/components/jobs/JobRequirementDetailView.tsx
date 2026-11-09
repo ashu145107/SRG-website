@@ -47,6 +47,16 @@ export function JobRequirementDetailView({ requirementId, jobCode: requestedJobC
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [applicationSearch, setApplicationSearch] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobile(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
 
   const id = Number(requirementId || 0);
 
@@ -231,6 +241,58 @@ export function JobRequirementDetailView({ requirementId, jobCode: requestedJobC
             ) : filteredItems.length === 0 ? (
               <div className="px-4 py-10 text-center text-sm font-medium text-theme-darkViolet/50">
                 No applications match your search or selected statuses.
+              </div>
+            ) : isMobile ? (
+              <div className="divide-y divide-theme-lightViolet/60">
+                {filteredItems.map((app: any, index: number) => {
+                  const candidateId = app?.candidateId || app?.userId || app?.applicantId || app?.id || index + 1;
+                  return (
+                    <div key={app?.id || index} className="space-y-3 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">#{index + 1}</p>
+                          <p className="mt-0.5 break-words text-sm font-bold text-slate-800">
+                            {app?.candidateName || app?.fullName || app?.name || 'N/A'}
+                          </p>
+                          <p className="mt-0.5 break-words text-xs font-medium text-slate-500">
+                            {app?.candidatePhone || app?.phone || app?.mobile || app?.mobileNo || app?.mobile_number || app?.phoneNumber || app?.contactNumber || 'N/A'}
+                          </p>
+                        </div>
+                        <span className="inline-flex shrink-0 rounded-full bg-theme-lightViolet/60 px-2.5 py-1 text-[11px] font-bold text-theme-darkViolet">
+                          {app?.status || app?.applicationStatus || 'Applied'}
+                        </span>
+                      </div>
+                      <div className="flex items-end justify-between gap-3 border-t border-slate-100 pt-3">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('jobs.req.appliedOn')}</p>
+                          <p className="mt-0.5 text-xs font-medium text-slate-600">
+                            {formatDateOnly(app?.appliedAt || app?.createdDate || app?.applicationDate) || 'N/A'}
+                          </p>
+                        </div>
+                        <a
+                          href="#/dashboard"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            void openEncryptedRouteInNewTab('/dashboard', {
+                              view: 'candidate',
+                              id: String(candidateId),
+                              from: 'jobRequirement',
+                              fromId: String(id),
+                              fromCode: jobCode === '-' ? '' : jobCode,
+                            }, token || '').catch((error: unknown) => {
+                              window.alert(error instanceof Error ? error.message : 'Unable to open applicant details.');
+                            });
+                          }}
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-blue-700"
+                          title={t('jobs.req.viewCandidate')}
+                          aria-label={t('jobs.req.viewCandidate')}
+                        >
+                          <Eye className="h-3.5 w-3.5" /> {t('jobs.req.viewCandidate')}
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="srg-scroll max-h-[70vh] overflow-x-auto overflow-y-auto rounded-xl border border-slate-150">

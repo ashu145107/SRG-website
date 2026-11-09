@@ -304,4 +304,27 @@ describe('JobRequirementDetailView', () => {
 
     expect(screen.getByText(/Updating/)).toBeInTheDocument();
   });
+
+  it('renders applicant cards instead of the table on mobile', async () => {
+    const originalMatchMedia = (window as any).matchMedia;
+    (window as any).matchMedia = jest.fn().mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    }));
+    try {
+      renderWithProviders(<JobRequirementDetailView requirementId={1482} />);
+
+      expect(await screen.findByText('#1')).toBeInTheDocument();
+      expect(screen.getAllByText('Ramesh Patil').length).toBe(1);
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    } finally {
+      (window as any).matchMedia = originalMatchMedia;
+    }
+  });
 });

@@ -243,6 +243,7 @@ export default function DashboardHub() {
   const [detailReqCode, setDetailReqCode] = useState<string>(isReqDetailMode ? urlReqCode : '');
   const [detailCandidateId, setDetailCandidateId] = useState<string>(isCandidateDetailMode ? urlCandidateId : '');
   const [detailCompanyId, setDetailCompanyId] = useState<string>(isCompanyDetailMode ? urlCompanyId : '');
+  const [companyJobDetailOpen, setCompanyJobDetailOpen] = useState(false);
   // When a candidate was opened from a job requirement's applications, remember
   // the originating requirement so "back" returns to that applications list.
   const [candidateFromReqId, setCandidateFromReqId] = useState<number>(
@@ -551,14 +552,20 @@ export default function DashboardHub() {
                   </>
                 ) : activeTab === 'registered_companies' && detailCompanyId ? (
                   <>
-                    <Link
-                      to="/dashboard"
-                      onClick={() => setDetailCompanyId('')}
-                      className="inline-flex items-center gap-2 text-xs font-bold text-theme-darkViolet/60 hover:text-theme-lavender transition-colors cursor-pointer"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" /> {t('dashboard.backToCompanies')}
-                    </Link>
-                    <AdminCompanyProfileView companyId={detailCompanyId} onBack={() => setDetailCompanyId('')} />
+                    {!companyJobDetailOpen && (
+                      <Link
+                        to="/dashboard"
+                        onClick={() => setDetailCompanyId('')}
+                        className="inline-flex items-center gap-2 text-xs font-bold text-theme-darkViolet/60 hover:text-theme-lavender transition-colors cursor-pointer"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5" /> {t('dashboard.backToCompanies')}
+                      </Link>
+                    )}
+                    <AdminCompanyProfileView
+                      companyId={detailCompanyId}
+                      onBack={() => setDetailCompanyId('')}
+                      onJobDetailsOpenChange={setCompanyJobDetailOpen}
+                    />
                   </>
                 ) : (
                   <>

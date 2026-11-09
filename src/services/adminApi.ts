@@ -13,6 +13,16 @@ export interface PaginatedResponse<T> {
   totalCount: number;
 }
 
+export interface CompanyRequirement {
+  requirementId?: number;
+  profileHeader?: string;
+  jobCode?: string;
+  companyName?: string;
+  email?: string;
+  workPlace?: string;
+  skill?: string;
+}
+
 /**
  * Parse API response and extract paginated data
  * Supports multiple API response formats
@@ -443,6 +453,32 @@ export const adminApi = baseApi.injectEndpoints({
     }),
 
     /**
+     * GET job requirements posted by a single company.
+     * The path segment is the company's user id (same id used for the
+     * company profile). Response shape: { value: [...] }.
+     */
+    getCompanyRequirements: builder.query<CompanyRequirement[], string>({
+      queryFn: async (companyId, api, extraOptions, baseQuery) => {
+        try {
+          const result = await baseQuery(`/api/v1/company/requirements/${companyId}`);
+          if (result.data) {
+            const raw = (result.data as any).value ?? (result.data as any).data ?? result.data;
+            const items = Array.isArray(raw) ? raw : [];
+            return { data: items as CompanyRequirement[] };
+          }
+          if (result.error) {
+            return { error: result.error };
+          }
+          return { data: [] };
+        } catch (err) {
+          console.error('[adminApi] getCompanyRequirements failed:', err);
+          return { error: { status: 'FETCH_ERROR', error: String(err) } };
+        }
+      },
+      providesTags: (result, error, companyId) => [{ type: 'Company', id: `requirements-${companyId}` }],
+    }),
+
+    /**
      * GET candidate detail for admin view.
      * 1) Try viewcandidateprofile/{id} (returns the full nested profile).
      * 2) Fallback: scan the user registration list which includes resume fields.
@@ -582,6 +618,7 @@ export const {
   useGetRequirementDetailQuery,
   useGetJobRequirementByCodeQuery,
   useGetAdminCompanyDetailQuery,
+  useGetCompanyRequirementsQuery,
   useGetAdminCandidateDetailQuery,
   useLazyGetAdminCandidateDetailQuery,
   useAddCompanyMutation

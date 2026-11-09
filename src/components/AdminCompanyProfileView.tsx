@@ -9,8 +9,8 @@
  * (with a company-list fallback when the dedicated endpoint is unavailable).
  */
 
-import React from 'react';
-import { useGetAdminCompanyDetailQuery } from '../services/adminApi';
+import React, { useEffect, useState } from 'react';
+import { useGetAdminCompanyDetailQuery, useGetCompanyRequirementsQuery } from '../services/adminApi';
 import {
   Building2,
   Phone,
@@ -19,9 +19,11 @@ import {
   Globe,
   MapPin,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Briefcase
 } from 'lucide-react';
 import { Loader } from './ui/FeedbackComponents';
+import { CompanyProfileJobDetails } from './jobs/CompanyProfileJobDetails';
 
 const Field = ({ icon, label, value }: { icon: React.ReactNode; label: string; value?: string | number }) => (
   <div className="flex items-start gap-3">
@@ -37,14 +39,42 @@ interface AdminCompanyProfileViewProps {
   companyId: string;
   /** Called when the user cancels an error state (Go Back). */
   onBack?: () => void;
+  /** Notifies the parent when a job requirement detail view is opened/closed. */
+  onJobDetailsOpenChange?: (open: boolean) => void;
 }
 
-export function AdminCompanyProfileView({ companyId, onBack }: AdminCompanyProfileViewProps) {
+export function AdminCompanyProfileView({ companyId, onBack, onJobDetailsOpenChange }: AdminCompanyProfileViewProps) {
+  const [selectedJob, setSelectedJob] = useState<{ requirementId: number; jobCode?: string } | null>(null);
+
+  useEffect(() => {
+    onJobDetailsOpenChange?.(Boolean(selectedJob));
+    return () => onJobDetailsOpenChange?.(false);
+  }, [selectedJob, onJobDetailsOpenChange]);
+
   const { data: company, isLoading, isFetching, refetch } = useGetAdminCompanyDetailQuery(companyId || '', {
     skip: !companyId,
   });
 
+  const {
+    data: requirements = [],
+    isLoading: requirementsLoading,
+    isFetching: requirementsFetching,
+    isError: requirementsError,
+  } = useGetCompanyRequirementsQuery(companyId || '', {
+    skip: !companyId,
+  });
+
   const field = (v: string | undefined | null): string => (v === undefined || v === null ? '' : String(v).trim());
+
+  if (selectedJob) {
+    return (
+      <CompanyProfileJobDetails
+        requirementId={selectedJob.requirementId}
+        jobCode={selectedJob.jobCode}
+        onBack={() => setSelectedJob(null)}
+      />
+    );
+  }
 
   return (
     <>
@@ -138,6 +168,82 @@ export function AdminCompanyProfileView({ companyId, onBack }: AdminCompanyProfi
                 <Field icon={<MapPin className="w-4 h-4" />} label="Address" value={field(company.address)} />
               )}
             </div>
+          </div>
+
+          {/* Job requirements posted by this company */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-xs">
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <h3 className="flex items-center gap-2 text-xs font-black text-blue-950 uppercase tracking-wider">
+                <Briefcase className="w-4 h-4 text-theme-lavender" /> Job Requirements
+              </h3>
+              {requirementsFetching && !requirementsLoading && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-theme-lavender">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Updating...
+                </span>
+              )}
+            </div>
+
+            {requirementsLoading ? (
+              <Loader />
+            ) : requirementsError ? (
+              <p className="py-6 text-center text-xs font-medium text-rose-600">
+                Unable to load job requirements for this company.
+              </p>
+            ) : requirements.length === 0 ? (
+              <p className="py-6 text-center text-xs font-medium text-gray-400">
+                No job requirements posted by this company.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-[10px] font-bold uppercase text-slate-500">
+                    <tr>
+                      <th className="whitespace-nowrap px-3 py-2.5">Job Code</th>
+                      <th className="px-3 py-2.5">Job Title</th>
+                      <th className="px-3 py-2.5">Company</th>
+                      <th className="px-3 py-2.5">Email</th>
+                      <th className="px-3 py-2.5">Work Place</th>
+                      <th className="px-3 py-2.5">Skill</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {requirements.map((requirement, index) => {
+                      const requirementId = Number(requirement.requirementId || 0);
+                      const requirementJobCode = field(requirement.jobCode);
+                      const canOpen = Number.isSafeInteger(requirementId) && requirementId > 0;
+                      return (
+                        <tr
+                          key={requirement.requirementId ?? requirement.jobCode ?? index}
+                          className="hover:bg-slate-50/60 transition-colors"
+                        >
+                          <td className="whitespace-nowrap px-3 py-2.5">
+                            {canOpen ? (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedJob({ requirementId, jobCode: requirementJobCode })}
+                                title="Open job details with applied applicants"
+                                className="font-mono text-[10px] font-bold text-blue-700 underline decoration-blue-300 underline-offset-2 transition-colors hover:text-blue-600 hover:decoration-blue-600 cursor-pointer"
+                              >
+                                {requirementJobCode || requirementId}
+                              </button>
+                            ) : (
+                              <span className="font-mono text-[10px] font-bold text-slate-500">
+                                {requirementJobCode || '—'}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 font-bold text-slate-800">{field(requirement.profileHeader) || '—'}</td>
+                          <td className="px-3 py-2.5 text-slate-700">{field(requirement.companyName) || '—'}</td>
+                          <td className="break-all px-3 py-2.5 text-slate-600">{field(requirement.email) || '—'}</td>
+                          <td className="px-3 py-2.5 text-slate-700">{field(requirement.workPlace) || '—'}</td>
+                          <td className="px-3 py-2.5 text-slate-600">{field(requirement.skill) || '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
